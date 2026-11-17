@@ -7,8 +7,32 @@ Values come from env vars (prefix ``NEWSROOM_``) or a local ``.env`` file. Secre
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class FeedConfig(BaseModel):
+    url: str
+    outlet: str = Field(max_length=200)
+    trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
+# v1 topic scope default: AI and tech news (STATE open question). All checked reachable 2026-11-16.
+# Trust scores are a uniform 0.5 placeholder until the Editor calibrates them.
+DEFAULT_FEEDS = (
+    FeedConfig(
+        url="https://feeds.arstechnica.com/arstechnica/technology-lab", outlet="Ars Technica"
+    ),
+    FeedConfig(
+        url="https://techcrunch.com/category/artificial-intelligence/feed/", outlet="TechCrunch"
+    ),
+    FeedConfig(
+        url="https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", outlet="The Verge"
+    ),
+    FeedConfig(url="https://www.technologyreview.com/feed/", outlet="MIT Technology Review"),
+    FeedConfig(url="https://www.wired.com/feed/tag/ai/latest/rss", outlet="Wired"),
+    FeedConfig(url="https://feeds.bbci.co.uk/news/technology/rss.xml", outlet="BBC News"),
+)
 
 
 class Settings(BaseSettings):
@@ -65,6 +89,14 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
+
+    # Reporter RSS ingest (decision 0003).
+    # Feeds override as a JSON list of {url, outlet, trust_score}.
+    reporter_feeds: list[FeedConfig] = Field(default_factory=lambda: list(DEFAULT_FEEDS))
+    reporter_ingest_every_minutes: int = Field(default=15, ge=1, le=60)
+    reporter_fetch_timeout_s: float = 20.0
+    reporter_max_concurrency: int = 8
+    reporter_user_agent: str = "newsroom-bot/0.1"
 
 
 @lru_cache
