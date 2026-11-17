@@ -7,7 +7,7 @@ import logging
 import re
 import sys
 from collections.abc import MutableMapping
-from typing import Any
+from typing import Any, TextIO
 
 import structlog
 
@@ -27,7 +27,8 @@ def redact_secrets(
     return event_dict
 
 
-def configure_logging(settings: Settings) -> None:
+def configure_logging(settings: Settings, stream: TextIO | None = None) -> None:
+    """``stream`` defaults to stdout; the CLI passes stderr so stdout stays clean for output."""
     level = logging.getLevelNamesMapping()[settings.log_level]
     renderer: structlog.typing.Processor = (
         structlog.processors.JSONRenderer()
@@ -44,7 +45,7 @@ def configure_logging(settings: Settings) -> None:
             renderer,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        logger_factory=structlog.PrintLoggerFactory(file=stream or sys.stdout),
         cache_logger_on_first_use=True,
     )
 
