@@ -4,17 +4,17 @@ Last updated: 2026-11-16 by: Claude Code
 
 ## Current phase
 
-Phase 0: bootstrap
+Phase 1: Reporter and data layer
 
 ## Active task
 
-0.2 `app/config.py`, `.env.example`, structlog setup, `/health` endpoint
+1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
 
 ## Tasks
 
 ### Phase 0: bootstrap
 - [x] 0.1 Scaffold the repo: uv project, folder per node, docker-compose (Postgres + pgvector, Redis), ruff, mypy, pytest, pre-commit, GitHub Actions CI
-- [ ] 0.2 `app/config.py` (pydantic-settings), `.env.example`, structlog setup, `/health` endpoint
+- [x] 0.2 `app/config.py` (pydantic-settings), `.env.example`, structlog setup, `/health` endpoint
 
 ### Phase 1: Reporter and data layer
 - [ ] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
@@ -67,6 +67,6 @@ Phase 0: bootstrap
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 0.1. uv project (Python 3.12, deps locked), empty package per node under `app/`, docker-compose (pgvector pg16, redis 7), ruff/mypy strict/pytest config, CI workflow, README, smoke test. `scripts/context_graph.py` is excluded from ruff (kit tool, kept as shipped).
-- Half done: `docker compose up -d` not verified, Docker is not installed on the dev machine. No git remote yet, so CI has not run.
-- Next: task 0.2.
+- Done: 0.2. `app/config.py` (pydantic-settings, `NEWSROOM_` prefix, secrets as `SecretStr`, `get_settings()` cached), `app/log.py` (structlog JSON, redacts secret-named fields), `app/main.py` with liveness `/health`, `.env.example`. Project is now an installable package (hatchling) so `importlib.metadata` and a future CLI entry point work; `fastapi[standard]` added for `fastapi dev`.
+- Half done: `docker compose up -d` still unverified (no Docker on the dev machine). No git remote, CI has not run.
+- Next: task 1.1 (needs the embedding model and dimension chosen for `data-model`).
