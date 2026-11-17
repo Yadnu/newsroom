@@ -8,7 +8,7 @@ Phase 1: Reporter and data layer
 
 ## Active task
 
-1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
+1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 
 ## Tasks
 
@@ -19,7 +19,7 @@ Phase 1: Reporter and data layer
 ### Phase 1: Reporter and data layer
 - [x] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
 - [x] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
-- [ ] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
+- [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [ ] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [ ] 1.5 reporter: clustering into stories by embedding similarity
 - [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.2. `complete()`/`embed()` in `app/shared/llm/`. Chat goes to Groq gpt-oss-20b, and the judge to gpt-oss-120b, with strict json_schema (decision 0008). Embeddings go to Voyage over httpx. Routing, retries, and cost/latency are logged as the `llm.call` event. 18 tests use a mock transport.
-- Half done: no live Groq/Voyage call yet, since no keys are in `.env`. `docker compose up -d` is still unverified. There is no git remote, so CI has not run.
-- Next: task 1.3. Build `span()`, then wrap the gateway calls so `Usage` reaches `traces` (tokens_in/out, cost_usd, latency_ms).
+- Done: 1.3. `span()` plus a buffered `DbSink` (decision 0009). Gateway calls are traced with usage, and the API lifespan starts and stops the writer. Integration tests pass on Postgres via `uv run --with pgserver` (Docker not installed).
+- Half done: no live Groq/Voyage call yet (no keys). `docker compose` is unverified. There is no git remote, so CI has not run.
+- Next: task 1.4. The ARQ worker must call `start_archive()`/`stop_archive()` in its startup/shutdown hooks, and each feed fetch goes in a `span("reporter", ...)`.

@@ -7,6 +7,7 @@ from importlib.metadata import version
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from app.archive import start_archive, stop_archive
 from app.config import get_settings
 from app.log import configure_logging, get_logger
 
@@ -22,7 +23,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings)
     get_logger(__name__).info("startup", component="api", env=settings.env)
-    yield
+    await start_archive()
+    try:
+        yield
+    finally:
+        await stop_archive()
 
 
 app = FastAPI(title="Newsroom", lifespan=lifespan)

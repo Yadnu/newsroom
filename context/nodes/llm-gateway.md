@@ -30,7 +30,7 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
 ## Invariants
 
 - No provider SDK imports outside this folder (today: none at all, httpx only).
-- Every call records tokens, cost in USD, latency, and model name.
+- Every call records tokens, cost in USD, latency, and model name, in a `traces` row via `span()`.
 - Every routed model and the embedding model must have a price, or `Gateway()` fails at startup.
 - Embeddings are always `EMBEDDING_DIM` (from `app.db.models`); any other length raises an error.
 
@@ -41,8 +41,8 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
 validation is resampled once (Groq's `json_validate_failed` 400 counts as a failure). HTTP retries
 cover 408/409/429/5xx and transport errors with exponential backoff, honor `retry-after`, and are
 capped by `llm_max_attempts`. Embeddings go to Voyage in batches of 1000. Usage is logged as a
-structlog `llm.call` event. Not wired to the archive `span()` yet (task 1.3) or to Langfuse
-(task 3.2). Tested with `httpx.MockTransport` only; no live call has been made.
+structlog `llm.call` event and recorded on an archive span (`complete.<task>` / `embed`,
+with tokens, cost, model and attempts; no prompt text). Langfuse is not wired yet (task 3.2). Tested with `httpx.MockTransport` only; no live call has been made.
 
 ## Open questions
 
@@ -54,3 +54,4 @@ structlog `llm.call` event. Not wired to the archive `span()` yet (task 1.3) or 
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-16: linked decision 0007 (voyage-4-lite, 1024 dims).
 - 2026-11-16: task 1.2: `complete()`/`embed()` with routing, retries, cost, strict schema (decision 0008).
+- 2026-11-16: `complete()`/`embed()` run inside archive spans (task 1.3).

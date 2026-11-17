@@ -14,6 +14,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from app.archive import Span, span
 from app.config import Settings
 from app.db.models import EMBEDDING_DIM
 from app.log import get_logger
@@ -76,6 +77,15 @@ class Gateway:
     async def complete[T: BaseModel](
         self, task: TaskName, messages: Sequence[Message], schema: type[T]
     ) -> tuple[T, Usage]:
+        with span("llm-gateway", f"complete.{task}", schema=schema.__name__) as s:
+            s.set(model=self.model_for(task))
+            result, usage = await self._complete(task, messages, schema)
+            _record(s, usage)
+            return result, usage
+
+    async def _complete[T: BaseModel](
+        self, task: TaskName, messages: Sequence[Message], schema: type[T]
+    ) -> tuple[T, Usage]:
         model = self.model_for(task)
         key = self._key(self._s.groq_api_key, "NEWSROOM_GROQ_API_KEY")
         body = {
@@ -128,6 +138,14 @@ class Gateway:
 
     async def embed(
         self, texts: Sequence[str], input_type: EmbedInputType | None = "document"
+    ) -> tuple[list[list[float]], Usage]:
+        with span("llm-gateway", "embed", model=self._s.embedding_model, n_texts=len(texts)) as s:
+            vectors, usage = await self._embed(texts, input_type)
+            _record(s, usage)
+            return vectors, usage
+
+    async def _embed(
+        self, texts: Sequence[str], input_type: EmbedInputType | None
     ) -> tuple[list[list[float]], Usage]:
         model = self._s.embedding_model
         if not texts:
@@ -220,6 +238,11 @@ class Gateway:
             attempts=attempts,
         )
         return usage
+
+
+def _record(s: Span, usage: Usage) -> None:
+    s.add_usage(usage.tokens_in, usage.tokens_out, usage.cost_usd)
+    s.set(attempts=usage.attempts)
 
 
 def _error_text(resp: httpx.Response) -> str:
