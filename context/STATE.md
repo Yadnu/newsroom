@@ -8,7 +8,7 @@ Phase 1: Reporter and data layer
 
 ## Active task
 
-1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
+1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
 
 ## Tasks
 
@@ -18,10 +18,10 @@ Phase 1: Reporter and data layer
 
 ### Phase 1: Reporter and data layer
 - [x] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
-- [ ] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
-- [ ] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
-- [ ] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
-- [ ] 1.5 reporter: clustering into stories by embedding similarity
+- [x] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
+- [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
+- [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
+- [x] 1.5 reporter: clustering into stories by embedding similarity
 - [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
 
 ### Phase 2: Writer and Editor (text only)
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.1. 8 SQLModel tables, async Alembic with migration `f1b85b824a32`, HNSW cosine indexes, `get_engine()`/`session_scope()`. Integration tests passed against a local Postgres 16 + pgvector (via `pgserver`, since Docker is not installed); CI now runs them with a pgvector service. Added `sqlalchemy[asyncio]` (greenlet).
-- Half done: `docker compose up -d` still unverified. No git remote, CI has not run.
-- Next: task 1.2. The LLM provider for `complete()` is not chosen yet; embeddings go to Voyage (decision 0007).
+- Done: 1.5. `embed_pending_sources()` and `cluster_stories()` in `app/reporter/cluster.py` (decision 0010). The worker job runs ingest, then embed, then cluster. Phase 1 PR is #1 on branch `phase1/gateway-archive-reporter`; CI passed (79 tests incl. integration) before 1.5 was added.
+- Half done: clustering has never seen real embeddings (no `NEWSROOM_VOYAGE_API_KEY`), so the 0.80 threshold is uncalibrated. There have been no live Groq calls, and the ARQ worker has not run on a real Redis.
+- Next: task 1.6. Its acceptance run needs the Voyage key; check the threshold on the first live clustering run.

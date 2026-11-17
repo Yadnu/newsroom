@@ -13,10 +13,10 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 
 | Node | Type | Status | Phase | Code | Depends on | Feeds | Decisions |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [archive](nodes/archive.md) | component | planned | 1 | `app/archive/` | data-model | web | 0005 |
+| [archive](nodes/archive.md) | component | in-progress | 1 | `app/archive/` | data-model | web | 0005, 0009 |
 | [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007 |
-| [llm-gateway](nodes/llm-gateway.md) | shared | planned | 1 | `app/shared/llm/` | archive | reporter, writer, editor | 0002, 0007 |
-| [reporter](nodes/reporter.md) | component | planned | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003 |
+| [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor | 0002, 0005, 0007, 0008 |
+| [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003, 0010 |
 | [editor](nodes/editor.md) | component | planned | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002 |
 | [producer](nodes/producer.md) | component | planned | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | - |
 | [writer](nodes/writer.md) | component | planned | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002 |
@@ -30,13 +30,13 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 ```mermaid
 flowchart LR
   anchor["anchor (planned)"]
-  archive["archive (planned)"]
+  archive["archive (in-progress)"]
   caller["caller (planned)"]
   data_model["data-model (done)"]
   editor["editor (planned)"]
-  llm_gateway["llm-gateway (planned)"]
+  llm_gateway["llm-gateway (in-progress)"]
   producer["producer (planned)"]
-  reporter["reporter (planned)"]
+  reporter["reporter (in-progress)"]
   standards_desk["standards-desk (planned)"]
   web["web (planned)"]
   writer["writer (planned)"]
@@ -54,6 +54,7 @@ flowchart LR
   caller --> standards_desk
   data_model --> archive
   data_model --> editor
+  data_model --> llm_gateway
   data_model --> reporter
   data_model --> writer
   editor --> standards_desk

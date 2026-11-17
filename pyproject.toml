@@ -9,6 +9,7 @@ dependencies = [
     "fastapi[standard]>=0.163.1",
     "feedparser>=6.0.14",
     "httpx>=0.28.1",
+    "numpy>=2.5.5",
     "pgvector>=0.5.1",
     "pydantic-settings>=2.16.3",
     "redis>=5.3.1",
@@ -54,3 +55,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = ["integration: needs Docker Postgres/Redis"]
+
+[[tool.mypy.overrides]]
+module = ["feedparser", "feedparser.*"]
+ignore_missing_imports = true
