@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     reporter_cluster_window_hours: int = Field(default=24, ge=1)
     reporter_embed_max_chars: int = 8000
 
+    # Producer rundown (task 2.0).
+    producer_freshness_hours: int = Field(default=24, ge=1)
+    producer_min_sources: int = Field(default=2, ge=1)
+    producer_seconds_per_story: int = Field(default=45, ge=10)
+
 
 @lru_cache
 def get_settings() -> Settings:

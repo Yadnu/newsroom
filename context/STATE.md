@@ -1,14 +1,14 @@
 # STATE
 
-Last updated: 2026-11-16 by: Claude Code
+Last updated: 2026-11-17 by: Claude Code
 
 ## Current phase
 
-Phase 1: Reporter and data layer
+Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 acceptance run.
 
 ## Active task
 
-1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
+2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
 
 ## Tasks
 
@@ -25,7 +25,7 @@ Phase 1: Reporter and data layer
 - [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on the Voyage key.
 
 ### Phase 2: Writer and Editor (text only)
-- [ ] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
+- [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
 - [ ] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
 - [ ] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 - [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.6 code. `top_stories()` in `app/reporter/rank.py` and the `newsroom stories` CLI in `app/cli.py` (typer + rich). CLI logs now go to stderr so `--json` stays clean. Everything is on PR #1 (`phase1/gateway-archive-reporter`).
-- Half done: the 1.6 acceptance is not met. A live `newsroom stories --top 10 --refresh` ingested 91 sources but produced 0 stories, because there is no `NEWSROOM_VOYAGE_API_KEY`. The 0.80 cluster threshold is uncalibrated.
-- Next: add the Voyage key, run `uv run newsroom stories --top 10 --refresh`, tune `reporter_cluster_threshold` until the top 10 all have 2+ sources from distinct events, then tick 1.6 and start phase 2 (task 2.0).
+- Done: 2.0. `build_rundown()` in `app/producer/rundown.py` picks the top fresh stories, splits the time evenly, and creates a briefing row. It is on branch `phase2/producer-rundown`, which is stacked on PR #2 (`phase1/stories-cli`, task 1.6, still open).
+- Half done: the 1.6 acceptance run is still blocked on `NEWSROOM_VOYAGE_API_KEY`, and the 0.80 cluster threshold is uncalibrated. Task 2.1 will be the first real LLM work, so it needs `NEWSROOM_GROQ_API_KEY` for any live check.
+- Next: task 2.1. Writer `draft_script(rundown)` through `llm.complete("draft", ...)`. Source text goes in user messages only, never in the system prompt.
