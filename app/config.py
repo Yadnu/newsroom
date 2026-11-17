@@ -107,6 +107,10 @@ class Settings(BaseSettings):
     producer_min_sources: int = Field(default=2, ge=1)
     producer_seconds_per_story: int = Field(default=45, ge=10)
 
+    # Writer (task 2.1). ~150 spoken words per minute.
+    writer_words_per_second: float = Field(default=2.5, gt=0)
+    writer_source_max_chars: int = Field(default=6000, ge=500)
+
 
 @lru_cache
 def get_settings() -> Settings:

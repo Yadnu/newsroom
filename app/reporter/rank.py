@@ -21,6 +21,7 @@ _links = StorySource.__table__  # type: ignore[attr-defined]
 
 
 class StorySourceRef(BaseModel):
+    id: UUID
     outlet: str
     title: str
     url: str
@@ -68,6 +69,7 @@ async def top_stories(
                 members_q = (
                     select(
                         _links.c.story_id,
+                        _sources.c.id,
                         _sources.c.outlet,
                         _sources.c.title,
                         _sources.c.url,
@@ -82,7 +84,7 @@ async def top_stories(
         for m in members:
             by_story[m.story_id].append(
                 StorySourceRef(
-                    outlet=m.outlet, title=m.title, url=m.url, published_at=m.published_at
+                    id=m.id, outlet=m.outlet, title=m.title, url=m.url, published_at=m.published_at
                 )
             )
         result = [

@@ -18,7 +18,11 @@ WHEN = datetime(2026, 11, 16, 9, 30, tzinfo=UTC)
 def _story(title: str, outlets: list[str]) -> TopStory:
     refs = [
         StorySourceRef(
-            outlet=o, title=f"{title} ({o})", url=f"https://{o}.test/x", published_at=WHEN
+            id=uuid4(),
+            outlet=o,
+            title=f"{title} ({o})",
+            url=f"https://{o}.test/x",
+            published_at=WHEN,
         )
         for o in outlets
     ]

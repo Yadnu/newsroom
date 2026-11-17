@@ -8,7 +8,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Active task
 
-2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
+2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 
 ## Tasks
 
@@ -26,7 +26,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
-- [ ] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
+- [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
 - [ ] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 - [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
 - [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
@@ -67,6 +67,6 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.0. `build_rundown()` in `app/producer/rundown.py` picks the top fresh stories, splits the time evenly, and creates a briefing row. It is on branch `phase2/producer-rundown`, which is stacked on PR #2 (`phase1/stories-cli`, task 1.6, still open).
-- Half done: the 1.6 acceptance run is still blocked on `NEWSROOM_VOYAGE_API_KEY`, and the 0.80 cluster threshold is uncalibrated. Task 2.1 will be the first real LLM work, so it needs `NEWSROOM_GROQ_API_KEY` for any live check.
-- Next: task 2.1. Writer `draft_script(rundown)` through `llm.complete("draft", ...)`. Source text goes in user messages only, never in the system prompt.
+- Done: 2.1. `draft_script()` in `app/writer/` with prompts in `prompts/writer/`. A new `claim_sources` table holds Writer citations (migration `f41cfce23b88`, decision 0011), and `StorySourceRef` now has the source `id`. It is on branch `phase2/writer-draft`, stacked on `phase2/producer-rundown` (PR #3), which is stacked on PR #2.
+- Half done: nothing has run against a real LLM (no `NEWSROOM_GROQ_API_KEY`), so prompt quality is unknown. The 1.6 acceptance is still blocked on `NEWSROOM_VOYAGE_API_KEY`.
+- Next: task 2.2. The Editor retrieves evidence passages from the sources in `claim_sources` (embedding similarity over chunks), and `judge_claim()` goes through `llm.complete("judge", ...)`. The judge must never see the Writer's reasoning.
