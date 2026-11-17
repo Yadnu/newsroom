@@ -30,6 +30,11 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
 - `async def cluster_stories(window_hours: int = 24) -> list[Story]`: assign unassigned, embedded sources
   in the window to stories (decision 0010). Returns stories created or updated (title, centroid).
   Idempotent; serialized by a Postgres advisory lock.
+- `async def top_stories(limit=10, window_hours=24, min_sources=2) -> list[TopStory]` (`rank.py`):
+  stories whose newest non-retracted source is in the window, with `min_sources`+ sources, ranked by
+  distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[outlet, title, url, published_at].
+- CLI (`app/cli.py`, script `newsroom`): `newsroom stories --top N [--hours 24] [--min-sources 2] [--refresh] [--json]`.
+  `--refresh` runs ingest, then embed, then cluster first. Logs go to stderr, results to stdout.
 - Planned: `async def search_live(query: str) -> list[Source]` (Tavily/Exa + Firecrawl, task 5.4).
 - Every `Source` carries url, outlet, trust_score, published_at, content, content_hash.
 
@@ -55,7 +60,8 @@ inserted 0. Content is the feed body only: often a summary of about 100 chars, a
 some outlets (capped at 20k chars). Clustering done (task 1.5) in `cluster.py`: pure `assign()`
 plus DB functions. Spans are `reporter/embed_sources` and `reporter/cluster_stories`. Verified on
 Postgres with a fake Voyage endpoint only, because there is no Voyage key yet. The 0.80 threshold
-is uncalibrated. Tests avoid `numpy.random` because Windows Application Control on the dev box
+is uncalibrated. `top_stories` and the CLI are built (task 1.6). A live `newsroom stories --refresh`
+ingested 91 sources but found 0 stories, because there is no Voyage key. Tests avoid `numpy.random` because Windows Application Control on the dev box
 blocks its DLL.
 
 ## Open questions
@@ -68,3 +74,4 @@ blocks its DLL.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-16: RSS ingest with url/content_hash dedupe, ARQ cron job (task 1.4).
 - 2026-11-16: embed pending sources + greedy centroid clustering into stories (task 1.5, decision 0010).
+- 2026-11-16: `top_stories()` ranking + `newsroom stories` CLI (task 1.6, acceptance pending Voyage key).

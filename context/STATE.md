@@ -22,7 +22,7 @@ Phase 1: Reporter and data layer
 - [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [x] 1.5 reporter: clustering into stories by embedding similarity
-- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
+- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on the Voyage key.
 
 ### Phase 2: Writer and Editor (text only)
 - [ ] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.5. `embed_pending_sources()` and `cluster_stories()` in `app/reporter/cluster.py` (decision 0010). The worker job runs ingest, then embed, then cluster. Phase 1 PR is #1 on branch `phase1/gateway-archive-reporter`; CI passed (79 tests incl. integration) before 1.5 was added.
-- Half done: clustering has never seen real embeddings (no `NEWSROOM_VOYAGE_API_KEY`), so the 0.80 threshold is uncalibrated. There have been no live Groq calls, and the ARQ worker has not run on a real Redis.
-- Next: task 1.6. Its acceptance run needs the Voyage key; check the threshold on the first live clustering run.
+- Done: 1.6 code. `top_stories()` in `app/reporter/rank.py` and the `newsroom stories` CLI in `app/cli.py` (typer + rich). CLI logs now go to stderr so `--json` stays clean. Everything is on PR #1 (`phase1/gateway-archive-reporter`).
+- Half done: the 1.6 acceptance is not met. A live `newsroom stories --top 10 --refresh` ingested 91 sources but produced 0 stories, because there is no `NEWSROOM_VOYAGE_API_KEY`. The 0.80 cluster threshold is uncalibrated.
+- Next: add the Voyage key, run `uv run newsroom stories --top 10 --refresh`, tune `reporter_cluster_threshold` until the top 10 all have 2+ sources from distinct events, then tick 1.6 and start phase 2 (task 2.0).

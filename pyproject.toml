@@ -13,12 +13,17 @@ dependencies = [
     "pgvector>=0.5.1",
     "pydantic-settings>=2.16.3",
     "redis>=5.3.1",
+    "rich>=15.0.0",
     "sqlalchemy[asyncio]>=2.1.9",
     "sqlmodel>=0.0.50",
     "structlog>=26.1.0",
     "tenacity>=9.2.1",
+    "typer>=0.29.1",
     "uvicorn>=0.54.0",
 ]
+
+[project.scripts]
+newsroom = "app.cli:main"
 
 [build-system]
 requires = ["hatchling"]
