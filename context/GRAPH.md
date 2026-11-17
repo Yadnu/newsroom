@@ -16,7 +16,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [archive](nodes/archive.md) | component | in-progress | 1 | `app/archive/` | data-model | web | 0005, 0009 |
 | [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007 |
 | [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor | 0002, 0005, 0007, 0008 |
-| [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003 |
+| [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003, 0010 |
 | [editor](nodes/editor.md) | component | planned | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002 |
 | [producer](nodes/producer.md) | component | planned | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | - |
 | [writer](nodes/writer.md) | component | planned | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002 |

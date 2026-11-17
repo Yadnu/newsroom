@@ -12,14 +12,24 @@ from arq.cron import CronJob
 
 from app.archive import start_archive, stop_archive
 from app.config import get_settings
-from app.log import configure_logging
-from app.reporter import ingest_feeds
+from app.log import configure_logging, get_logger
+from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.shared import llm
+
+log = get_logger(__name__)
 
 
 async def ingest_job(ctx: dict[Any, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
-    report = await ingest_feeds()
-    return report.model_dump()
+    """Ingest feeds, embed new sources, cluster them into stories."""
+    result: dict[str, Any] = {"ingest": (await ingest_feeds()).model_dump()}
+    try:
+        result["embedded"] = await embed_pending_sources()
+    except llm.LLMConfigError as e:  # e.g. no Voyage key yet: ingest still counts
+        log.warning("worker.embed_skipped", reason=str(e))
+        result["embedded"] = 0
+    stories = await cluster_stories(get_settings().reporter_cluster_window_hours)
+    result["stories_touched"] = len(stories)
+    return result
 
 
 async def startup(_ctx: dict[str, Any]) -> None:

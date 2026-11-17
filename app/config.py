@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     reporter_fetch_timeout_s: float = 20.0
     reporter_max_concurrency: int = 8
     reporter_user_agent: str = "newsroom-bot/0.1"
+    # Clustering (decision 0010). Threshold is uncalibrated until a labelled live sample exists.
+    reporter_cluster_threshold: float = Field(default=0.80, gt=0.0, le=1.0)
+    reporter_cluster_window_hours: int = Field(default=24, ge=1)
+    reporter_embed_max_chars: int = 8000
 
 
 @lru_cache
