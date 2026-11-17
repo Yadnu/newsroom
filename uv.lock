@@ -1314,10 +1314,12 @@ dependencies = [
     { name = "pgvector" },
     { name = "pydantic-settings" },
     { name = "redis" },
+    { name = "rich" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
     { name = "structlog" },
     { name = "tenacity" },
+    { name = "typer" },
     { name = "uvicorn" },
 ]
 
@@ -1342,10 +1344,12 @@ requires-dist = [
     { name = "pgvector", specifier = ">=0.5.1" },
     { name = "pydantic-settings", specifier = ">=2.16.3" },
     { name = "redis", specifier = ">=5.3.1" },
+    { name = "rich", specifier = ">=15.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.9" },
     { name = "sqlmodel", specifier = ">=0.0.50" },
     { name = "structlog", specifier = ">=26.1.0" },
     { name = "tenacity", specifier = ">=9.2.1" },
+    { name = "typer", specifier = ">=0.29.1" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
