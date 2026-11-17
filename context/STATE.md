@@ -8,7 +8,7 @@ Phase 1: Reporter and data layer
 
 ## Active task
 
-1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
+1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 
 ## Tasks
 
@@ -18,7 +18,7 @@ Phase 1: Reporter and data layer
 
 ### Phase 1: Reporter and data layer
 - [x] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
-- [ ] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
+- [x] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
 - [ ] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [ ] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [ ] 1.5 reporter: clustering into stories by embedding similarity
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.1. 8 SQLModel tables, async Alembic with migration `f1b85b824a32`, HNSW cosine indexes, `get_engine()`/`session_scope()`. Integration tests passed against a local Postgres 16 + pgvector (via `pgserver`, since Docker is not installed); CI now runs them with a pgvector service. Added `sqlalchemy[asyncio]` (greenlet).
-- Half done: `docker compose up -d` still unverified. No git remote, CI has not run.
-- Next: task 1.2. The LLM provider for `complete()` is not chosen yet; embeddings go to Voyage (decision 0007).
+- Done: 1.2. `complete()`/`embed()` in `app/shared/llm/`. Chat goes to Groq gpt-oss-20b, and the judge to gpt-oss-120b, with strict json_schema (decision 0008). Embeddings go to Voyage over httpx. Routing, retries, and cost/latency are logged as the `llm.call` event. 18 tests use a mock transport.
+- Half done: no live Groq/Voyage call yet, since no keys are in `.env`. `docker compose up -d` is still unverified. There is no git remote, so CI has not run.
+- Next: task 1.3. Build `span()`, then wrap the gateway calls so `Usage` reaches `traces` (tokens_in/out, cost_usd, latency_ms).
