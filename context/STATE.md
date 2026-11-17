@@ -68,5 +68,5 @@ Phase 1: Reporter and data layer
 
 - Who worked last: Claude Code
 - Done: 1.4. RSS ingest in `app/reporter/` (parse, normalize, hash, `ON CONFLICT DO NOTHING`), ARQ cron in `app/worker.py`, `python -m app.reporter` for one run. A live run stored 91 sources from 6 feeds, and a re-run stored 0.
-- Half done: the ARQ worker has not run against a real Redis (no Docker). There have been no live Groq/Voyage calls (no keys), and CI has not run (no remote).
+- Half done: 1.5 has only started: `numpy` was added for vector math, and there is no clustering code yet. The ARQ worker has not run against a real Redis (no Docker). There have been no live Groq/Voyage calls (no keys), and CI first runs on the phase 1 PR.
 - Next: task 1.5. Embed sources whose `embedding` is null through `llm.embed()` (needs `NEWSROOM_VOYAGE_API_KEY`), then cluster. Feed content is often only a short summary.
