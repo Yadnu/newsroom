@@ -8,7 +8,7 @@ Phase 1: Reporter and data layer
 
 ## Active task
 
-1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
+1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
 
 ## Tasks
 
@@ -17,7 +17,7 @@ Phase 1: Reporter and data layer
 - [x] 0.2 `app/config.py` (pydantic-settings), `.env.example`, structlog setup, `/health` endpoint
 
 ### Phase 1: Reporter and data layer
-- [ ] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
+- [x] 1.1 data-model: SQLModel models for all 8 tables + first Alembic migration + HNSW index
 - [ ] 1.2 llm-gateway: `complete()` with structured output, `embed()`, routing table, cost and token accounting
 - [ ] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [ ] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
@@ -67,6 +67,6 @@ Phase 1: Reporter and data layer
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 0.2. `app/config.py` (pydantic-settings, `NEWSROOM_` prefix, secrets as `SecretStr`, `get_settings()` cached), `app/log.py` (structlog JSON, redacts secret-named fields), `app/main.py` with liveness `/health`, `.env.example`. Project is now an installable package (hatchling) so `importlib.metadata` and a future CLI entry point work; `fastapi[standard]` added for `fastapi dev`.
-- Half done: `docker compose up -d` still unverified (no Docker on the dev machine). No git remote, CI has not run.
-- Next: task 1.1. Embedding model chosen in decision 0007 (voyage-4-lite, 1024 dims).
+- Done: 1.1. 8 SQLModel tables, async Alembic with migration `f1b85b824a32`, HNSW cosine indexes, `get_engine()`/`session_scope()`. Integration tests passed against a local Postgres 16 + pgvector (via `pgserver`, since Docker is not installed); CI now runs them with a pgvector service. Added `sqlalchemy[asyncio]` (greenlet).
+- Half done: `docker compose up -d` still unverified. No git remote, CI has not run.
+- Next: task 1.2. The LLM provider for `complete()` is not chosen yet; embeddings go to Voyage (decision 0007).

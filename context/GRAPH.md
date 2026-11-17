@@ -14,7 +14,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | Node | Type | Status | Phase | Code | Depends on | Feeds | Decisions |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [archive](nodes/archive.md) | component | planned | 1 | `app/archive/` | data-model | web | 0005 |
-| [data-model](nodes/data-model.md) | shared | planned | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007 |
+| [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007 |
 | [llm-gateway](nodes/llm-gateway.md) | shared | planned | 1 | `app/shared/llm/` | archive | reporter, writer, editor | 0002, 0007 |
 | [reporter](nodes/reporter.md) | component | planned | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003 |
 | [editor](nodes/editor.md) | component | planned | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002 |
@@ -32,7 +32,7 @@ flowchart LR
   anchor["anchor (planned)"]
   archive["archive (planned)"]
   caller["caller (planned)"]
-  data_model["data-model (planned)"]
+  data_model["data-model (done)"]
   editor["editor (planned)"]
   llm_gateway["llm-gateway (planned)"]
   producer["producer (planned)"]

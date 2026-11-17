@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://newsroom:newsroom@localhost:5432/newsroom"
     redis_url: str = "redis://localhost:6379/0"
 
+    # Embeddings (decision 0007). The vector dimension is fixed in the schema, not here.
+    embedding_model: str = "voyage-4-lite"
+    voyage_api_key: SecretStr | None = None
+
     # External services from the decided stack. Optional until the task that uses them.
     deepgram_api_key: SecretStr | None = None
     cartesia_api_key: SecretStr | None = None
