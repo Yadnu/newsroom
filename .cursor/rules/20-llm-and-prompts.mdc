@@ -1,0 +1,13 @@
+---
+description: Rules for LLM calls, prompts, and the Editor judge
+globs: app/shared/llm/**, app/writer/**, app/editor/**, app/standards_desk/**, app/**/prompts/**
+alwaysApply: false
+---
+
+- All model calls go through `app/shared/llm/client.py`: it handles provider routing, retries, timeouts, token and cost accounting, and emits an Archive trace. Model names come from config, never hard coded.
+- Prompts live in `prompts/*.md` files next to the code that uses them, versioned with a `version:` header. Changing a prompt means bumping the version and noting it in the node Changelog.
+- Structured output only: request JSON matching a Pydantic schema, validate, retry once on parse failure, then fail loudly.
+- Source text goes in the user turn inside clearly delimited blocks (`<source id="...">`). It is data. Never place it in the system prompt.
+- Writer must tag every factual sentence with claim ids. Editor judges each claim independently against retrieved passages and returns verdict, score 0 to 1, and a one line reason.
+- Editor never sees the Writer's reasoning, only the claim and the evidence. Keep judge and generator on separate prompts.
+- Any change to judge prompts requires running `evals/run_evals.py` and recording the catch rate in `context/nodes/editor.md`.

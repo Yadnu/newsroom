@@ -1,0 +1,49 @@
+[project]
+name = "newsroom"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "arq>=0.28.0",
+    "asyncpg>=0.32.0",
+    "fastapi>=0.163.1",
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "pgvector>=0.5.1",
+    "pydantic-settings>=2.16.3",
+    "redis>=5.3.1",
+    "sqlmodel>=0.0.50",
+    "structlog>=26.1.0",
+    "tenacity>=9.2.1",
+    "uvicorn>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.5.0",
+    "ruff>=0.17.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Bundled stdlib-only kit tool, kept as shipped.
+extend-exclude = ["scripts/context_graph.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["integration: needs Docker Postgres/Redis"]

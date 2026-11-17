@@ -1,0 +1,11 @@
+---
+description: Database, migrations, and the trace chain
+globs: app/db/**, alembic/**
+alwaysApply: false
+---
+
+- Models in `app/db/models.py` (SQLModel). Every schema change ships with an Alembic migration in the same commit. Never edit an applied migration.
+- The trace chain must stay intact: sources -> stories -> script_lines -> claims -> claim_evidence. Foreign keys with explicit `ondelete` behavior.
+- Embeddings in pgvector columns with an HNSW index. Embedding model and dimension come from config and are recorded in `context/nodes/data-model.md`.
+- Dedupe sources by `content_hash` and URL canonicalization before insert.
+- Update `context/nodes/data-model.md` whenever a table or column changes.

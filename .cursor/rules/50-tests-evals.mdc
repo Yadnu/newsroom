@@ -1,0 +1,11 @@
+---
+description: Testing and evaluation rules
+globs: tests/**, evals/**
+alwaysApply: false
+---
+
+- pytest with pytest-asyncio. Unit tests mock network and LLM calls with recorded fixtures in `tests/fixtures/`. No live API calls in unit tests.
+- Integration tests run against Docker Postgres and are marked `@pytest.mark.integration`.
+- Each component has a contract test that checks its public surface against its node Contract.
+- Evals live in `evals/`: `labelled_claims.jsonl` (judge agreement), `planted_falsehoods.jsonl` (catch rate), `red_team.jsonl` (satire, stale, injection). Report precision, recall, catch rate, and cost.
+- Record headline eval numbers in `context/nodes/editor.md` and `context/STATE.md` after each run.

@@ -1,0 +1,14 @@
+---
+description: Python and FastAPI conventions for the backend
+globs: app/**/*.py, scripts/**/*.py, evals/**/*.py
+alwaysApply: false
+---
+
+- Python 3.12, full type hints, `mypy app` clean. Pydantic v2 models for every boundary between components.
+- Each component folder exposes a small public surface in `__init__.py` that matches its node's Contract in `context/nodes/<id>.md`. Other components import only that surface.
+- Async all the way for I/O (httpx.AsyncClient, asyncpg via SQLModel async session). No blocking calls in request paths.
+- Config only via `app/config.py` (pydantic-settings). No `os.getenv` elsewhere.
+- Errors: raise typed exceptions from `app/shared/errors.py`; FastAPI handlers map them to responses. No bare `except`.
+- Logging through `structlog`, JSON, with `briefing_id` and `component` bound. Never log secrets or full article bodies.
+- External calls: timeout set, retries with backoff via `tenacity`, result cached when idempotent.
+- Functions under ~40 lines. If a module passes ~300 lines, split it and note it in the node file.

@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: context-graph-check
+        name: context graph check
+        entry: python scripts/context_graph.py check
+        language: system
+        pass_filenames: false
+        always_run: true

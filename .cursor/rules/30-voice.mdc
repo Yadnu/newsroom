@@ -1,0 +1,12 @@
+---
+description: Voice pipeline rules for Anchor and Caller
+globs: app/anchor/**, app/caller/**, app/producer/**
+alwaysApply: false
+---
+
+- Voice runs on Pipecat. Keep STT, TTS and transport behind small adapters (`adapters/deepgram.py`, `adapters/cartesia.py`) so providers can be swapped by config.
+- Anchor only accepts script lines whose claims are all approved and cleared by Standards Desk. Enforce this in code, not by convention.
+- Stream TTS sentence by sentence. Record `audio_start_ms` and `audio_end_ms` per script line for transcript sync.
+- Barge-in: when Caller detects speech, Anchor pauses within 300 ms and the Producer decides to answer or resume.
+- Track a latency budget per Caller stage (stt, intent, search, write, judge, first_audio) and emit each as an Archive span.
+- Never block the audio loop on network calls. Use queues between pipeline stages.

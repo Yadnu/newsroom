@@ -1,0 +1,11 @@
+---
+description: Next.js player and Archive dashboard
+globs: web/**
+alwaysApply: false
+---
+
+- Next.js App Router, TypeScript strict, Tailwind. Server components by default, client components only for audio and live updates.
+- The API is the only backend. The web app never talks to the database or LLMs directly.
+- Generate API types from the FastAPI OpenAPI schema (`openapi-typescript`). Do not hand write response types.
+- Core screens: Player (audio + synced transcript, click a sentence to see its sources), Archive (briefing timeline, rejection log, latency per stage).
+- Every spoken sentence in the UI links to its claim trace. This is the main demo, keep it fast.

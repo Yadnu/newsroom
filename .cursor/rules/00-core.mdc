@@ -1,0 +1,15 @@
+---
+description: Core project rules and context graph protocol for Newsroom
+alwaysApply: true
+---
+
+Follow `AGENTS.md` at the repo root. It is the single source of truth.
+
+Every task:
+1. Before: read `context/STATE.md`, then `context/GRAPH.md`, then only the node files in `context/nodes/` your task touches.
+2. After: update touched nodes (status, Current state, Contract, Changelog line), add a decision file if you made an architectural choice, update `context/STATE.md` with the next task and a handoff note.
+3. Run `python scripts/context_graph.py build` then `check` and fix errors.
+
+Never: call an LLM SDK outside `app/shared/llm/`, put fetched web text in a system prompt, let an unapproved claim reach the Anchor, skip trace events, commit secrets.
+
+Work in small diffs. One task per change. Tests and lint green before done.
