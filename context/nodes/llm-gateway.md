@@ -6,7 +6,7 @@ phase: 1
 code: app/shared/llm/
 depends_on: [archive]
 feeds: [reporter, writer, editor]
-decisions: [0002]
+decisions: [0002, 0007]
 ---
 
 # llm-gateway
@@ -36,3 +36,4 @@ Empty package scaffolded at `app/shared/llm/` (docstring only, no public surface
 
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
+- 2026-11-16: linked decision 0007 (voyage-4-lite, 1024 dims).

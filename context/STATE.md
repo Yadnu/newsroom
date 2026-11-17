@@ -69,4 +69,4 @@ Phase 1: Reporter and data layer
 - Who worked last: Claude Code
 - Done: 0.2. `app/config.py` (pydantic-settings, `NEWSROOM_` prefix, secrets as `SecretStr`, `get_settings()` cached), `app/log.py` (structlog JSON, redacts secret-named fields), `app/main.py` with liveness `/health`, `.env.example`. Project is now an installable package (hatchling) so `importlib.metadata` and a future CLI entry point work; `fastapi[standard]` added for `fastapi dev`.
 - Half done: `docker compose up -d` still unverified (no Docker on the dev machine). No git remote, CI has not run.
-- Next: task 1.1 (needs the embedding model and dimension chosen for `data-model`).
+- Next: task 1.1. Embedding model chosen in decision 0007 (voyage-4-lite, 1024 dims).
