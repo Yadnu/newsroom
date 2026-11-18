@@ -6,7 +6,7 @@ phase: 1
 code: app/shared/llm/
 depends_on: [archive, data-model]
 feeds: [reporter, writer, editor]
-decisions: [0002, 0005, 0007, 0008]
+decisions: [0002, 0005, 0007, 0008, 0014]
 ---
 
 # llm-gateway
@@ -26,6 +26,9 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
 - `get_gateway()` / `set_gateway(Gateway)` / `aclose()` manage the process-wide instance.
 - Routing table `Settings.llm_routes` (task -> model) and prices `Settings.llm_prices`
   (model -> USD per 1M in/out). Both can be overridden from env as JSON.
+- Fallbacks `Settings.llm_fallbacks` (task -> model; default draft/classify/answer -> `gpt-oss-120b`, no judge
+  fallback): tried once after `StructuredOutputError` or a retryable provider error that outlived the retries
+  (decision 0014). `Gateway.fallback_for(task)`. Fallback models must be priced.
 
 ## Invariants
 
@@ -42,7 +45,7 @@ validation is resampled once (Groq's `json_validate_failed` 400 counts as a fail
 cover 408/409/429/5xx and transport errors with exponential backoff, honor `retry-after`, and are
 capped by `llm_max_attempts`. Embeddings go to Voyage in batches of 1000. Usage is logged as a
 structlog `llm.call` event and recorded on an archive span (`complete.<task>` / `embed`,
-with tokens, cost, model and attempts; no prompt text). Langfuse is not wired yet (task 3.2). Tested with `httpx.MockTransport` only; no live call has been made.
+with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse is not wired yet (task 3.2). Tested with `httpx.MockTransport` only; no live call has been made.
 
 ## Open questions
 
@@ -55,3 +58,4 @@ with tokens, cost, model and attempts; no prompt text). Langfuse is not wired ye
 - 2026-11-16: linked decision 0007 (voyage-4-lite, 1024 dims).
 - 2026-11-16: task 1.2: `complete()`/`embed()` with routing, retries, cost, strict schema (decision 0008).
 - 2026-11-16: `complete()`/`embed()` run inside archive spans (task 1.3).
+- 2026-11-18: per-task fallback model on invalid output or exhausted retries (decision 0014).

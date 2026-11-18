@@ -10,6 +10,7 @@ from app.archive import MemorySink
 from app.config import get_settings
 from app.db.models import Verdict
 from app.editor import ClaimVerdict, EvidencePassage, review_script
+from app.shared.llm import StructuredOutputError
 from app.writer import ClaimFeedback, DraftClaim, DraftLine, Script, WriterError
 
 
@@ -161,4 +162,27 @@ async def test_zero_rounds_only_judges(harness: Any, monkeypatch: pytest.MonkeyP
     h = harness(lambda text: Verdict.rewrite)
     out = await review_script(Script(briefing_id=uuid4(), lines=[_line(0, "x.")]))
     assert out.rounds == 0 and h.rewrites == []
+    assert out.verdicts[0].verdict == Verdict.rewrite
+
+
+async def test_pending_claims_are_not_sent_to_the_writer(harness: Any) -> None:
+    h = harness(lambda text: Verdict.pending)  # judge call failed
+    out = await review_script(Script(briefing_id=uuid4(), lines=[_line(0, "x.")]))
+    assert out.rounds == 0 and h.rewrites == []
+    assert out.verdicts[0].verdict == Verdict.pending
+
+
+async def test_llm_error_in_rewrite_keeps_old_line(
+    harness: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    h = harness(attributed_ok)
+
+    async def boom(line: DraftLine, feedback: Sequence[ClaimFeedback], round_no: int) -> DraftLine:
+        h.rewrites.append((line.text, list(feedback), round_no))
+        raise StructuredOutputError("bad json")
+
+    monkeypatch.setattr(review, "rewrite_line", boom)
+    bad = _line(0, "it ships Nova.")
+    out = await review_script(Script(briefing_id=uuid4(), lines=[bad]))
+    assert out.script.lines == [bad] and len(h.rewrites) == 2
     assert out.verdicts[0].verdict == Verdict.rewrite

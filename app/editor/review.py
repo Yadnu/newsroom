@@ -19,6 +19,7 @@ from app.db.models import Verdict
 from app.editor import judge
 from app.editor.judge import ClaimVerdict
 from app.log import get_logger
+from app.shared import llm
 from app.writer import (
     ClaimFeedback,
     DraftClaim,
@@ -40,8 +41,12 @@ class ReviewedScript(BaseModel):
         return sum(v.verdict == verdict for v in self.verdicts)
 
 
+# A pending verdict means the judge call failed: not the Writer's fault, so no rewrite.
+SEND_BACK = frozenset({Verdict.rewrite, Verdict.rejected})
+
+
 def needs_rewrite(line: DraftLine, verdicts: dict[UUID, ClaimVerdict]) -> bool:
-    return any(verdicts[c.id].verdict != Verdict.approved for c in line.claims)
+    return any(verdicts[c.id].verdict in SEND_BACK for c in line.claims)
 
 
 def feedback_for(line: DraftLine, verdicts: dict[UUID, ClaimVerdict]) -> list[ClaimFeedback]:
@@ -50,7 +55,7 @@ def feedback_for(line: DraftLine, verdicts: dict[UUID, ClaimVerdict]) -> list[Cl
             text=c.text, verdict=verdicts[c.id].verdict.value, reason=verdicts[c.id].reason
         )
         for c in line.claims
-        if verdicts[c.id].verdict != Verdict.approved
+        if verdicts[c.id].verdict in SEND_BACK
     ]
 
 
@@ -59,7 +64,7 @@ async def _try_rewrite(
 ) -> DraftLine | None:
     try:
         return await rewrite_line(line, feedback, round_no)
-    except WriterError as e:
+    except (WriterError, llm.LLMError) as e:
         log.warning("editor.rewrite_failed", line_id=str(line.id), round=round_no, error=str(e))
         return None
 

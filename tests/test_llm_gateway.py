@@ -104,8 +104,10 @@ async def test_route_override_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "NEWSROOM_LLM_PRICES",
         json.dumps({"m-a": [1, 2], "m-b": [3, 4], "voyage-4-lite": [0.02, 0]}),
     )
+    monkeypatch.setenv("NEWSROOM_LLM_FALLBACKS", json.dumps({"draft": "m-b"}))
     gw = _gw(Recorder())
     assert gw.model_for("judge") == "m-b"
+    assert gw.fallback_for("draft") == "m-b" and gw.fallback_for("judge") is None
 
 
 def test_missing_route_or_price_fails_fast() -> None:
@@ -274,3 +276,48 @@ async def test_module_functions_use_installed_gateway() -> None:
     finally:
         await llm.aclose()
     assert llm._gateway is None
+
+
+# ---- fallback (decision 0014) ----------------------------------------------------------------
+
+
+async def test_invalid_output_falls_back_to_task_fallback_model(trace_sink: Any) -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(_chat("not json"), _chat("{}"), _chat(good, 50, 10))
+    result, usage = await _gw(rec).complete("draft", MSGS, Verdict)
+    assert result.reason == "ok"
+    assert [rec.body(i)["model"] for i in range(3)] == [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+    ]
+    assert usage.model == "openai/gpt-oss-120b"
+    (s,) = [t for t in trace_sink.traces if t.event == "complete.draft"]
+    assert s.payload["fallback_from"] == "openai/gpt-oss-20b"
+    assert s.payload["model"] == "openai/gpt-oss-120b"
+
+
+async def test_rate_limit_after_retries_falls_back() -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(httpx.Response(429), httpx.Response(429), _chat(good))
+    result, _ = await _gw(rec, llm_max_attempts=2).complete("draft", MSGS, Verdict)
+    assert result.approved is True and rec.body(2)["model"] == "openai/gpt-oss-120b"
+
+
+async def test_auth_error_does_not_fall_back() -> None:
+    rec = Recorder(httpx.Response(401, json={"error": {"message": "bad key"}}))
+    with pytest.raises(LLMProviderError):
+        await _gw(rec).complete("draft", MSGS, Verdict)
+    assert len(rec.requests) == 1
+
+
+async def test_judge_has_no_fallback() -> None:
+    rec = Recorder(_chat("not json"), _chat("{}"))
+    with pytest.raises(StructuredOutputError):
+        await _gw(rec).complete("judge", MSGS, Verdict)
+    assert len(rec.requests) == 2
+
+
+def test_fallback_model_must_be_priced() -> None:
+    with pytest.raises(LLMConfigError, match="no price"):
+        _gw(Recorder(), llm_fallbacks={"draft": "unpriced-model"})

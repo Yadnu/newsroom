@@ -180,6 +180,19 @@ def no_evidence(claim_id: UUID) -> ClaimVerdict:
     )
 
 
+def judge_failed(claim_id: UUID, error: Exception) -> ClaimVerdict:
+    """The judge call failed: the claim stays ``pending`` (never airs) and is not stored."""
+    return ClaimVerdict(
+        claim_id=claim_id,
+        verdict=Verdict.pending,
+        score=0.0,
+        reason=f"judge failed: {type(error).__name__}",
+        checks=dict.fromkeys(CHECKS, False),
+        sensitive=False,
+        evidence=[],
+    )
+
+
 # ---- judging --------------------------------------------------------------------------------
 
 
@@ -192,8 +205,12 @@ async def _judge(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
             v = no_evidence(claim.id)
         else:
             messages, refs = judge_messages(claim.text, passages)
-            out = await llm.complete("judge", messages, JudgeOut)
-            v = decide(claim.id, out, refs)
+            try:
+                out = await llm.complete("judge", messages, JudgeOut)
+            except llm.LLMError as e:
+                v = judge_failed(claim.id, e)
+            else:
+                v = decide(claim.id, out, refs)
         s.set(
             verdict=v.verdict.value,
             score=v.score,
@@ -245,7 +262,9 @@ async def judge_script(script: Script) -> JudgedScript:
 
 
 async def store_verdicts(verdicts: Sequence[ClaimVerdict], briefing_id: UUID | None = None) -> None:
-    """Write verdicts and evidence in one transaction. Re-judging replaces old evidence."""
+    """Write verdicts and evidence in one transaction. Re-judging replaces old evidence.
+    ``pending`` verdicts (judge failed) are not written: the claim keeps its stored state."""
+    verdicts = [v for v in verdicts if v.verdict != Verdict.pending]
     for v in verdicts:
         if v.verdict == Verdict.approved and not v.evidence:
             raise AssertionError(f"claim {v.claim_id}: approved without evidence")

@@ -302,3 +302,12 @@ async def test_judge_script_judges_every_claim_and_traces(
     assert all(t.parent_id == outer.id and t.briefing_id == script.briefing_id for t in inner)
     judge_calls = [t for t in trace_sink.traces if t.event == "complete.judge"]
     assert {t.parent_id for t in judge_calls} == {t.id for t in inner}
+
+
+async def test_judge_failure_leaves_claim_pending(backend: Any, db: dict[str, Any]) -> None:
+    src = _src("Ars", CHIP)
+    db["sources"] = {src.id: src}
+    backend("not json", "{}")  # judge has no fallback model
+    v = await judge_claim(_claim("Acme began shipping an AI chip.", src))
+    assert v.verdict == Verdict.pending and v.reason == "judge failed: StructuredOutputError"
+    assert v.evidence == []

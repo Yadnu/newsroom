@@ -6,7 +6,7 @@ phase: 2
 code: app/editor/
 depends_on: [writer, llm-gateway, data-model, archive]
 feeds: [standards-desk, writer]
-decisions: [0002, 0012, 0013]
+decisions: [0002, 0012, 0013, 0014]
 ---
 
 # editor
@@ -32,6 +32,8 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
   `ReviewedScript`: script (current lines), verdicts (one per current claim), rounds, `count(verdict)`.
 - `judge_all(claims)` (judge without storing) and `store_verdicts(verdicts, briefing_id=None)`.
 - Writes `claims.verdict/score/reason/judged_at` and `claim_evidence` (replaced on re-judge).
+- A failed judge call (`LLMError`; the judge has no fallback model) gives `verdict=pending`, which is not stored
+  and not sent back to the Writer. A rewrite that raises `LLMError` keeps the old line (decision 0014).
 - Prompts: `prompts/editor/judge_system.md` (static) and `judge_user.md` (`$today`, `$claim`, `$evidence`).
   Passages go in escaped `<evidence id="E<n>" outlet published>` blocks, in the user turn only.
 
@@ -68,3 +70,4 @@ falsehood rejected; a company-reported fact stated as plain fact got rewrite (at
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-18: evidence retrieval + `judge_claim()`/`judge_script()` with 5-check rubric (task 2.2, decision 0012).
 - 2026-11-18: `review_script()` rewrite loop, max 2 rounds (task 2.3, decision 0013).
+- 2026-11-18: judge failure -> pending; loop tolerates LLM errors (decision 0014).

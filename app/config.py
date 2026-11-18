@@ -70,6 +70,16 @@ class Settings(BaseSettings):
             "judge": "openai/gpt-oss-120b",
         }
     )
+    # Task -> fallback model, tried once when the routed model gives invalid output twice or a
+    # transient error outlives the retries (decision 0014). No judge fallback: a weaker judge is
+    # worse than no verdict. Env override is JSON.
+    llm_fallbacks: dict[str, str] = Field(
+        default_factory=lambda: {
+            "draft": "openai/gpt-oss-120b",
+            "classify": "openai/gpt-oss-120b",
+            "answer": "openai/gpt-oss-120b",
+        }
+    )
     # Model -> (input, output) USD per 1M tokens. Groq list prices 2026-11-16; free tier bills $0
     # but we record list cost so budgets hold after upgrading. Voyage price unconfirmed (0007).
     llm_prices: dict[str, tuple[float, float]] = Field(

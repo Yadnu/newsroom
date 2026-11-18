@@ -6,7 +6,7 @@ phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
 feeds: [editor]
-decisions: [0002, 0011, 0013]
+decisions: [0002, 0011, 0013, 0014]
 ---
 
 # writer
@@ -17,8 +17,9 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 
 - `async def draft_script(rundown: Rundown) -> Script`: one `llm.complete("draft", ..., DraftSegment)` call per
   rundown item, run concurrently. Stores `script_lines` (order sequential across the briefing), `claims`
-  (`verdict=pending`) and `claim_sources` in one transaction. Raises `WriterError` if a segment is still invalid
-  after one resample, or if no item has usable (non-retracted) sources. An item with no usable sources is skipped.
+  (`verdict=pending`) and `claim_sources` in one transaction. An item with no usable sources, or whose segment fails
+  (`WriterError` after one resample, or `LLMError`), is skipped (decision 0014). Raises `WriterError` only if no
+  item has usable sources or none could be drafted.
 - `Script`: briefing_id, lines[`DraftLine`: id, story_id, order, text, claims[`DraftClaim`: id, text, source_ids]].
 - `async def rewrite_line(line: DraftLine, feedback: Sequence[ClaimFeedback], round_no: int) -> DraftLine`: one
   `"draft"` call using the story's non-retracted sources and `prompts/writer/rewrite_user.md` (`$line`, `$feedback`).
@@ -56,3 +57,4 @@ instruction. It states company-reported facts without attribution, which the Edi
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-17: `draft_script()` with claim tagging, validation + one resample, prompts in `prompts/writer/` (task 2.1).
 - 2026-11-18: `rewrite_line()` + attribution rule in the draft prompt (task 2.3, decision 0013).
+- 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).
