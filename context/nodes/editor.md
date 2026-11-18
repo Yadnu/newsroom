@@ -44,7 +44,8 @@ Task 2.2 done in `app/editor/retrieve.py` and `judge.py`. Spans: `editor/judge_s
 verdict), with a child `editor/judge_claim` per claim (verdict, score, checks, evidence count).
 Unit tested with fake Groq + Voyage over `httpx.MockTransport`. `tests/integration/test_editor_db.py`
 passes on Neon Postgres 18 (verdicts, evidence, briefing status, no approved claim without evidence,
-re-judge replaces evidence). No live model run yet, so judge quality is unmeasured.
+re-judge replaces evidence). Live smoke run (2026-11-18, `openai/gpt-oss-120b`, 3 hand-made claims): planted
+falsehood rejected; a company-reported fact stated as plain fact got rewrite (attributed). ~1.8 s per judgement. No eval set yet (task 2.4).
 
 ## Open questions
 

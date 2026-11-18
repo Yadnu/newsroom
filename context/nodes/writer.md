@@ -36,8 +36,9 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 
 `draft_script()` done (task 2.1) in `app/writer/draft.py` and `prompts.py`. Spans: `writer/draft_script`
 (briefing_id), with a child `writer/draft_segment` per story (attempts, lines, claims, words, problems).
-Tested with a fake Groq through `httpx.MockTransport` and on Postgres. Not yet run against a real model (no
-`NEWSROOM_GROQ_API_KEY`), so prompt quality and length accuracy are unmeasured.
+Tested with a fake Groq through `httpx.MockTransport` and on Postgres. One live smoke run (2026-11-18,
+`openai/gpt-oss-20b`, 2 hand-written sources, 30 s target): 75/75 words, valid on the first try, ignored an injected
+instruction. It states company-reported facts without attribution, which the Editor's `attributed` check flags as rewrite.
 
 ## Open questions
 
