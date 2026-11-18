@@ -196,7 +196,7 @@ def judge_failed(claim_id: UUID, error: Exception) -> ClaimVerdict:
 # ---- judging --------------------------------------------------------------------------------
 
 
-async def _judge(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
+async def judge_passages(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
     # The claim text and reason are recorded so rejections survive a rewrite (decision 0013).
     with span(
         "editor", "judge_claim", claim_id=claim.id, claim=claim.text, passages=len(passages)
@@ -232,7 +232,7 @@ async def judge_all(claims: Sequence[DraftClaim]) -> list[ClaimVerdict]:
 
     async def one(c: ClaimRef) -> ClaimVerdict:
         async with limit:
-            return await _judge(c, passages[c.id])
+            return await judge_passages(c, passages[c.id])
 
     return list(await asyncio.gather(*(one(c) for c in refs)))
 
@@ -245,7 +245,7 @@ async def judge_claim(claim: DraftClaim) -> ClaimVerdict:
     """Retrieve evidence, judge one claim, and store the verdict and its evidence."""
     ref = _ref(claim)
     passages = await retrieve_evidence([ref])
-    verdict = await _judge(ref, passages[ref.id])
+    verdict = await judge_passages(ref, passages[ref.id])
     await store_verdicts([verdict])
     return verdict
 
