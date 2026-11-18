@@ -6,7 +6,7 @@ phase: 2
 code: app/editor/
 depends_on: [writer, llm-gateway, data-model, archive]
 feeds: [standards-desk, writer]
-decisions: [0002, 0012]
+decisions: [0002, 0012, 0013]
 ---
 
 # editor
@@ -27,6 +27,10 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
   `chunk_text(text, size, overlap)`.
 - Rubric: supported, faithful, attributed, fresh, corroborated (sensitive claims need 2 outlets).
   Verdict rules are in decision 0012.
+- `async def review_script(script: Script) -> ReviewedScript`: `judge_script()`, then up to `rewrite_max_rounds` (2)
+  rounds of `writer.rewrite_line()` for lines with a non-approved claim, re-judging only new claims (decision 0013).
+  `ReviewedScript`: script (current lines), verdicts (one per current claim), rounds, `count(verdict)`.
+- `judge_all(claims)` (judge without storing) and `store_verdicts(verdicts, briefing_id=None)`.
 - Writes `claims.verdict/score/reason/judged_at` and `claim_evidence` (replaced on re-judge).
 - Prompts: `prompts/editor/judge_system.md` (static) and `judge_user.md` (`$today`, `$claim`, `$evidence`).
   Passages go in escaped `<evidence id="E<n>" outlet published>` blocks, in the user turn only.
@@ -40,7 +44,8 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
 
 ## Current state
 
-Task 2.2 done in `app/editor/retrieve.py` and `judge.py`. Spans: `editor/judge_script` (counts per
+Tasks 2.2 and 2.3 done in `app/editor/retrieve.py`, `judge.py` and `review.py`. Spans: `editor/review_script` (rounds,
+counts) > `editor/rewrite_round` (rewritten, failed, approved). `judge_claim` spans now carry the claim text and reason. Spans: `editor/judge_script` (counts per
 verdict), with a child `editor/judge_claim` per claim (verdict, score, checks, evidence count).
 Unit tested with fake Groq + Voyage over `httpx.MockTransport`. `tests/integration/test_editor_db.py`
 passes on Neon Postgres 18 (verdicts, evidence, briefing status, no approved claim without evidence,
@@ -62,3 +67,4 @@ falsehood rejected; a company-reported fact stated as plain fact got rewrite (at
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-18: evidence retrieval + `judge_claim()`/`judge_script()` with 5-check rubric (task 2.2, decision 0012).
+- 2026-11-18: `review_script()` rewrite loop, max 2 rounds (task 2.3, decision 0013).

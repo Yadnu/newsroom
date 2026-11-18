@@ -4,5 +4,14 @@ Node: context/nodes/writer.md
 """
 
 from app.writer.draft import DraftClaim, DraftLine, Script, WriterError, draft_script
+from app.writer.rewrite import ClaimFeedback, rewrite_line
 
-__all__ = ["DraftClaim", "DraftLine", "Script", "WriterError", "draft_script"]
+__all__ = [
+    "ClaimFeedback",
+    "DraftClaim",
+    "DraftLine",
+    "Script",
+    "WriterError",
+    "draft_script",
+    "rewrite_line",
+]

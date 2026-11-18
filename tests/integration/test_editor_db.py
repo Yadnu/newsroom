@@ -18,10 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import app.shared.llm as llm
 from alembic import command
+from app.archive import MemorySink
 from app.config import Settings, get_settings
 from app.db.models import EMBEDDING_DIM
 from app.db.session import get_engine
-from app.editor import judge_claim, judge_script
+from app.editor import judge_claim, judge_script, review_script
 from app.producer import build_rundown
 from app.writer import draft_script
 
@@ -46,7 +47,17 @@ def backend(req: httpx.Request) -> httpx.Response:
         data = [{"index": i, "embedding": [1.0] * EMBEDDING_DIM} for i in range(len(body["input"]))]
         return httpx.Response(200, json={"data": data, "usage": {"total_tokens": 5}})
     user = body["messages"][1]["content"]
-    if "Story: " in user:  # Writer
+    if "<line>" in user:  # Writer rewrite: attribute the claim
+        story = user.split("Story: ", 1)[1].split("\n", 1)[0]
+        text = f"{story} happened, outlets say."
+        content = json.dumps(
+            {
+                "lines": [
+                    {"text": text, "factual": True, "claims": [{"text": text, "sources": ["S1"]}]}
+                ]
+            }
+        )
+    elif "Story: " in user:  # Writer draft
         story = user.split("Story: ", 1)[1].split("\n", 1)[0]
         content = json.dumps(
             {
@@ -59,8 +70,8 @@ def backend(req: httpx.Request) -> httpx.Response:
                 ]
             }
         )
-    else:  # Editor: approve the chip story, reject the probe
-        content = _judgement("<claim>Chip" in user)
+    else:  # Editor: approve the chip story and attributed claims, reject the rest
+        content = _judgement("<claim>Chip" in user or "outlets say" in user)
     return httpx.Response(
         200,
         json={
@@ -177,3 +188,41 @@ async def test_judge_script_stores_verdicts_and_evidence(db: AsyncEngine) -> Non
     await judge_claim(chip)
     rows = await _all(db, "SELECT 1 FROM claim_evidence WHERE claim_id = :c", c=chip.id)
     assert len(rows) == 1
+
+
+async def test_review_script_rewrites_rejected_line_and_replaces_its_claims(
+    db: AsyncEngine, trace_sink: MemorySink
+) -> None:
+    await _story(db, "Chip launch", ["A", "B"])
+    await _story(db, "AI probe", ["A", "B"])
+    rundown = await build_rundown(1.5)
+    script = await draft_script(rundown)
+    probe_line = next(ln for ln in script.lines if ln.text.startswith("AI probe"))
+    old_claim = probe_line.claims[0].id
+
+    reviewed = await review_script(script)
+    assert reviewed.rounds == 1
+    assert {v.verdict for v in reviewed.verdicts} == {"approved"}
+
+    (line,) = await _all(db, "SELECT text FROM script_lines WHERE id = :i", i=probe_line.id)
+    assert line.text == "AI probe happened, outlets say."
+    claims = await _all(
+        db,
+        "SELECT id, verdict, rewrite_round FROM claims WHERE script_line_id = :i",
+        i=probe_line.id,
+    )
+    assert len(claims) == 1 and claims[0].id != old_claim
+    assert (claims[0].verdict, claims[0].rewrite_round) == ("approved", 1)
+    assert await _all(db, "SELECT 1 FROM claims WHERE id = :i", i=old_claim) == []
+    ev = await _all(db, "SELECT 1 FROM claim_evidence WHERE claim_id = :i", i=claims[0].id)
+    cited = await _all(db, "SELECT 1 FROM claim_sources WHERE claim_id = :i", i=claims[0].id)
+    assert len(ev) == 1 and len(cited) == 1
+
+    # The rejection survives in the trace log (decision 0013).
+    (rejected,) = [
+        t
+        for t in trace_sink.traces
+        if t.event == "judge_claim" and t.payload["claim_id"] == str(old_claim)
+    ]
+    assert rejected.payload["verdict"] == "rejected"
+    assert rejected.payload["claim"] == "AI probe happened."

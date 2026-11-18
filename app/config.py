@@ -117,6 +117,8 @@ class Settings(BaseSettings):
     editor_source_max_chars: int = Field(default=20000, ge=1000)
     editor_top_k: int = Field(default=4, ge=1, le=12)
     editor_max_concurrency: int = Field(default=8, ge=1)
+    # Rewrite loop (task 2.3, decision 0013): rounds of Writer rewrites for non-approved claims.
+    rewrite_max_rounds: int = Field(default=2, ge=0, le=5)
 
 
 @lru_cache

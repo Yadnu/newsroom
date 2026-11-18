@@ -106,7 +106,7 @@ def db(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         state["stored"].append((list(verdicts), briefing_id))
 
     monkeypatch.setattr(retrieve, "load_sources", fake_load)
-    monkeypatch.setattr(judge, "_store", fake_store)
+    monkeypatch.setattr(judge, "store_verdicts", fake_store)
     return state
 
 

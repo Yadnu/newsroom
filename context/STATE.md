@@ -8,7 +8,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Active task
 
-2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
+2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py`
 
 ## Tasks
 
@@ -28,7 +28,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
 - [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
 - [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
-- [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
+- [x] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
 - [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
 - [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
@@ -67,6 +67,6 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.2. `app/editor/` has `retrieve_evidence()` (cited, non-retracted sources are chunked on the fly, top-4 chunks by cosine) and `judge_claim()`/`judge_script()`. The model scores the 5 checks and code computes the verdict (decision 0012). Branch `phase2/editor-judge`, stacked on `phase2/writer-draft`.
-- Half done: Groq key is set in `.env` and a live smoke run of Writer + Editor worked (see the node files). Voyage key still missing, so 1.6 acceptance and live retrieval are blocked. Dev DB is now Neon (Postgres 18.7, pgvector) via `NEWSROOM_DATABASE_URL` in `.env` (asyncpg URL with `?ssl=require`). Redis is Upstash over TCP+TLS: `NEWSROOM_REDIS_URL=rediss://default:<REST token>@<host>:6379/0`, and the ARQ worker connects. All 13 integration tests pass there, but they TRUNCATE tables, so give `NEWSROOM_TEST_DATABASE_URL` its own Neon branch before the dev DB holds real data. Smart App Control on this machine blocks SQLAlchemy's `.pyd` files and the `mypy` exe. Use `python -m mypy app` and load the pure-Python `_cy` modules to run tests.
-- Next: task 2.3. Add `rewrite_line()` in the Writer, send `rewrite`/`rejected` verdicts back, re-judge with `judge_claim()` (it replaces evidence), bump `claims.rewrite_round`, and stop after 2 rounds.
+- Done: 2.3. `editor.review_script()` judges, sends lines with non-approved claims to `writer.rewrite_line()` with the Editor's reasons, and re-judges, for at most 2 rounds. A rewrite replaces the line's claims, and the rejection history lives in `judge_claim` spans (decision 0013). The draft prompt now requires attribution. Branch `phase2/rewrite-loop`, stacked on `phase2/editor-judge`. 147 tests pass, including Neon integration.
+- Half done: live Groq runs are flaky. `gpt-oss-20b` sometimes fails strict JSON twice (`StructuredOutputError`, which aborts all of `draft_script`), and rate limits cause retries of up to 26 s. Voyage key still missing (1.6 acceptance, live retrieval). Env: Neon Postgres + Upstash Redis + Groq in `.env`. Smart App Control blocks the SQLAlchemy `.pyd` files and the mypy exe: use `python -m mypy app` and the pure-Python `_cy` loader.
+- Next: task 2.4. Build the eval set (100 labelled claims + 30 planted falsehoods), with `evals/run_evals.py` calling `judge_all()` over fixed passages, and record the catch rate in the editor node.
