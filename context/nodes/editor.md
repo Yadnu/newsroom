@@ -43,7 +43,8 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
 Task 2.2 done in `app/editor/retrieve.py` and `judge.py`. Spans: `editor/judge_script` (counts per
 verdict), with a child `editor/judge_claim` per claim (verdict, score, checks, evidence count).
 Unit tested with fake Groq + Voyage over `httpx.MockTransport`. `tests/integration/test_editor_db.py`
-is written but has not run yet (no Postgres on this machine). No live model run yet, so judge quality is unmeasured.
+passes on Neon Postgres 18 (verdicts, evidence, briefing status, no approved claim without evidence,
+re-judge replaces evidence). No live model run yet, so judge quality is unmeasured.
 
 ## Open questions
 

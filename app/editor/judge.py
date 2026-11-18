@@ -241,9 +241,9 @@ async def _store(verdicts: Sequence[ClaimVerdict], briefing_id: UUID | None = No
     async with session_scope() as session:
         if verdicts:
             ids = [v.claim_id for v in verdicts]
-            await session.execute(delete(_evidence).where(_evidence.c.claim_id.in_(ids)))
+            await session.exec(delete(_evidence).where(_evidence.c.claim_id.in_(ids)))
         for v in verdicts:
-            await session.execute(
+            await session.exec(
                 update(_claims)
                 .where(_claims.c.id == v.claim_id)
                 .values(verdict=v.verdict.value, score=v.score, reason=v.reason, judged_at=now)
@@ -258,7 +258,7 @@ async def _store(verdicts: Sequence[ClaimVerdict], briefing_id: UUID | None = No
         session.add_all(rows)
         await session.flush()
         if briefing_id is not None:
-            await session.execute(
+            await session.exec(
                 update(_briefings)
                 .where(_briefings.c.id == briefing_id)
                 .values(status=BriefingStatus.judged.value)
