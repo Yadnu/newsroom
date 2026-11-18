@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-17 by: Claude Code
+Last updated: 2026-11-18 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Active task
 
-2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
+2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
 
 ## Tasks
 
@@ -27,7 +27,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
 - [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
-- [ ] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
+- [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 - [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
 - [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
 - [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
@@ -67,6 +67,6 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.1. `draft_script()` in `app/writer/` with prompts in `prompts/writer/`. A new `claim_sources` table holds Writer citations (migration `f41cfce23b88`, decision 0011), and `StorySourceRef` now has the source `id`. It is on branch `phase2/writer-draft`, stacked on `phase2/producer-rundown` (PR #3), which is stacked on PR #2.
-- Half done: nothing has run against a real LLM (no `NEWSROOM_GROQ_API_KEY`), so prompt quality is unknown. The 1.6 acceptance is still blocked on `NEWSROOM_VOYAGE_API_KEY`.
-- Next: task 2.2. The Editor retrieves evidence passages from the sources in `claim_sources` (embedding similarity over chunks), and `judge_claim()` goes through `llm.complete("judge", ...)`. The judge must never see the Writer's reasoning.
+- Done: 2.2. `app/editor/` has `retrieve_evidence()` (cited, non-retracted sources are chunked on the fly, top-4 chunks by cosine) and `judge_claim()`/`judge_script()`. The model scores the 5 checks and code computes the verdict (decision 0012). Branch `phase2/editor-judge`, stacked on `phase2/writer-draft`.
+- Half done: `tests/integration/test_editor_db.py` has not run (no Docker/Postgres here), and no live Groq/Voyage keys, so judge quality is unmeasured. Smart App Control on this machine blocks SQLAlchemy's `.pyd` files and the `mypy` exe. Use `python -m mypy app` and load the pure-Python `_cy` modules to run tests.
+- Next: task 2.3. Add `rewrite_line()` in the Writer, send `rewrite`/`rejected` verdicts back, re-judge with `judge_claim()` (it replaces evidence), bump `claims.rewrite_round`, and stop after 2 rounds.

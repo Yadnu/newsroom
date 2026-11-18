@@ -111,6 +111,13 @@ class Settings(BaseSettings):
     writer_words_per_second: float = Field(default=2.5, gt=0)
     writer_source_max_chars: int = Field(default=6000, ge=500)
 
+    # Editor (task 2.2, decision 0012). Evidence chunks are embedded on the fly, not stored.
+    editor_chunk_chars: int = Field(default=700, ge=200)
+    editor_chunk_overlap: int = Field(default=120, ge=0)
+    editor_source_max_chars: int = Field(default=20000, ge=1000)
+    editor_top_k: int = Field(default=4, ge=1, le=12)
+    editor_max_concurrency: int = Field(default=8, ge=1)
+
 
 @lru_cache
 def get_settings() -> Settings:
