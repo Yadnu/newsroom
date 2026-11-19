@@ -84,6 +84,7 @@ async def top_stories(
         for m in members:
             by_story[m.story_id].append(
                 StorySourceRef(
+                    outlet=m.outlet, title=m.title, url=m.url, published_at=m.published_at
                     id=m.id, outlet=m.outlet, title=m.title, url=m.url, published_at=m.published_at
                 )
             )

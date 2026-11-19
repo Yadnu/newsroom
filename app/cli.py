@@ -5,6 +5,9 @@ import json
 import sys
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Any
+
+import typer
+from rich.console import Console
 from uuid import UUID
 
 import typer
@@ -14,6 +17,10 @@ from rich.table import Table
 
 from app.archive import start_archive, stop_archive
 from app.config import get_settings
+from app.log import configure_logging
+from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
+from app.reporter.rank import TopStory, top_stories
+from app.shared import llm
 from app.db.models import Verdict
 from app.editor import ClaimVerdict, ReviewedScript, review_script
 from app.log import configure_logging
@@ -231,5 +238,6 @@ def brief(
     print_brief(report)
 
 
+ main
 def main() -> None:
     app()

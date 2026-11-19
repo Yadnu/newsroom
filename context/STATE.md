@@ -22,6 +22,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 - [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [x] 1.5 reporter: clustering into stories by embedding similarity
+- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on the Voyage key.
 - [x] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
 
 ### Phase 2: Writer and Editor (text only)
@@ -68,6 +69,9 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
+- Done: 1.6 code. `top_stories()` in `app/reporter/rank.py` and the `newsroom stories` CLI in `app/cli.py` (typer + rich). CLI logs now go to stderr so `--json` stays clean. Everything is on PR #1 (`phase1/gateway-archive-reporter`).
+- Half done: the 1.6 acceptance is not met. A live `newsroom stories --top 10 --refresh` ingested 91 sources but produced 0 stories, because there is no `NEWSROOM_VOYAGE_API_KEY`. The 0.80 cluster threshold is uncalibrated.
+- Next: add the Voyage key, run `uv run newsroom stories --top 10 --refresh`, tune `reporter_cluster_threshold` until the top 10 all have 2+ sources from distinct events, then tick 1.6 and start phase 2 (task 2.0).
 - Done: 1.6 acceptance. 10 more default feeds (`app/config.py`); a live refresh embedded 263 sources and the top 10 all have 2+ sources. `tests/conftest.py` now exits if `NEWSROOM_TEST_DATABASE_URL` is the app database (integration fixtures TRUNCATE; that is how test stories "Chip launch"/"AI probe", outlets A/B/C, got into the dev DB, where they still are).
 - Open: Groq free tier 8000 TPM on the judge: about half of claims went `pending` in the live brief; chat calls have no pacing (stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event (Anthropic IPO) in two. Judge weaknesses from 2.4. `main` has only up to PR #3; phase 2 is on `phase2/evals-v1` with no PR to main yet.
 - Next: 3.1 `claim_trace()` + rejection log API (archive node).

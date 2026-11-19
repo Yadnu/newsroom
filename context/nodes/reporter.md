@@ -32,6 +32,7 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   Idempotent; serialized by a Postgres advisory lock.
 - `async def top_stories(limit=10, window_hours=24, min_sources=2) -> list[TopStory]` (`rank.py`):
   stories whose newest non-retracted source is in the window, with `min_sources`+ sources, ranked by
+  distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[outlet, title, url, published_at].
   distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[`StorySourceRef`: id, outlet, title, url, published_at].
 - CLI (`app/cli.py`, script `newsroom`): `newsroom stories --top N [--hours 24] [--min-sources 2] [--refresh] [--json]`.
   `--refresh` runs ingest, then embed, then cluster first. Logs go to stderr, results to stdout.
@@ -58,6 +59,10 @@ with a child `reporter/fetch_feed` per feed. Default feeds: 16 feeds from 15 AI/
 returned 200; VentureBeat 429 and Semafor 404 left out), uniform trust_score 0.5 (placeholder). Live run on 2026-11-16: 91 sources from 6 outlets, a re-run
 inserted 0. Content is the feed body only: often a summary of about 100 chars, and full text for
 some outlets (capped at 20k chars). Clustering done (task 1.5) in `cluster.py`: pure `assign()`
+plus DB functions. Spans are `reporter/embed_sources` and `reporter/cluster_stories`. Verified on
+Postgres with a fake Voyage endpoint only, because there is no Voyage key yet. The 0.80 threshold
+is uncalibrated. `top_stories` and the CLI are built (task 1.6). A live `newsroom stories --refresh`
+ingested 91 sources but found 0 stories, because there is no Voyage key. Tests avoid `numpy.random` because Windows Application Control on the dev box
 plus DB functions. Spans are `reporter/embed_sources` and `reporter/cluster_stories`. The 0.80 threshold
 is uncalibrated. `top_stories` and the CLI are built (task 1.6). Live `newsroom stories --refresh`
 (2026-11-18, 7 min with Voyage free-tier pacing): 263 new sources embedded, top 10 all with 2+ sources and up to
