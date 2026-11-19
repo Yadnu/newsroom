@@ -8,7 +8,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Active task
 
-2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py`
+2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ## Tasks
 
@@ -29,7 +29,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
 - [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 - [x] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
-- [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
+- [x] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
 - [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ### Phase 3: Archive
@@ -62,11 +62,12 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Latest eval numbers
 
-(none yet)
+- 2026-11-18, judge_v1 (130 cases), prompt `dad2a081`, `gpt-oss-120b`: catch rate 1.00 (30/30), precision 0.904,
+  recall 0.971, false flag rate 0.113. Results in `evals/results/judge_v1-dad2a081.*`.
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.3. `editor.review_script()` judges, sends lines with non-approved claims to `writer.rewrite_line()` with the Editor's reasons, and re-judges, for at most 2 rounds. A rewrite replaces the line's claims, and the rejection history lives in `judge_claim` spans (decision 0013). The draft prompt now requires attribution. Branch `phase2/rewrite-loop`, stacked on `phase2/editor-judge`. 147 tests pass, including Neon integration.
-- Half done: live Groq runs are flaky. `gpt-oss-20b` sometimes fails strict JSON twice (`StructuredOutputError`, which aborts all of `draft_script`), and rate limits cause retries of up to 26 s. Voyage key still missing (1.6 acceptance, live retrieval). Env: Neon Postgres + Upstash Redis + Groq in `.env`. Smart App Control blocks the SQLAlchemy `.pyd` files and the mypy exe: use `python -m mypy app` and the pure-Python `_cy` loader.
-- Next: task 2.4. Build the eval set (100 labelled claims + 30 planted falsehoods), with `evals/run_evals.py` calling `judge_all()` over fixed passages, and record the catch rate in the editor node.
+- Done: 2.4. `evals/run_evals.py` + `evals/data/judge_v1.json` (20 synthetic stories, 100 labelled + 30 planted), and the baseline is recorded (above). Also: gateway fallback models and partial-failure handling (decision 0014). PRs #3 to #7 are open and stacked (#3 -> main, each next PR on the one before).
+- Half done: judge weaknesses from the eval: it demands attribution for facts outlets report plainly (6 of 7 false flags), and it misses `sensitive` on election and central-bank figures. No prompt change yet; rerun the eval after any change. Groq free-tier rate limits fail about 23% of calls at concurrency 2; the runner resumes, so use `--concurrency 1`. Voyage key still missing.
+- Next: task 2.5, the `newsroom brief --minutes 3` CLI: build_rundown -> draft_script -> review_script, then print each line with its claims' verdicts and source outlets.

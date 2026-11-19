@@ -52,7 +52,9 @@ verdict), with a child `editor/judge_claim` per claim (verdict, score, checks, e
 Unit tested with fake Groq + Voyage over `httpx.MockTransport`. `tests/integration/test_editor_db.py`
 passes on Neon Postgres 18 (verdicts, evidence, briefing status, no approved claim without evidence,
 re-judge replaces evidence). Live smoke run (2026-11-18, `openai/gpt-oss-120b`, 3 hand-made claims): planted
-falsehood rejected; a company-reported fact stated as plain fact got rewrite (attributed). ~1.8 s per judgement. No eval set yet (task 2.4).
+falsehood rejected; a company-reported fact stated as plain fact got rewrite (attributed). ~1.8 s per judgement. Eval set `evals/data/judge_v1.json` (task 2.4): fixed passages, so retrieval is not measured. False flag rate 0.113
+(7/62): 6 are over-strict `attributed` on facts the outlets state plainly, 1 is corroboration. Misses: 2 of 6
+single-outlet sensitive claims (election turnout, central-bank remark) were not marked `sensitive`.
 
 ## Open questions
 
@@ -62,7 +64,7 @@ falsehood rejected; a company-reported fact stated as plain fact got rewrite (at
 
 | Date | Prompt version | Catch rate | Precision | Recall |
 | --- | --- | --- | --- | --- |
-| (none yet) | | | | |
+| 2026-11-18 | `dad2a081` (gpt-oss-120b), judge_v1 | 1.00 (30/30) | 0.904 | 0.971 |
 
 ## Changelog
 
@@ -71,3 +73,4 @@ falsehood rejected; a company-reported fact stated as plain fact got rewrite (at
 - 2026-11-18: evidence retrieval + `judge_claim()`/`judge_script()` with 5-check rubric (task 2.2, decision 0012).
 - 2026-11-18: `review_script()` rewrite loop, max 2 rounds (task 2.3, decision 0013).
 - 2026-11-18: judge failure -> pending; loop tolerates LLM errors (decision 0014).
+- 2026-11-18: judge eval v1 baseline: catch 1.00, precision 0.904, recall 0.971 (task 2.4).
