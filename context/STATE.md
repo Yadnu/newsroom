@@ -4,11 +4,11 @@ Last updated: 2026-11-18 by: Claude Code
 
 ## Current phase
 
-Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 acceptance run.
+Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 acceptance run. Phase 2 code is complete; 2.5's live run is pending.
 
 ## Active task
 
-2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
+3.1 `claim_trace()` API + rejection log API
 
 ## Tasks
 
@@ -22,7 +22,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [x] 1.5 reporter: clustering into stories by embedding similarity
-- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on the Voyage key.
+- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on Voyage 429 (key is set; see llm-gateway).
 
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
@@ -30,7 +30,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
 - [x] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
 - [x] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
-- [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
+- [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim. Code done; live run blocked on Voyage 429 (embed batches too big for the key's rate limit).
 
 ### Phase 3: Archive
 - [ ] 3.1 `claim_trace()` API + rejection log API
@@ -68,6 +68,6 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.4. `evals/run_evals.py` + `evals/data/judge_v1.json` (20 synthetic stories, 100 labelled + 30 planted), and the baseline is recorded (above). Also: gateway fallback models and partial-failure handling (decision 0014). PRs #3 to #7 are open and stacked (#3 -> main, each next PR on the one before).
-- Half done: judge weaknesses from the eval: it demands attribution for facts outlets report plainly (6 of 7 false flags), and it misses `sensitive` on election and central-bank figures. No prompt change yet; rerun the eval after any change. Groq free-tier rate limits fail about 23% of calls at concurrency 2; the runner resumes, so use `--concurrency 1`. Voyage key still missing.
-- Next: task 2.5, the `newsroom brief --minutes 3` CLI: build_rundown -> draft_script -> review_script, then print each line with its claims' verdicts and source outlets.
+- Done: 2.5 code. `newsroom brief` in `app/cli.py` (producer node): rundown -> draft -> review, prints each line with each claim's verdict, score, outlets, and the reason for non-approved claims; `--json`, `--topic`, `--refresh`. Unit tested. PRs #3 to #7 are still open and stacked; this commit sits on `phase2/evals-v1`.
+- Blocked: the 1.6 and 2.5 live runs. The Voyage key is now set, but `stories --refresh` gets HTTP 429: `EMBED_BATCH=1000` with no token cap is over the free-tier limit (about 3 RPM, 10K TPM). Fix in llm-gateway: cap batches by tokens and pace requests, or add billing to the Voyage account. The DB holds only integration-test stories (outlets A/B/C). Judge weaknesses from 2.4 are still open.
+- Next: unblock Voyage, then run `newsroom stories --refresh` and `newsroom brief --minutes 3` and tick 1.6 and 2.5. After that, 3.1.

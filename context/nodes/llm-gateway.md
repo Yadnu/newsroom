@@ -45,7 +45,9 @@ validation is resampled once (Groq's `json_validate_failed` 400 counts as a fail
 cover 408/409/429/5xx and transport errors with exponential backoff, honor `retry-after`, and are
 capped by `llm_max_attempts`. Embeddings go to Voyage in batches of 1000. Usage is logged as a
 structlog `llm.call` event and recorded on an archive span (`complete.<task>` / `embed`,
-with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse is not wired yet (task 3.2). Tested with `httpx.MockTransport` only; no live call has been made.
+with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse is not wired yet (task 3.2). Live Groq calls work (writer/editor smoke runs). Live Voyage embedding
+fails: on 2026-11-18 `newsroom stories --refresh` got HTTP 429 after retries. A 1000-text batch is far over the
+limit of a Voyage key without billing (about 3 requests and 10K tokens per minute), so the batch size has no token cap.
 
 ## Open questions
 
@@ -59,3 +61,4 @@ with tokens, cost, model and attempts; no prompt text). Fallback model per task 
 - 2026-11-16: task 1.2: `complete()`/`embed()` with routing, retries, cost, strict schema (decision 0008).
 - 2026-11-16: `complete()`/`embed()` run inside archive spans (task 1.3).
 - 2026-11-18: per-task fallback model on invalid output or exhausted retries (decision 0014).
+- 2026-11-18: recorded live Voyage 429 on embed batches.
