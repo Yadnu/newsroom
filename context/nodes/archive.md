@@ -36,7 +36,17 @@ Observability. Records every component event and builds the claim-to-source trac
 - `SourceRef(id, outlet, title, url, published_at, retracted)`. Payload parsing: `judgement_from_trace()`, `line_id_of()`.
 - HTTP (`routes.py`, mounted in `app/main.py`): `GET /archive/lines/{line_id}/trace` -> `ClaimTrace` (404 unknown);
   `GET /archive/rejections?briefing_id=&limit=1..500&include_rewrite=` -> `list[Rejection]`.
-- LLM-level traces also go to Langfuse through the llm-gateway (phase 3).
+- `async def list_briefings(limit=50) -> list[BriefingSummary]` / `briefing_detail(id) -> BriefingDetail`
+  (`briefings.py`, task 3.3). `BriefingSummary(id, created_at, status, target_minutes, lines, verdicts: dict[verdict,
+  count], cost_usd, tokens_in, tokens_out, wall_ms)`; `BriefingDetail(briefing, lines: list[LineSummary(id, order,
+  text, story_title, verdicts)], stages: list[Stage])`. `BriefingNotFoundError`.
+- `stages_from_spans(rows) -> list[Stage(component, steps, latency_ms, llm_calls, llm_ms, cost_usd, tokens_in,
+  tokens_out, errors)]`: entry spans (parent missing or in another component) give steps and latency; llm-gateway
+  spans are charged to the nearest non-gateway ancestor. `GET /archive/briefings?limit=1..200`,
+  `GET /archive/briefings/{id}` (404 unknown).
+- Archive read spans put the briefing id in the payload (`briefing`), never in `briefing_id`, so reading a
+  briefing never changes its own timeline.
+- LLM-level traces also go to Langfuse through the llm-gateway (task 3.2).
 
 ## Invariants
 
@@ -57,6 +67,8 @@ Spans recorded earlier come back with `line_id`/`line_text` null and are absent 
 run in `archive/claim_trace` / `archive/rejection_log` spans. Unit tests cover payload parsing and routes;
 `tests/integration/test_archive_trace_db.py` covers the SQL (CI only; no local test DB). Read-only live check on
 the dev DB (briefing `3873a08c`): a sentence traced to its TechCrunch URL; 7 rejections listed.
+Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: producer 1.2 s, writer 33 s
+(7 LLM calls), editor 175 s (25 calls, 6 errors), $0.011 total. Covered in the same integration test file.
 
 ## Open questions
 
@@ -68,3 +80,4 @@ the dev DB (briefing `3873a08c`): a sentence traced to its TechCrunch URL; 7 rej
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-16: `span()`, buffered `DbSink`, gateway spans, lifespan wiring (task 1.3, decision 0009).
 - 2026-11-18: `claim_trace()`, `rejection_log()` and `/archive` routes (task 3.1).
+- 2026-11-19: briefing list/detail with per-stage latency and cost; read spans off the timeline (task 3.3).

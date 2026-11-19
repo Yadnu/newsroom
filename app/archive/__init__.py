@@ -7,6 +7,15 @@ installed sink; the default ``DbSink`` writes them to ``traces`` in the backgrou
 processes call ``await start_archive()`` at startup and ``await stop_archive()`` at shutdown.
 """
 
+from app.archive.briefings import (
+    BriefingDetail,
+    BriefingNotFoundError,
+    BriefingSummary,
+    LineSummary,
+    Stage,
+    briefing_detail,
+    list_briefings,
+)
 from app.archive.sink import DbSink, MemorySink, TraceSink, get_sink, set_sink
 from app.archive.span import Span, current_span, span
 from app.archive.trace import (
@@ -22,20 +31,27 @@ from app.archive.trace import (
 )
 
 __all__ = [
+    "BriefingDetail",
+    "BriefingNotFoundError",
+    "BriefingSummary",
     "ClaimTrace",
     "DbSink",
     "EvidenceRef",
     "Judgement",
+    "LineSummary",
     "MemorySink",
     "Rejection",
     "SourceRef",
     "Span",
+    "Stage",
     "TraceNotFoundError",
     "TraceSink",
     "TracedClaim",
+    "briefing_detail",
     "claim_trace",
     "current_span",
     "get_sink",
+    "list_briefings",
     "rejection_log",
     "set_sink",
     "span",

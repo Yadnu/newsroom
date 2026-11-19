@@ -16,7 +16,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from alembic import command
-from app.archive import TraceNotFoundError, claim_trace, rejection_log
+from app.archive import (
+    BriefingNotFoundError,
+    TraceNotFoundError,
+    briefing_detail,
+    claim_trace,
+    list_briefings,
+    rejection_log,
+)
 from app.config import get_settings
 from app.db import (
     Briefing,
@@ -189,3 +196,47 @@ async def test_rejection_log_for_briefing(seeded: dict[str, Any]) -> None:
     assert [r.claim_id for r in only_rejected] == [seeded["old_claim"]]
     assert len(await rejection_log()) == 3  # every briefing
     assert len(await rejection_log(limit=1)) == 1
+
+
+async def test_briefing_timeline(seeded: dict[str, Any]) -> None:
+    b = seeded["briefing"]
+    review = Trace(
+        briefing_id=b, component="editor", event="review_script", started_at=T0, latency_ms=9000.0
+    )
+    call = Trace(
+        briefing_id=b,
+        parent_id=review.id,
+        component="llm-gateway",
+        event="complete.judge",
+        started_at=T0 + timedelta(seconds=1),
+        latency_ms=4000.0,
+        tokens_in=4000,
+        tokens_out=100,
+        cost_usd=0.001,
+    )
+    async with session_scope() as s:
+        s.add_all([review, call])
+
+    newest_first = await list_briefings()
+    assert len(newest_first) == 2
+    summary = next(x for x in newest_first if x.id == b)
+    assert summary.lines == 1 and summary.verdicts == {"approved": 1}
+    assert summary.cost_usd == pytest.approx(0.001) and summary.tokens_in == 4000
+    assert summary.wall_ms == pytest.approx(120_000.0)  # T0 to the last judge span at T0+2min
+    assert len(await list_briefings(limit=1)) == 1
+
+    # Reading the archive must not add to the briefing's own timeline.
+    await claim_trace(seeded["line"])
+    await rejection_log(b)
+    detail = await briefing_detail(b)
+    assert detail.briefing.wall_ms == summary.wall_ms
+    (line,) = detail.lines
+    assert line.id == seeded["line"] and line.story_title == "Acme chip"
+    assert line.verdicts == {"approved": 1}
+    (editor,) = [st for st in detail.stages if st.component == "editor"]
+    assert (editor.llm_calls, editor.tokens_in) == (1, 4000)
+    assert editor.cost_usd == pytest.approx(0.001)
+    assert all(st.component != "archive" for st in detail.stages)
+
+    with pytest.raises(BriefingNotFoundError):
+        await briefing_detail(uuid4())
