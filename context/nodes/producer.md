@@ -26,6 +26,8 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   `build_rundown` -> `writer.draft_script` -> `editor.review_script` and prints every line with each claim's verdict,
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
   judge's reason. Exit 1 on `NoStoriesError` or `WriterError`. Progress goes to stderr, the script to stdout.
+  `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh) runs it live with repo secrets
+  `NEWSROOM_DATABASE_URL`, `NEWSROOM_GROQ_API_KEY`, `NEWSROOM_VOYAGE_API_KEY`; uploads `brief.json` + logs, writes a job summary.
 - `async def handle_call(question: CallerQuestion) -> CallerAnswerPlan`: pause, run a fast Reporter -> Writer -> Editor loop, resume.
 
 ## Invariants
@@ -51,3 +53,4 @@ integration-test stories. `handle_call` is not built yet (phase 5).
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-17: simple `build_rundown()` with an even time split and a briefing row (task 2.0).
 - 2026-11-18: `newsroom brief` CLI prints the reviewed script with verdict and sources per claim (task 2.5).
+- 2026-11-18: manual `Brief` GitHub workflow runs the live pipeline.
