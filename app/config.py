@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-4-lite"
     voyage_api_key: SecretStr | None = None
     voyage_base_url: str = "https://api.voyageai.com/v1"
+    # Embedding batches and pacing (decision 0015). 0 = no limit. A Voyage key without billing
+    # allows about 3 requests and 10K tokens per minute: use 3 / 9000 / 9000 there.
+    embed_requests_per_minute: int = Field(default=0, ge=0)
+    embed_tokens_per_minute: int = Field(default=0, ge=0)
+    embed_batch_max_tokens: int = Field(default=100_000, ge=1)
 
     # Chat completions (decision 0008): Groq, OpenAI-compatible API.
     groq_api_key: SecretStr | None = None

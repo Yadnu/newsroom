@@ -26,7 +26,7 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   `build_rundown` -> `writer.draft_script` -> `editor.review_script` and prints every line with each claim's verdict,
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
   judge's reason. Exit 1 on `NoStoriesError` or `WriterError`. Progress goes to stderr, the script to stdout.
-  `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh) runs it live with repo secrets
+  `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh; free-tier embed pacing) runs it live with repo secrets
   `NEWSROOM_DATABASE_URL`, `NEWSROOM_GROQ_API_KEY`, `NEWSROOM_VOYAGE_API_KEY`; uploads `brief.json` + logs, writes a job summary.
 - `async def handle_call(question: CallerQuestion) -> CallerAnswerPlan`: pause, run a fast Reporter -> Writer -> Editor loop, resume.
 
@@ -40,8 +40,9 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
 Simple rundown done (task 2.0) in `app/producer/rundown.py`, traced as `producer/build_rundown`
 with the new briefing_id. Tested with a stubbed Reporter and on Postgres
 (`tests/integration/test_producer_db.py`). `newsroom brief` (task 2.5) is unit tested with a stubbed pipeline
-(`tests/test_cli.py`). It has not been run live: refresh fails on Voyage 429 (see llm-gateway), and the DB holds only
-integration-test stories. `handle_call` is not built yet (phase 5).
+(`tests/test_cli.py`). Live run 2026-11-18 (`--minutes 3 -t Altman -t Anthropic`, 3m17s):
+briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approved 5, rewrite 1, rejected 1, pending 7
+(Groq TPM 429 on the judge). The Anthropic story was skipped (`StructuredOutputError` on draft and fallback). `handle_call` is not built yet (phase 5).
 
 ## Open questions
 

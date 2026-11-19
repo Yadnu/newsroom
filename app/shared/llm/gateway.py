@@ -32,8 +32,10 @@ from app.shared.llm.types import (
 
 RETRYABLE_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504})
 EMBED_BATCH = 1000  # Voyage max inputs per request
+EMBED_CHARS_PER_TOKEN = 3  # conservative estimate for sizing batches before the call
 STRUCTURED_ATTEMPTS = 2  # resample once when the output fails validation
 _MAX_BACKOFF_S = 30.0
+_RATE_LIMIT_BACKOFF_S = 15.0
 
 log = get_logger(__name__)
 
@@ -52,9 +54,14 @@ class Gateway:
         settings: Settings,
         transport: httpx.AsyncBaseTransport | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._s = settings
         self._sleep = sleep
+        self._clock = clock
+        # Embedding pacing (decision 0015): one request at a time, next start no earlier than this.
+        self._embed_lock = asyncio.Lock()
+        self._embed_next_at = 0.0
         self._http = httpx.AsyncClient(timeout=settings.llm_timeout_s, transport=transport)
         missing = [t for t in TASK_NAMES if t not in settings.llm_routes]
         if missing:
@@ -177,17 +184,23 @@ class Gateway:
         start = time.perf_counter()
         vectors: list[list[float]] = []
         tokens = attempts = 0
-        for i in range(0, len(texts), EMBED_BATCH):
-            batch = list(texts[i : i + EMBED_BATCH])
+        for batch in embed_batches(texts, self._batch_token_cap()):
             body = {
                 "model": model,
                 "input": batch,
                 "input_type": input_type,
                 "output_dimension": EMBEDDING_DIM,
             }
-            data, n = await self._post(f"{self._s.voyage_base_url}/embeddings", key, body)
+            async with self._embed_lock:
+                await self._wait_embed_slot()
+                sent_at = self._clock()
+                data, n = await self._post(f"{self._s.voyage_base_url}/embeddings", key, body)
+                used = int((data.get("usage") or {}).get("total_tokens", 0))
+                self._embed_next_at = sent_at + self._embed_interval(
+                    used or sum(estimate_tokens(t) for t in batch)
+                )
             attempts += n
-            tokens += int((data.get("usage") or {}).get("total_tokens", 0))
+            tokens += used
             rows = sorted(data["data"], key=lambda r: r["index"])
             if len(rows) != len(batch):
                 raise LLMProviderError(f"asked for {len(batch)} embeddings, got {len(rows)}")
@@ -197,6 +210,22 @@ class Gateway:
                     raise LLMProviderError(f"embedding has {len(vec)} dims, want {EMBEDDING_DIM}")
                 vectors.append(vec)
         return vectors, self._usage(model, tokens, 0, start, attempts, task="embed")
+
+    def _batch_token_cap(self) -> int:
+        cap = self._s.embed_batch_max_tokens
+        if self._s.embed_tokens_per_minute:
+            cap = min(cap, self._s.embed_tokens_per_minute)
+        return cap
+
+    def _embed_interval(self, tokens: int) -> float:
+        """Seconds to wait after a request so neither per-minute limit is exceeded."""
+        rpm, tpm = self._s.embed_requests_per_minute, self._s.embed_tokens_per_minute
+        return max(60.0 / rpm if rpm else 0.0, 60.0 * tokens / tpm if tpm else 0.0)
+
+    async def _wait_embed_slot(self) -> None:
+        delay = self._embed_next_at - self._clock()
+        if delay > 0:
+            await self._sleep(delay)
 
     # ---- internals --------------------------------------------------------------------
 
@@ -223,7 +252,9 @@ class Gateway:
                 payload: dict[str, Any] = resp.json()
                 return payload, attempt
             if resp.status_code in RETRYABLE_STATUS and not last:
-                await self._sleep(self._backoff(attempt, resp.headers.get("retry-after")))
+                await self._sleep(
+                    self._backoff(attempt, resp.headers.get("retry-after"), resp.status_code)
+                )
                 continue
             raise LLMProviderError(
                 f"HTTP {resp.status_code}: {_error_text(resp)}", status_code=resp.status_code
@@ -231,12 +262,15 @@ class Gateway:
         raise AssertionError("unreachable")  # pragma: no cover
 
     @staticmethod
-    def _backoff(attempt: int, retry_after: str | None) -> float:
+    def _backoff(attempt: int, retry_after: str | None, status: int | None = None) -> float:
         if retry_after:
             try:
                 return min(float(retry_after), _MAX_BACKOFF_S)
             except ValueError:
                 pass
+        if status == 429:
+            # Per-minute limits with no retry-after: wait long enough for the window to roll.
+            return min(_RATE_LIMIT_BACKOFF_S * attempt, _MAX_BACKOFF_S)
         return min(0.5 * 2.0 ** (attempt - 1), _MAX_BACKOFF_S)
 
     def _usage(
@@ -286,3 +320,25 @@ def _error_text(resp: httpx.Response) -> str:
         return str(err)[:500]
     except (json.JSONDecodeError, AttributeError):
         return resp.text[:500]
+
+
+def estimate_tokens(text: str) -> int:
+    return max(1, -(-len(text) // EMBED_CHARS_PER_TOKEN))
+
+
+def embed_batches(texts: Sequence[str], max_tokens: int) -> list[list[str]]:
+    """Split in order into batches of at most ``EMBED_BATCH`` texts and ``max_tokens`` estimated
+    tokens. A single text over the cap goes alone (the caller already trims texts)."""
+    batches: list[list[str]] = []
+    batch: list[str] = []
+    size = 0
+    for text in texts:
+        n = estimate_tokens(text)
+        if batch and (len(batch) >= EMBED_BATCH or size + n > max_tokens):
+            batches.append(batch)
+            batch, size = [], 0
+        batch.append(text)
+        size += n
+    if batch:
+        batches.append(batch)
+    return batches

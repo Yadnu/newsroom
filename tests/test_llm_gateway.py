@@ -16,7 +16,7 @@ from app.shared.llm import (
     Message,
     StructuredOutputError,
 )
-from app.shared.llm.gateway import cost_usd
+from app.shared.llm.gateway import cost_usd, embed_batches, estimate_tokens
 from app.shared.llm.schema import strict_json_schema
 
 MSGS: list[Message] = [{"role": "user", "content": "Is the claim supported?"}]
@@ -262,6 +262,85 @@ async def test_embed_rejects_wrong_dimension() -> None:
     rec = Recorder(httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.1] * 8}]}))
     with pytest.raises(LLMProviderError, match="dims"):
         await _gw(rec).embed(["x"])
+
+
+class FakeClock:
+    """Time that only moves when the gateway sleeps, plus a fixed cost per request."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+        self.slept: list[float] = []
+
+    def __call__(self) -> float:
+        return self.now
+
+    async def sleep(self, s: float) -> None:
+        self.slept.append(s)
+        self.now += s
+
+
+def test_embed_batches_respect_token_cap_and_order() -> None:
+    texts = ["a" * 30, "b" * 30, "c" * 30, "d" * 300, "e"]  # 10, 10, 10, 100, 1 tokens
+    assert [estimate_tokens(t) for t in texts] == [10, 10, 10, 100, 1]
+    batches = embed_batches(texts, max_tokens=25)
+    assert batches == [[texts[0], texts[1]], [texts[2]], [texts[3]], [texts[4]]]
+    assert [t for b in batches for t in b] == texts  # an oversized text goes alone, order kept
+    assert [len(b) for b in embed_batches(["x"] * 2500, 10**9)] == [1000, 1000, 500]
+
+
+async def test_embed_paces_requests_by_tokens_and_requests_per_minute() -> None:
+    clock = FakeClock()
+    rec = Recorder(_embed_response, _embed_response, _embed_response)
+    gw = Gateway(
+        _settings(embed_tokens_per_minute=60, embed_requests_per_minute=3),
+        transport=httpx.MockTransport(rec),
+        sleep=clock.sleep,
+        clock=clock,
+    )
+    # "abc" estimates as 1 token, so 30 texts fit one batch; the fake response reports 3 tokens
+    # per text, and pacing uses the reported count.
+    vectors, _ = await gw.embed(["abc"] * 30)
+    assert len(vectors) == 30 and len(rec.requests) == 1
+    assert clock.slept == []  # first request goes straight out
+    await gw.embed(["abc"] * 10)  # previous used 90 tokens -> 90s; rpm alone would be 20s
+    assert clock.slept == [pytest.approx(90.0)]
+    await gw.embed(["abc"])  # 30 tokens used -> max(20s rpm, 30s tpm)
+    assert clock.slept[1] == pytest.approx(30.0)
+
+
+async def test_embed_batch_capped_by_tokens_per_minute() -> None:
+    clock = FakeClock()
+    rec = Recorder(_embed_response, _embed_response)
+    gw = Gateway(
+        _settings(embed_tokens_per_minute=20),
+        transport=httpx.MockTransport(rec),
+        sleep=clock.sleep,
+        clock=clock,
+    )
+    await gw.embed(["abc"] * 30)  # 30 estimated tokens -> batches of 20 and 10
+    assert [len(rec.body(i)["input"]) for i in range(2)] == [20, 10]
+    assert clock.slept == [pytest.approx(60.0 * 60 / 20)]  # 20 texts x 3 reported tokens
+
+
+async def test_embed_without_limits_never_sleeps() -> None:
+    clock = FakeClock()
+    rec = Recorder(_embed_response, _embed_response)
+    gw = Gateway(_settings(), transport=httpx.MockTransport(rec), sleep=clock.sleep, clock=clock)
+    await gw.embed(["a"])
+    await gw.embed(["b"])
+    assert clock.slept == []
+
+
+async def test_429_without_retry_after_waits_for_the_window() -> None:
+    slept: list[float] = []
+
+    async def sleep(s: float) -> None:
+        slept.append(s)
+
+    rec = Recorder(httpx.Response(429), httpx.Response(429), httpx.Response(429), _embed_response)
+    gw = Gateway(_settings(), transport=httpx.MockTransport(rec), sleep=sleep)
+    await gw.embed(["a"])
+    assert slept == [15.0, 30.0, 30.0]
 
 
 # ---- module-level API ----------------------------------------------------------------------

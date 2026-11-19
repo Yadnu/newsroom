@@ -34,6 +34,10 @@ jobs:
       NEWSROOM_DATABASE_URL: ${{ secrets.NEWSROOM_DATABASE_URL }}
       NEWSROOM_GROQ_API_KEY: ${{ secrets.NEWSROOM_GROQ_API_KEY }}
       NEWSROOM_VOYAGE_API_KEY: ${{ secrets.NEWSROOM_VOYAGE_API_KEY }}
+      # Free-tier Voyage pacing (decision 0015); set the two per-minute repo variables to 0 once the account has billing.
+      NEWSROOM_EMBED_REQUESTS_PER_MINUTE: ${{ vars.NEWSROOM_EMBED_REQUESTS_PER_MINUTE || '3' }}
+      NEWSROOM_EMBED_TOKENS_PER_MINUTE: ${{ vars.NEWSROOM_EMBED_TOKENS_PER_MINUTE || '9000' }}
+      NEWSROOM_EMBED_BATCH_MAX_TOKENS: ${{ vars.NEWSROOM_EMBED_BATCH_MAX_TOKENS || '9000' }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
