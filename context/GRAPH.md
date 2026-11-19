@@ -15,15 +15,15 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [archive](nodes/archive.md) | component | in-progress | 1 | `app/archive/` | data-model | web | 0005, 0009, 0013 |
 | [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007, 0011 |
-| [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor | 0002, 0005, 0007, 0008, 0014, 0015 |
+| [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor, caller | 0002, 0005, 0007, 0008, 0014, 0015 |
 | [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003, 0010 |
 | [editor](nodes/editor.md) | component | in-progress | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002, 0012, 0013, 0014 |
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | - |
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002, 0011, 0013, 0014 |
-| [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, archive | web | 0004, 0016, 0017 |
-| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer | 0016 |
+| [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017 |
+| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller | 0016 |
 | [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive | - | - |
-| [caller](nodes/caller.md) | component | planned | 5 | `app/caller/` | archive | standards-desk, producer | 0004 |
+| [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018 |
 
 ## Edges
 
@@ -31,7 +31,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 flowchart LR
   anchor["anchor (in-progress)"]
   archive["archive (in-progress)"]
-  caller["caller (planned)"]
+  caller["caller (in-progress)"]
   data_model["data-model (done)"]
   editor["editor (in-progress)"]
   llm_gateway["llm-gateway (in-progress)"]
@@ -50,6 +50,7 @@ flowchart LR
   archive --> standards_desk
   archive --> web
   archive --> writer
+  caller --> anchor
   caller --> producer
   caller --> standards_desk
   data_model --> archive
@@ -59,6 +60,7 @@ flowchart LR
   data_model --> writer
   editor --> standards_desk
   editor --> writer
+  llm_gateway --> caller
   llm_gateway --> editor
   llm_gateway --> reporter
   llm_gateway --> writer
@@ -66,6 +68,7 @@ flowchart LR
   producer --> writer
   reporter --> producer
   standards_desk --> anchor
+  standards_desk --> caller
   standards_desk --> producer
   writer --> editor
 ```

@@ -391,3 +391,31 @@ details summary {
   text-decoration: line-through;
   text-decoration-color: var(--line);
 }
+
+.controls button.talk {
+  background: transparent;
+  color: var(--accent);
+  margin-left: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.controls button.talk.live {
+  background: var(--rejected);
+  border-color: var(--rejected);
+  color: var(--panel);
+}
+
+.caller {
+  padding: 10px 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.caller .question {
+  margin: 6px 0;
+}
+
+.heard-text {
+  font: italic 15px/1.4 var(--serif);
+  margin: 4px 0;
+}

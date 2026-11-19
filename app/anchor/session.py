@@ -13,6 +13,7 @@ import wave
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from starlette.websockets import WebSocket
 
@@ -114,16 +115,23 @@ class WavFileSession(VoiceSession):
 
 
 class WebSocketSession(VoiceSession):
-    """Binary messages are PCM16 chunks; text messages are the JSON events."""
+    """Binary messages are PCM16 chunks; text messages are the JSON events. Sends are serialised
+    because the Anchor and the Caller share the socket."""
 
     realtime = True
 
     def __init__(self, ws: WebSocket) -> None:
         super().__init__()
         self.ws = ws
+        self.current_line_id: UUID | None = None  # last line announced, for the Caller
+        self._send_lock = asyncio.Lock()
 
     async def send_audio(self, pcm: bytes) -> None:
-        await self.ws.send_bytes(pcm)
+        async with self._send_lock:
+            await self.ws.send_bytes(pcm)
 
     async def send_event(self, event: dict[str, Any]) -> None:
-        await self.ws.send_json(event)
+        if event.get("type") == "line":
+            self.current_line_id = UUID(event["line_id"])
+        async with self._send_lock:
+            await self.ws.send_json(event)

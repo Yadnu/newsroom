@@ -20,6 +20,9 @@ Next.js player and Archive dashboard.
   highlights the sentence being heard (audio-clock mapping in `lib/player.ts`), pauses/resumes over the socket,
   greys lines that never aired (held back by the Standards Desk), and a click opens that line's claim trace.
   Linked from the briefing page and from cleared/aired briefings in the list.
+- Push-to-talk (task 5.1): "Hold to ask" pauses the Anchor, captures the mic (AudioWorklet
+  `public/mic-worklet.js`, `lib/mic.ts` downsamples to 16 kHz PCM16), sends `mic_start` / chunks / `mic_end`, and
+  shows live interim words and the classified question (intent badge, story). Resume continues the briefing.
 - `NEWSROOM_PUBLIC_API_URL`: the API as the browser reaches it (WebSocket base); defaults to `NEWSROOM_API_URL`.
 - Archive dashboard (task 3.3): `/` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
@@ -57,3 +60,4 @@ automated (no browser in the agent environment).
 - 2026-11-16: node created from the design doc.
 - 2026-11-19: Archive dashboard scaffolded and built (task 3.3).
 - 2026-11-19: live Player with synced, clickable transcript (task 4.3).
+- 2026-11-19: push-to-talk questions in the Player (task 5.1).

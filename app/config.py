@@ -153,6 +153,14 @@ class Settings(BaseSettings):
     anchor_send_ahead_ms: int = Field(default=250, ge=0)  # client buffer for realtime sessions
     anchor_line_timeout_s: float = Field(default=30.0, gt=0)
 
+    # Caller voice input (task 5.1, decisions 0004 and 0018).
+    caller_stt: Literal["deepgram", "fake"] = "deepgram"
+    deepgram_model: str = "nova-3"
+    caller_sample_rate: int = Field(default=16000, ge=8000, le=48000)
+    caller_utterance_gap_ms: int = Field(default=800, ge=100)
+    caller_max_question_s: int = Field(default=30, ge=1, le=120)
+    caller_finalize_wait_ms: int = Field(default=1500, ge=0)  # after release, for the last words
+
     # Producer rundown (task 2.0).
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)

@@ -5,7 +5,7 @@ status: in-progress
 phase: 1
 code: app/shared/llm/
 depends_on: [archive, data-model]
-feeds: [reporter, writer, editor]
+feeds: [reporter, writer, editor, caller]
 decisions: [0002, 0005, 0007, 0008, 0014, 0015]
 ---
 

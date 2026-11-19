@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { MIC_RATE, MicChunker } from "@/lib/mic";
 import {
   type AnchorEvent,
   AudioClock,
+  type CallerQuestionEvent,
   type TimedLine,
   activeLine,
   applyEvent,
@@ -15,6 +17,15 @@ import {
 export type PlayerLine = { id: string; order: number; text: string; story_title: string | null };
 
 type Status = "idle" | "connecting" | "playing" | "paused" | "done" | "error";
+
+const INTENT_LABEL: Record<CallerQuestionEvent["intent"], string> = {
+  follow_up: "follow-up",
+  background: "background",
+  off_topic: "off topic",
+  unknown: "not classified",
+};
+
+type Mic = { stream: MediaStream; nodes: AudioNode[]; chunker: MicChunker };
 
 const CLOSE_REASONS: Record<number, string> = {
   4404: "This briefing does not exist.",
@@ -38,6 +49,10 @@ export function Player({
   const [active, setActive] = useState<string | null>(null);
   const [heard, setHeard] = useState<Set<string>>(new Set());
   const [elapsed, setElapsed] = useState(0);
+  const [talking, setTalking] = useState(false);
+  const [heardText, setHeardText] = useState("");
+  const [questions, setQuestions] = useState<CallerQuestionEvent[]>([]);
+  const [callerError, setCallerError] = useState<string | null>(null);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -45,6 +60,9 @@ export function Player({
   const timedRef = useRef<TimedLine[]>([]);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const statusRef = useRef<Status>("idle");
+  const micRef = useRef<Mic | null>(null);
+  const talkingRef = useRef(false);
+  const workletReady = useRef(false);
 
   const setBoth = useCallback((s: Status) => {
     statusRef.current = s;
@@ -62,13 +80,23 @@ export function Player({
     sourcesRef.current.clear();
   }, []);
 
+  const closeMic = useCallback(() => {
+    const mic = micRef.current;
+    micRef.current = null;
+    if (!mic) return;
+    for (const n of mic.nodes) n.disconnect();
+    for (const t of mic.stream.getTracks()) t.stop();
+  }, []);
+
   const teardown = useCallback(() => {
+    closeMic();
+    talkingRef.current = false;
     wsRef.current?.close();
     wsRef.current = null;
     stopSources();
     void ctxRef.current?.close();
     ctxRef.current = null;
-  }, [stopSources]);
+  }, [stopSources, closeMic]);
 
   useEffect(() => teardown, [teardown]);
 
@@ -101,6 +129,14 @@ export function Player({
         timedRef.current = applyEvent(timedRef.current, e);
       } else if (e.type === "done") {
         setBoth("done");
+      } else if (e.type === "caller_interim") {
+        setHeardText(e.text);
+      } else if (e.type === "caller_question") {
+        setHeardText("");
+        setQuestions((q) => [e, ...q]);
+      } else if (e.type === "caller_error") {
+        setHeardText("");
+        setCallerError(e.message);
       }
     },
     [setBoth],
@@ -128,6 +164,10 @@ export function Player({
     setHeard(new Set());
     setActive(null);
     setElapsed(0);
+    setQuestions([]);
+    setHeardText("");
+    setCallerError(null);
+    workletReady.current = false;
     timedRef.current = [];
     clockRef.current = null;
     setBoth("connecting");
@@ -164,6 +204,60 @@ export function Player({
     setBoth("playing");
   }, [setBoth]);
 
+  const startTalk = useCallback(async () => {
+    const ws = wsRef.current;
+    const ctx = ctxRef.current;
+    if (talkingRef.current || !ws || ws.readyState !== WebSocket.OPEN || !ctx) return;
+    talkingRef.current = true;
+    setTalking(true);
+    setCallerError(null);
+    setHeardText("");
+    if (statusRef.current === "playing") pause();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      if (!workletReady.current) {
+        await ctx.audioWorklet.addModule("/mic-worklet.js");
+        workletReady.current = true;
+      }
+      if (!talkingRef.current) {
+        for (const t of stream.getTracks()) t.stop(); // released before the mic opened
+        return;
+      }
+      const source = ctx.createMediaStreamSource(stream);
+      const capture = new AudioWorkletNode(ctx, "mic-capture");
+      const mute = ctx.createGain();
+      mute.gain.value = 0; // keeps the worklet pulled without playing the mic back
+      const chunker = new MicChunker(ctx.sampleRate);
+      ws.send(JSON.stringify({ type: "mic_start", sample_rate: MIC_RATE }));
+      capture.port.onmessage = (m: MessageEvent<Float32Array>) => {
+        for (const chunk of chunker.push(m.data)) ws.send(chunk);
+      };
+      source.connect(capture).connect(mute).connect(ctx.destination);
+      micRef.current = { stream, nodes: [source, capture, mute], chunker };
+    } catch {
+      talkingRef.current = false;
+      setTalking(false);
+      setCallerError("Microphone not available. Allow mic access to ask a question.");
+    }
+  }, [pause]);
+
+  const stopTalk = useCallback(() => {
+    if (!talkingRef.current) return;
+    talkingRef.current = false;
+    setTalking(false);
+    const mic = micRef.current;
+    const ws = wsRef.current;
+    if (mic && ws && ws.readyState === WebSocket.OPEN) {
+      const rest = mic.chunker.flush();
+      if (rest) ws.send(rest);
+      ws.send(JSON.stringify({ type: "mic_end" }));
+    }
+    closeMic();
+  }, [closeMic]);
+
+  const canTalk = status === "playing" || status === "paused";
   const finished = status === "done" && active == null;
   return (
     <section className="card player" aria-label="Briefing player">
@@ -186,8 +280,52 @@ export function Player({
         </span>
         {status === "paused" && <span className="muted">Paused. Resume replays the sentence.</span>}
         {finished && <span className="muted">End of briefing.</span>}
+        <button
+          type="button"
+          className={`talk${talking ? " live" : ""}`}
+          disabled={!canTalk && !talking}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            void startTalk();
+          }}
+          onPointerUp={stopTalk}
+          onPointerCancel={stopTalk}
+          onKeyDown={(e) => {
+            if ((e.key === " " || e.key === "Enter") && !e.repeat) {
+              e.preventDefault();
+              void startTalk();
+            }
+          }}
+          onKeyUp={(e) => {
+            if (e.key === " " || e.key === "Enter") stopTalk();
+          }}
+          aria-pressed={talking}
+        >
+          {talking ? "\u25cf Listening\u2026 release to send" : "\ud83c\udf99 Hold to ask"}
+        </button>
       </div>
       {error && <p className="error">{error}</p>}
+      {(talking || heardText || callerError || questions.length > 0) && (
+        <div className="caller" aria-live="polite">
+          {heardText && <p className="heard-text">&ldquo;{heardText}&rdquo;</p>}
+          {callerError && <p className="error">{callerError}</p>}
+          {questions.map((q) => (
+            <div key={q.id} className="question">
+              <span className={`badge ${q.intent === "off_topic" ? "rejected" : "approved"}`}>
+                {INTENT_LABEL[q.intent]}
+              </span>
+              <b>{q.restated || q.transcript}</b>
+              {q.story_title && <span className="muted"> &middot; about {q.story_title}</span>}
+              {q.restated && q.restated !== q.transcript && (
+                <div className="muted">heard: &ldquo;{q.transcript}&rdquo;</div>
+              )}
+            </div>
+          ))}
+          {questions.length > 0 && status === "paused" && (
+            <p className="muted">Answers arrive in a later step. Press Resume to continue.</p>
+          )}
+        </div>
+      )}
       <ol className="script transcript">
         {lines.map((ln, i) => {
           const held = (finished || status === "done") && !heard.has(ln.id) && active !== ln.id;

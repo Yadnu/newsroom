@@ -8,7 +8,7 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 
 ## Active task
 
-5.1 caller: Deepgram adapter, intent classification
+5.2 standards-desk: `screen_caller()`
 
 ## Tasks
 
@@ -43,7 +43,7 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 - [x] 4.3 web: Player with synced, clickable transcript (acceptance: briefing plays in browser)
 
 ### Phase 5: Caller and Producer (voice in)
-- [ ] 5.1 caller: Deepgram adapter, intent classification
+- [x] 5.1 caller: Deepgram adapter, intent classification
 - [ ] 5.2 standards-desk: `screen_caller()`
 - [ ] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
 - [ ] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
@@ -68,6 +68,6 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 4.3. `/briefings/[id]/listen` plays the live Anchor stream in the browser (Web Audio), highlights the sentence being read, pause/resume, click a sentence for its claim trace. Verified live with Cartesia via a Node client using the Player's logic; in-browser listening still to be confirmed by a person. Branch `phase4/player` stacks on `phase4/anchor` (PR #17) and `phase4/clear-for-air` (PR #16); none merged.
-- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, and pending lines never air). Standards rules are heuristics (tune in 6.1). Cartesia cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 5.1 caller (needs `NEWSROOM_DEEPGRAM_API_KEY`): Deepgram STT adapter in the Pipecat pipeline, intent classification through the llm-gateway (`classify` task).
+- Done: 5.1. `app/caller/`: Deepgram (Pipecat) + fake STT, `listen()` utterances, `classify()` via the gateway, push-to-talk on the Anchor WebSocket (`CallIn`), "Hold to ask" in the Player, `newsroom ask` CLI (decision 0018). Live: word-for-word transcript, correct intent and story, card 1.9 s after release. Branch `phase5/caller` stacks on #18, #17, #16; none merged.
+- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, and pending lines never air). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram cost not tracked. In-browser mic use not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 5.2 standards-desk `screen_caller(transcript)`: abusive, off-topic, prompt injection, before a question reaches the Producer.

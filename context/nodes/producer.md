@@ -61,3 +61,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-18: manual `Brief` GitHub workflow runs the live pipeline.
 - 2026-11-19: `newsroom brief` clears the script for air and shows blocked lines (task 4.1).
 - 2026-11-19: `newsroom speak <briefing_id> [--out file.wav]` voices a stored briefing (task 4.2).
+- 2026-11-19: `newsroom ask --briefing <id> --wav q.wav` transcribes and classifies a question (task 5.1).

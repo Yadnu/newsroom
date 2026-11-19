@@ -9,6 +9,7 @@ interruption); ``resume()`` replays that line from its start.
 """
 
 import asyncio
+import contextlib
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -264,6 +265,11 @@ async def _shutdown(worker: PipelineWorker, running: "asyncio.Task[Any]") -> Non
     try:
         await worker.queue_frame(EndFrame())
         await asyncio.wait_for(asyncio.shield(running), 10)
+    except asyncio.CancelledError:  # we were cancelled: still stop Pipecat's tasks, then re-raise
+        with contextlib.suppress(BaseException):
+            await asyncio.wait_for(worker.cancel(), 5)
+        running.cancel()
+        raise
     except Exception:
         await worker.cancel()
         running.cancel()

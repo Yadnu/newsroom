@@ -7,7 +7,20 @@ export type AnchorEvent =
   | { type: "line_end"; line_id: string; end_ms: number }
   | { type: "paused"; at_ms: number }
   | { type: "resumed"; at_ms: number }
-  | { type: "done"; audio_ms: number; completed: boolean };
+  | { type: "done"; audio_ms: number; completed: boolean }
+  | { type: "caller_interim"; text: string }
+  | {
+      type: "caller_question";
+      id: string;
+      transcript: string;
+      intent: "follow_up" | "background" | "off_topic" | "unknown";
+      story_id: string | null;
+      story_title: string | null;
+      restated: string;
+    }
+  | { type: "caller_error"; message: string };
+
+export type CallerQuestionEvent = Extract<AnchorEvent, { type: "caller_question" }>;
 
 /** Little-endian signed 16-bit PCM to floats in [-1, 1). */
 export function pcm16ToFloat32(bytes: ArrayBuffer): Float32Array<ArrayBuffer> {

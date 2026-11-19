@@ -110,3 +110,90 @@ def test_close_codes(wired: dict[str, Any], flag: str, code: int) -> None:
     ):
         ws.receive_json()
     assert e.value.code == code
+
+
+# ---- push-to-talk (task 5.1) -----------------------------------------------------------------
+
+
+@pytest.fixture
+def mic(wired: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    import app.caller.live as live
+    from app.caller import CallerContext, FakeSTTService, Intent, StoryRef
+    from app.caller import listen as real_listen
+
+    script = wired["script"]
+    story = script.lines[0].story_id
+    seen: dict[str, Any] = {"contexts": []}
+
+    async def fake_context(s: ClearedScript, current: Any = None) -> CallerContext:
+        return CallerContext(s.briefing_id, (StoryRef(story, "Acme chip"),), current)
+
+    async def classifier(transcript: str, context: CallerContext) -> Intent:
+        seen["contexts"].append(context)
+        return Intent("follow_up", story, f"When does {transcript}?")
+
+    def fake_listen(chunks: Any, context: CallerContext, settings: Any = None) -> Any:
+        stt = FakeSTTService(["nova ship"], sample_rate=16000)
+        caller_settings = Settings(  # type: ignore[call-arg]
+            _env_file=None, caller_stt="fake", caller_finalize_wait_ms=100
+        )
+        return real_listen(
+            chunks, context, stt=stt, settings=caller_settings, classifier=classifier
+        )
+
+    monkeypatch.setattr(live, "context_for", fake_context)
+    monkeypatch.setattr(live, "listen", fake_listen)
+    wired["settings"] = SETTINGS.model_copy(update={"anchor_send_ahead_ms": 0})  # real-time pace
+    return seen
+
+
+def _until(ws: Any, kind: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    while True:
+        msg = ws.receive()
+        if msg["type"] == "websocket.close":
+            return events
+        if msg.get("text") is not None:
+            events.append(json.loads(msg["text"]))
+            if events[-1]["type"] == kind:
+                return events
+
+
+def test_push_to_talk_gives_interim_then_classified_question(
+    wired: dict[str, Any], mic: dict[str, Any]
+) -> None:
+    script = wired["script"]
+    with TestClient(app).websocket_connect(f"/anchor/briefings/{script.briefing_id}/live") as ws:
+        _until(ws, "line")  # the Anchor is reading line 0
+        ws.send_text(json.dumps({"type": "mic_start", "sample_rate": 16000}))
+        for _ in range(10):
+            ws.send_bytes(b"\x01\x00" * 1600)  # 10 x 100 ms
+        ws.send_text(json.dumps({"type": "mic_end"}))
+        events = _until(ws, "caller_question")
+        _until(ws, "done")
+    interims = [e["text"] for e in events if e["type"] == "caller_interim"]
+    (q,) = [e for e in events if e["type"] == "caller_question"]
+    assert interims and interims[-1] == "nova ship"
+    assert q["transcript"] == "nova ship" and q["intent"] == "follow_up"
+    assert q["story_title"] == "Acme chip" and q["restated"] == "When does nova ship?"
+    assert mic["contexts"][0].current_story_id == script.lines[0].story_id
+
+
+def test_mic_audio_without_start_is_ignored(wired: dict[str, Any], mic: dict[str, Any]) -> None:
+    script = wired["script"]
+    with TestClient(app).websocket_connect(f"/anchor/briefings/{script.briefing_id}/live") as ws:
+        ws.send_bytes(b"\x01\x00" * 16000)
+        ws.send_text(json.dumps({"type": "mic_end"}))
+        events = _until(ws, "done")
+    assert not [e for e in events if e["type"].startswith("caller_")]
+
+
+def test_wrong_mic_rate_is_refused(wired: dict[str, Any], mic: dict[str, Any]) -> None:
+    script = wired["script"]
+    with TestClient(app).websocket_connect(f"/anchor/briefings/{script.briefing_id}/live") as ws:
+        ws.send_text(json.dumps({"type": "mic_start", "sample_rate": 48000}))
+        # Read to the end: leaving while Pipecat is still starting makes TestClient cancel the
+        # app mid-startup, which a real server (uvicorn) never does on disconnect.
+        events = _until(ws, "done")
+    (err,) = [e for e in events if e["type"] == "caller_error"]
+    assert "16000 Hz" in err["message"]

@@ -299,5 +299,69 @@ def speak(
     console.print(f"wrote {out} ({report.audio_ms / 1000:.1f} s, {len(report.lines)} lines)")
 
 
+@app.command()
+def ask(
+    briefing_id: Annotated[str, typer.Option("--briefing", "-b", help="Briefing being heard.")],
+    wav: Annotated[Path, typer.Option("--wav", help="Mono 16-bit WAV of the spoken question.")],
+    realtime: Annotated[
+        bool, typer.Option("--realtime", help="Stream at speaking pace, like a live mic.")
+    ] = False,
+) -> None:
+    """Transcribe a spoken question and classify it against a briefing's stories."""
+    import wave
+
+    from app.caller import CallerQuestion, Interim, context_for, listen
+    from app.caller.types import CallerConfigError
+    from app.standards_desk import clear_stored
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    settings = get_settings()
+    with wave.open(str(wav), "rb") as w:
+        if (w.getnchannels(), w.getsampwidth(), w.getframerate()) != (
+            1,
+            2,
+            settings.caller_sample_rate,
+        ):
+            err.print(f"[red]Need a mono 16-bit WAV at {settings.caller_sample_rate} Hz[/]")
+            raise typer.Exit(code=2)
+        pcm = w.readframes(w.getnframes())
+    chunk = settings.caller_sample_rate * 2 // 10  # 100 ms
+
+    async def chunks() -> Any:
+        for i in range(0, len(pcm), chunk):
+            if realtime:
+                await asyncio.sleep(0.1)
+            yield pcm[i : i + chunk]
+
+    async def go() -> list[CallerQuestion]:
+        context = await context_for(await clear_stored(UUID(briefing_id)))
+        found: list[CallerQuestion] = []
+        async for event in listen(chunks(), context):
+            if isinstance(event, Interim):
+                err.print(f"[dim]… {escape(event.text)}[/]")
+            else:
+                found.append(event)
+        titles = {s.id: s.title for s in context.stories}
+        for q in found:
+            title = titles.get(q.story_id, "") if q.story_id else ""
+            console.print(f"[bold]{escape(q.transcript)}[/]")
+            console.print(f"  intent {q.intent}  story {escape(title) or '-'}")
+            if q.restated:
+                console.print(f"  restated: {escape(q.restated)}")
+        return found
+
+    try:
+        found = _run(go)
+    except CallerConfigError as e:
+        err.print(f"[red]Speech-to-text is not configured:[/] {e}")
+        raise typer.Exit(code=1) from e
+    except (BriefingNotFoundError, NotClearedError) as e:
+        err.print(f"[red]Cannot use that briefing:[/] {e}")
+        raise typer.Exit(code=1) from e
+    if not found:
+        err.print("No question heard.")
+        raise typer.Exit(code=1)
+
+
 def main() -> None:
     app()
