@@ -18,7 +18,9 @@ WHEN = datetime(2026, 11, 17, 8, 0, tzinfo=UTC)
 
 def _story(title: str, source_titles: tuple[str, ...] = ("a", "b")) -> TopStory:
     refs = [
-        StorySourceRef(outlet=f"O{i}", title=t, url=f"https://o{i}.test/{title}", published_at=WHEN)
+        StorySourceRef(
+            id=uuid4(), outlet=f"O{i}", title=t, url=f"https://o{i}.test/{title}", published_at=WHEN
+        )
         for i, t in enumerate(source_titles)
     ]
     return TopStory(

@@ -1,14 +1,14 @@
 # STATE
 
-Last updated: 2026-11-17 by: Claude Code
+Last updated: 2026-11-18 by: Claude Code
 
 ## Current phase
 
-Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 acceptance run.
+Phase 3: Archive. Phases 1 and 2 are complete.
 
 ## Active task
 
-2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
+3.1 `claim_trace()` API + rejection log API
 
 ## Tasks
 
@@ -22,15 +22,15 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [x] 1.5 reporter: clustering into stories by embedding similarity
-- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; acceptance run blocked on the Voyage key.
+- [x] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
 
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
-- [ ] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
-- [ ] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
-- [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
-- [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
-- [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
+- [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
+- [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
+- [x] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
+- [x] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
+- [x] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ### Phase 3: Archive
 - [ ] 3.1 `claim_trace()` API + rejection log API
@@ -62,11 +62,12 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Latest eval numbers
 
-(none yet)
+- 2026-11-18, judge_v1 (130 cases), prompt `dad2a081`, `gpt-oss-120b`: catch rate 1.00 (30/30), precision 0.904,
+  recall 0.971, false flag rate 0.113. Results in `evals/results/judge_v1-dad2a081.*`.
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.0. `build_rundown()` in `app/producer/rundown.py` picks the top fresh stories, splits the time evenly, and creates a briefing row. It is on branch `phase2/producer-rundown`, which is stacked on PR #2 (`phase1/stories-cli`, task 1.6, still open).
-- Half done: the 1.6 acceptance run is still blocked on `NEWSROOM_VOYAGE_API_KEY`, and the 0.80 cluster threshold is uncalibrated. Task 2.1 will be the first real LLM work, so it needs `NEWSROOM_GROQ_API_KEY` for any live check.
-- Next: task 2.1. Writer `draft_script(rundown)` through `llm.complete("draft", ...)`. Source text goes in user messages only, never in the system prompt.
+- Done: 1.6 acceptance. 10 more default feeds (`app/config.py`); a live refresh embedded 263 sources and the top 10 all have 2+ sources. `tests/conftest.py` now exits if `NEWSROOM_TEST_DATABASE_URL` is the app database (integration fixtures TRUNCATE; that is how test stories "Chip launch"/"AI probe", outlets A/B/C, got into the dev DB, where they still are).
+- Open: Groq free tier 8000 TPM on the judge: about half of claims went `pending` in the live brief; chat calls have no pacing (stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event (Anthropic IPO) in two. Judge weaknesses from 2.4. `main` has only up to PR #3; phase 2 is on `phase2/evals-v1` with no PR to main yet.
+- Next: 3.1 `claim_trace()` + rejection log API (archive node).

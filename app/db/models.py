@@ -1,4 +1,5 @@
 """SQLModel tables. The trace chain: sources -> stories -> script_lines -> claims -> claim_evidence.
+Claims also record the sources the Writer cited in ``claim_sources``.
 
 Delete rules keep the chain intact: deleting a briefing removes its lines, claims, and evidence;
 a source cannot be deleted while evidence points at it (retract it with ``retracted`` instead).
@@ -134,6 +135,22 @@ class ClaimEvidence(SQLModel, table=True):
     source_id: UUID = _fk("sources.id", "RESTRICT")
     passage: str = Field(sa_type=Text)
     score: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class ClaimSource(SQLModel, table=True):
+    """Sources the Writer cited for a claim (decision 0011). Not evidence: the Editor's verified
+    passages live in ``claim_evidence``, and only those can approve a claim."""
+
+    __tablename__ = "claim_sources"
+
+    claim_id: UUID = Field(
+        sa_column=Column(ForeignKey("claims.id", ondelete="CASCADE"), primary_key=True)
+    )
+    source_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("sources.id", ondelete="RESTRICT"), primary_key=True, index=True
+        )
+    )
 
 
 class Trace(SQLModel, table=True):

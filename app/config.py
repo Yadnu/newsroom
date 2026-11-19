@@ -17,7 +17,7 @@ class FeedConfig(BaseModel):
     trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
-# v1 topic scope default: AI and tech news (STATE open question). All checked reachable 2026-11-16.
+# v1 topic scope default: AI and tech news (STATE open question).
 # Trust scores are a uniform 0.5 placeholder until the Editor calibrates them.
 DEFAULT_FEEDS = (
     FeedConfig(
@@ -32,6 +32,25 @@ DEFAULT_FEEDS = (
     FeedConfig(url="https://www.technologyreview.com/feed/", outlet="MIT Technology Review"),
     FeedConfig(url="https://www.wired.com/feed/tag/ai/latest/rss", outlet="Wired"),
     FeedConfig(url="https://feeds.bbci.co.uk/news/technology/rss.xml", outlet="BBC News"),
+    # Added 2026-11-18 (all returned 200 with entries) so the same event shows up in 2+ outlets.
+    FeedConfig(url="https://arstechnica.com/ai/feed/", outlet="Ars Technica"),
+    FeedConfig(
+        url="https://www.theregister.com/software/ai_ml/headlines.atom", outlet="The Register"
+    ),
+    FeedConfig(url="https://www.engadget.com/rss.xml", outlet="Engadget"),
+    FeedConfig(url="https://www.zdnet.com/topic/artificial-intelligence/rss.xml", outlet="ZDNET"),
+    FeedConfig(
+        url="https://www.theguardian.com/technology/artificialintelligenceai/rss",
+        outlet="The Guardian",
+    ),
+    FeedConfig(
+        url="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+        outlet="The New York Times",
+    ),
+    FeedConfig(url="https://siliconangle.com/category/ai/feed/", outlet="SiliconANGLE"),
+    FeedConfig(url="https://the-decoder.com/feed/", outlet="The Decoder"),
+    FeedConfig(url="https://www.cnbc.com/id/19854910/device/rss/rss.html", outlet="CNBC"),
+    FeedConfig(url="https://feeds.bloomberg.com/technology/news.rss", outlet="Bloomberg"),
 )
 
 
@@ -55,6 +74,11 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-4-lite"
     voyage_api_key: SecretStr | None = None
     voyage_base_url: str = "https://api.voyageai.com/v1"
+    # Embedding batches and pacing (decision 0015). 0 = no limit. A Voyage key without billing
+    # allows about 3 requests and 10K tokens per minute: use 3 / 9000 / 9000 there.
+    embed_requests_per_minute: int = Field(default=0, ge=0)
+    embed_tokens_per_minute: int = Field(default=0, ge=0)
+    embed_batch_max_tokens: int = Field(default=100_000, ge=1)
 
     # Chat completions (decision 0008): Groq, OpenAI-compatible API.
     groq_api_key: SecretStr | None = None
@@ -68,6 +92,16 @@ class Settings(BaseSettings):
             "classify": "openai/gpt-oss-20b",
             "answer": "openai/gpt-oss-20b",
             "judge": "openai/gpt-oss-120b",
+        }
+    )
+    # Task -> fallback model, tried once when the routed model gives invalid output twice or a
+    # transient error outlives the retries (decision 0014). No judge fallback: a weaker judge is
+    # worse than no verdict. Env override is JSON.
+    llm_fallbacks: dict[str, str] = Field(
+        default_factory=lambda: {
+            "draft": "openai/gpt-oss-120b",
+            "classify": "openai/gpt-oss-120b",
+            "answer": "openai/gpt-oss-120b",
         }
     )
     # Model -> (input, output) USD per 1M tokens. Groq list prices 2026-11-16; free tier bills $0
@@ -106,6 +140,19 @@ class Settings(BaseSettings):
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)
     producer_seconds_per_story: int = Field(default=45, ge=10)
+
+    # Writer (task 2.1). ~150 spoken words per minute.
+    writer_words_per_second: float = Field(default=2.5, gt=0)
+    writer_source_max_chars: int = Field(default=6000, ge=500)
+
+    # Editor (task 2.2, decision 0012). Evidence chunks are embedded on the fly, not stored.
+    editor_chunk_chars: int = Field(default=700, ge=200)
+    editor_chunk_overlap: int = Field(default=120, ge=0)
+    editor_source_max_chars: int = Field(default=20000, ge=1000)
+    editor_top_k: int = Field(default=4, ge=1, le=12)
+    editor_max_concurrency: int = Field(default=8, ge=1)
+    # Rewrite loop (task 2.3, decision 0013): rounds of Writer rewrites for non-approved claims.
+    rewrite_max_rounds: int = Field(default=2, ge=0, le=5)
 
 
 @lru_cache
