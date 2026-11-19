@@ -8,7 +8,7 @@ Node: context/nodes/caller.md
 
 from app.caller.context import context_for
 from app.caller.intent import classify
-from app.caller.listen import listen
+from app.caller.pipeline import listen
 from app.caller.stt import FakeSTTService, make_stt
 from app.caller.types import (
     CallerConfigError,

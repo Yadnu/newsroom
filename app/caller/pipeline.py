@@ -34,10 +34,23 @@ from app.caller.intent import classify
 from app.caller.stt import make_stt
 from app.caller.types import CallerContext, CallerEvent, CallerQuestion, Intent, Interim
 from app.config import Settings, get_settings
+from app.standards_desk.screen import ScreenResult, screen_caller
 
 Classifier = Callable[[str, CallerContext], Awaitable[Intent]]
+Screener = Callable[[str, str | None], Awaitable[ScreenResult]]
 STT_CONNECT_WAIT_S = 5.0
-SETTLE_S = 0.3  # after release, once a final transcript is in, how long to wait for a straggler
+SETTLE_S = 0.3  # after release, once the finals cover the audio, how long to wait for a straggler
+COVER_SLACK_MS = 400  # finals ending this close to the end of the audio count as covering it
+
+
+def final_end_ms(frame: TranscriptionFrame) -> int | None:
+    """Where this final transcript ends in the audio, if the STT says (Deepgram results carry
+    ``start`` and ``duration`` in seconds). ``None`` when unknown."""
+    start = getattr(frame.result, "start", None)
+    duration = getattr(frame.result, "duration", None)
+    if isinstance(start, int | float) and isinstance(duration, int | float):
+        return round((start + duration) * 1000)
+    return None
 
 
 async def stt_ready(stt: STTService) -> None:
@@ -53,7 +66,7 @@ async def stt_ready(stt: STTService) -> None:
 class _Heard(FrameProcessor):
     """End of the pipeline: forwards transcripts to ``listen()`` through a queue."""
 
-    def __init__(self, out: "asyncio.Queue[tuple[str, str]]") -> None:
+    def __init__(self, out: "asyncio.Queue[tuple[str, str, int | None]]") -> None:
         super().__init__(name="caller-heard")
         self.out = out
 
@@ -61,10 +74,10 @@ class _Heard(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, TranscriptionFrame):
             if frame.text.strip():
-                self.out.put_nowait(("final", frame.text.strip()))
+                self.out.put_nowait(("final", frame.text.strip(), final_end_ms(frame)))
         elif isinstance(frame, InterimTranscriptionFrame):
             if frame.text.strip():
-                self.out.put_nowait(("interim", frame.text.strip()))
+                self.out.put_nowait(("interim", frame.text.strip(), None))
         else:
             await self.push_frame(frame, direction)
 
@@ -76,18 +89,20 @@ async def listen(
     stt: STTService | None = None,
     settings: Settings | None = None,
     classifier: Classifier | None = None,
+    screener: Screener | None = None,
 ) -> AsyncIterator[CallerEvent]:
     """Yield ``Interim`` while the listener talks and a ``CallerQuestion`` per utterance.
     ``audio`` is PCM16 mono at ``caller_sample_rate``."""
     settings = settings or get_settings()
     stt = stt or make_stt(settings)
     classifier = classifier or classify
+    screener = screener or screen_caller
     sr = settings.caller_sample_rate
     max_bytes = settings.caller_max_question_s * sr * 2
     gap_s = settings.caller_utterance_gap_ms / 1000
     finalize_s = settings.caller_finalize_wait_ms / 1000
 
-    heard: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
+    heard: asyncio.Queue[tuple[str, str, int | None]] = asyncio.Queue()
     worker = PipelineWorker(
         Pipeline([stt, _Heard(heard)]),
         params=PipelineParams(audio_in_sample_rate=sr),
@@ -122,13 +137,14 @@ async def listen(
             await worker.queue_frame(VADUserStoppedSpeakingFrame())
         finally:
             stats["audio_ms"] = sent * 1000 // (sr * 2)
-            heard.put_nowait(("audio_done", ""))
+            heard.put_nowait(("audio_done", "", None))
 
     feeder = asyncio.create_task(feed())
     finals: list[str] = []
     pending = ""  # latest interim words after the last final
     audio_done = False
     first_word_at: float | None = None
+    heard_until_ms: int | None = None  # end of the latest timed final, when the STT reports it
 
     async def question() -> CallerQuestion:
         transcript = " ".join([*finals, pending] if pending else finals).strip()
@@ -140,14 +156,25 @@ async def listen(
             stt_ms=round((time.perf_counter() - (first_word_at or time.perf_counter())) * 1000),
         ) as s:
             intent = await classifier(transcript, context)
-            s.set(intent=intent.intent, story_id=intent.story_id)
+            screen = await screener(transcript, intent.intent)
+            s.set(
+                intent=intent.intent,
+                story_id=intent.story_id,
+                allowed=screen.allowed,
+                screen=screen.category,
+            )
         stats["questions"] += 1
-        return CallerQuestion(transcript, intent.intent, intent.story_id, intent.restated)
+        return CallerQuestion(
+            transcript, intent.intent, intent.story_id, intent.restated, screen=screen
+        )
 
     with span("caller", "listen", context.briefing_id) as s:
         try:
             while True:
-                if audio_done and finals and not pending:
+                covered = (
+                    heard_until_ms is None or heard_until_ms >= stats["audio_ms"] - COVER_SLACK_MS
+                )
+                if audio_done and finals and not pending and covered:
                     timeout: float | None = min(SETTLE_S, finalize_s)  # last words are in
                 elif audio_done:
                     timeout = finalize_s
@@ -156,11 +183,11 @@ async def listen(
                 else:
                     timeout = None
                 try:
-                    kind, text = await asyncio.wait_for(heard.get(), timeout)
+                    kind, text, end_ms = await asyncio.wait_for(heard.get(), timeout)
                 except TimeoutError:
                     if finals or pending:
                         yield await question()
-                        finals, pending, first_word_at = [], "", None
+                        finals, pending, first_word_at, heard_until_ms = [], "", None, None
                     if audio_done:
                         break
                     continue
@@ -178,6 +205,8 @@ async def listen(
                     first_word_at = first_word_at or time.perf_counter()
                     finals.append(text)
                     pending = ""
+                    if end_ms is not None:
+                        heard_until_ms = max(heard_until_ms or 0, end_ms)
                     yield Interim(" ".join(finals))
         finally:
             feeder.cancel()

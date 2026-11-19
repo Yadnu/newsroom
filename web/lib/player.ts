@@ -17,6 +17,9 @@ export type AnchorEvent =
       story_id: string | null;
       story_title: string | null;
       restated: string;
+      allowed: boolean;
+      screen_category: "ok" | "empty" | "too_long" | "abusive" | "injection" | "off_topic";
+      screen_reason: string;
     }
   | { type: "caller_error"; message: string };
 

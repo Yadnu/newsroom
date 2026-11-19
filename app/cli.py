@@ -348,6 +348,12 @@ def ask(
             console.print(f"  intent {q.intent}  story {escape(title) or '-'}")
             if q.restated:
                 console.print(f"  restated: {escape(q.restated)}")
+            if q.screen is not None:
+                verdict = "allowed" if q.screen.allowed else "BLOCKED"
+                console.print(
+                    f"  screen: {verdict} {q.screen.category} ({q.screen.checked_by})"
+                    f" {escape(q.screen.reason)}"
+                )
         return found
 
     try:

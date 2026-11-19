@@ -25,6 +25,15 @@ const INTENT_LABEL: Record<CallerQuestionEvent["intent"], string> = {
   unknown: "not classified",
 };
 
+const SCREEN_LABEL: Record<CallerQuestionEvent["screen_category"], string> = {
+  ok: "ok",
+  empty: "too short",
+  too_long: "too long",
+  abusive: "abusive",
+  injection: "instructions, not a question",
+  off_topic: "off topic",
+};
+
 type Mic = { stream: MediaStream; nodes: AudioNode[]; chunker: MicChunker };
 
 const CLOSE_REASONS: Record<number, string> = {
@@ -311,9 +320,13 @@ export function Player({
           {callerError && <p className="error">{callerError}</p>}
           {questions.map((q) => (
             <div key={q.id} className="question">
-              <span className={`badge ${q.intent === "off_topic" ? "rejected" : "approved"}`}>
-                {INTENT_LABEL[q.intent]}
-              </span>
+              {q.allowed ? (
+                <span className="badge approved">{INTENT_LABEL[q.intent]}</span>
+              ) : (
+                <span className="badge rejected" title={q.screen_reason}>
+                  not taken: {SCREEN_LABEL[q.screen_category]}
+                </span>
+              )}
               <b>{q.restated || q.transcript}</b>
               {q.story_title && <span className="muted"> &middot; about {q.story_title}</span>}
               {q.restated && q.restated !== q.transcript && (

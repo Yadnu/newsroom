@@ -15,7 +15,7 @@ from typing import Any
 from uuid import UUID
 
 from app.caller.context import context_for
-from app.caller.listen import listen
+from app.caller.pipeline import listen
 from app.caller.types import CallerConfigError, CallerContext, CallerQuestion, Interim
 from app.config import Settings, get_settings
 from app.log import get_logger
@@ -125,6 +125,9 @@ class CallIn:
                             "story_id": str(event.story_id) if event.story_id else None,
                             "story_title": titles.get(event.story_id) if event.story_id else None,
                             "restated": event.restated,
+                            "allowed": event.screen.allowed if event.screen else True,
+                            "screen_category": event.screen.category if event.screen else "ok",
+                            "screen_reason": event.screen.reason if event.screen else "",
                         }
                     )
         except CallerConfigError as e:

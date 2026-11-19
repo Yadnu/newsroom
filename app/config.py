@@ -143,6 +143,7 @@ class Settings(BaseSettings):
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)
     standards_max_transition_words: int = Field(default=10, ge=1)
+    standards_max_question_words: int = Field(default=80, ge=5)  # caller screen (task 5.2)
 
     # Anchor voice output (task 4.2, decisions 0004 and 0017).
     anchor_tts: Literal["cartesia", "fake"] = "cartesia"

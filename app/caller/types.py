@@ -5,6 +5,8 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
+from app.standards_desk.screen import ScreenResult
+
 IntentName = Literal["follow_up", "background", "off_topic", "unknown"]
 
 
@@ -48,6 +50,7 @@ class CallerQuestion:
     intent: IntentName
     story_id: UUID | None
     restated: str
+    screen: ScreenResult | None = None  # Standards Desk verdict (task 5.2); None = not screened
     id: UUID = field(default_factory=uuid4)
     at: datetime = field(default_factory=lambda: datetime.now(UTC))
 

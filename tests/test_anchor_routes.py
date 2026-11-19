@@ -143,6 +143,17 @@ def mic(wired: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> dict[str, Any
 
     monkeypatch.setattr(live, "context_for", fake_context)
     monkeypatch.setattr(live, "listen", fake_listen)
+    import app.caller.pipeline as listen_mod
+    from app.standards_desk import ScreenResult
+
+    async def screen(transcript: str, intent: str | None = None) -> ScreenResult:
+        return (
+            ScreenResult(False, "injection", "tries to instruct", "rules")
+            if "ignore" in transcript
+            else ScreenResult(True, "ok", "", "llm")
+        )
+
+    monkeypatch.setattr(listen_mod, "screen_caller", screen)
     wired["settings"] = SETTINGS.model_copy(update={"anchor_send_ahead_ms": 0})  # real-time pace
     return seen
 
@@ -176,6 +187,7 @@ def test_push_to_talk_gives_interim_then_classified_question(
     assert interims and interims[-1] == "nova ship"
     assert q["transcript"] == "nova ship" and q["intent"] == "follow_up"
     assert q["story_title"] == "Acme chip" and q["restated"] == "When does nova ship?"
+    assert (q["allowed"], q["screen_category"]) == (True, "ok")
     assert mic["contexts"][0].current_story_id == script.lines[0].story_id
 
 

@@ -23,6 +23,7 @@ Next.js player and Archive dashboard.
 - Push-to-talk (task 5.1): "Hold to ask" pauses the Anchor, captures the mic (AudioWorklet
   `public/mic-worklet.js`, `lib/mic.ts` downsamples to 16 kHz PCM16), sends `mic_start` / chunks / `mic_end`, and
   shows live interim words and the classified question (intent badge, story). Resume continues the briefing.
+  A question the Standards Desk blocked shows "not taken: <category>" with the reason (task 5.2).
 - `NEWSROOM_PUBLIC_API_URL`: the API as the browser reaches it (WebSocket base); defaults to `NEWSROOM_API_URL`.
 - Archive dashboard (task 3.3): `/` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
