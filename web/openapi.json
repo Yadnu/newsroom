@@ -1,0 +1,957 @@
+{
+  "components": {
+    "schemas": {
+      "BriefingDetail": {
+        "properties": {
+          "briefing": {
+            "$ref": "#/components/schemas/BriefingSummary"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineSummary"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/Stage"
+            },
+            "title": "Stages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "briefing",
+          "lines",
+          "stages"
+        ],
+        "title": "BriefingDetail",
+        "type": "object"
+      },
+      "BriefingSummary": {
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_minutes": {
+            "title": "Target Minutes",
+            "type": "number"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "verdicts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Verdicts",
+            "type": "object"
+          },
+          "wall_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wall Ms"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "status",
+          "target_minutes",
+          "lines",
+          "verdicts",
+          "cost_usd",
+          "tokens_in",
+          "tokens_out",
+          "wall_ms"
+        ],
+        "title": "BriefingSummary",
+        "type": "object"
+      },
+      "ClaimTrace": {
+        "properties": {
+          "audio_end_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio End Ms"
+          },
+          "audio_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Start Ms"
+          },
+          "briefing_id": {
+            "format": "uuid",
+            "title": "Briefing Id",
+            "type": "string"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/TracedClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/Judgement"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "story_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Id"
+          },
+          "story_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Title"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "briefing_id",
+          "story_id",
+          "story_title",
+          "order",
+          "text",
+          "audio_start_ms",
+          "audio_end_ms",
+          "claims",
+          "history"
+        ],
+        "title": "ClaimTrace",
+        "type": "object"
+      },
+      "EvidenceRef": {
+        "properties": {
+          "passage": {
+            "title": "Passage",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          }
+        },
+        "required": [
+          "source",
+          "passage",
+          "score"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "env": {
+            "title": "Env",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "env"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Judgement": {
+        "description": "One ``editor/judge_claim`` span. ``current``: the claim is still in ``claims``.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "claim_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Id"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "at",
+          "claim_id",
+          "claim",
+          "verdict",
+          "score",
+          "reason",
+          "checks",
+          "current"
+        ],
+        "title": "Judgement",
+        "type": "object"
+      },
+      "LineSummary": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "story_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Title"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "verdicts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Verdicts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "text",
+          "story_title",
+          "verdicts"
+        ],
+        "title": "LineSummary",
+        "type": "object"
+      },
+      "Rejection": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "briefing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Briefing Id"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "claim_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Id"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "line_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Id"
+          },
+          "line_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Text"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "at",
+          "claim_id",
+          "claim",
+          "verdict",
+          "score",
+          "reason",
+          "checks",
+          "current",
+          "briefing_id",
+          "line_id",
+          "line_text"
+        ],
+        "title": "Rejection",
+        "type": "object"
+      },
+      "SourceRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outlet": {
+            "title": "Outlet",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "retracted": {
+            "title": "Retracted",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "outlet",
+          "title",
+          "url",
+          "published_at",
+          "retracted"
+        ],
+        "title": "SourceRef",
+        "type": "object"
+      },
+      "Stage": {
+        "description": "One component's share of a briefing. ``latency_ms`` sums the component's entry spans\n(its own top-level steps); LLM calls made inside it are counted in ``llm_*``.",
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "llm_calls": {
+            "title": "Llm Calls",
+            "type": "integer"
+          },
+          "llm_ms": {
+            "title": "Llm Ms",
+            "type": "number"
+          },
+          "steps": {
+            "title": "Steps",
+            "type": "integer"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "component",
+          "steps",
+          "latency_ms",
+          "llm_calls",
+          "llm_ms",
+          "cost_usd",
+          "tokens_in",
+          "tokens_out",
+          "errors"
+        ],
+        "title": "Stage",
+        "type": "object"
+      },
+      "TracedClaim": {
+        "properties": {
+          "cited": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Cited",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "judged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judged At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "rewrite_round": {
+            "title": "Rewrite Round",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "verdict",
+          "score",
+          "reason",
+          "rewrite_round",
+          "judged_at",
+          "cited",
+          "evidence"
+        ],
+        "title": "TracedClaim",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Newsroom",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/archive/briefings": {
+      "get": {
+        "description": "Briefings, newest first, with claim verdict counts, cost and wall time.",
+        "operationId": "get_briefings_archive_briefings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BriefingSummary"
+                  },
+                  "title": "Response Get Briefings Archive Briefings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Briefings",
+        "tags": [
+          "archive"
+        ]
+      }
+    },
+    "/archive/briefings/{briefing_id}": {
+      "get": {
+        "description": "One briefing: its script lines with verdict counts, and latency and cost per stage.",
+        "operationId": "get_briefing_archive_briefings__briefing_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "briefing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Briefing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefingDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Briefing",
+        "tags": [
+          "archive"
+        ]
+      }
+    },
+    "/archive/lines/{line_id}/trace": {
+      "get": {
+        "description": "A script line with its claims, verdicts, cited sources, evidence and judgement history.",
+        "operationId": "get_claim_trace_archive_lines__line_id__trace_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTrace"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Claim Trace",
+        "tags": [
+          "archive"
+        ]
+      }
+    },
+    "/archive/rejections": {
+      "get": {
+        "description": "Editor judgements that were not approved, newest first.",
+        "operationId": "get_rejections_archive_rejections_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "briefing_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Briefing Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_rewrite",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Rewrite",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Rejection"
+                  },
+                  "title": "Response Get Rejections Archive Rejections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Rejections",
+        "tags": [
+          "archive"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Liveness only. Does not touch Postgres or Redis.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

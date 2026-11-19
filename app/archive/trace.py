@@ -170,7 +170,7 @@ async def claim_trace(script_line_id: UUID) -> ClaimTrace:
             ).one_or_none()
             if line is None:
                 raise TraceNotFoundError(f"no script line {script_line_id}")
-            s.briefing_id = line.briefing_id
+            s.set(briefing=line.briefing_id)  # payload only: reads stay off the briefing timeline
             claims = (
                 await conn.execute(
                     text(
@@ -252,7 +252,11 @@ async def rejection_log(
     ``current`` is false once a rewrite replaced the claim."""
     verdicts = list(REJECTING_OR_REWRITE if include_rewrite else REJECTING)
     with span(
-        "archive", "rejection_log", briefing_id, limit=limit, include_rewrite=include_rewrite
+        "archive",
+        "rejection_log",
+        briefing=briefing_id,
+        limit=limit,
+        include_rewrite=include_rewrite,
     ) as s:
         async with get_engine().connect() as conn:
             where = "component = :c AND event = :e AND payload->>'verdict' = ANY(:v)"

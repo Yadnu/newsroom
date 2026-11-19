@@ -4,11 +4,11 @@ Last updated: 2026-11-19 by: Claude Code
 
 ## Current phase
 
-Phase 3: Archive. Phases 1 and 2 are complete.
+Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 
 ## Active task
 
-3.3 web: Archive dashboard
+4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
 
 ## Tasks
 
@@ -35,7 +35,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 ### Phase 3: Archive
 - [x] 3.1 `claim_trace()` API + rejection log API
 - [x] 3.2 Langfuse integration in llm-gateway
-- [ ] 3.3 web: Archive dashboard (acceptance: any sentence traces to its source URL in one click)
+- [x] 3.3 web: Archive dashboard (acceptance: any sentence traces to its source URL in one click)
 
 ### Phase 4: Anchor (voice out)
 - [ ] 4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
@@ -68,6 +68,6 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 3.2. `app/shared/llm/langfuse.py` exports each gateway call (trace id = archive span id, generations with prompts, output, tokens, cost) over the ingestion API; off until `NEWSROOM_LANGFUSE_PUBLIC_KEY`/`SECRET_KEY` are set, never run live yet. 3.1 is PR #11 and 3.2 is on `phase3/langfuse` (stacked on it); `main` needs PR #12 (undo the bad PR #10 merge) first.
-- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live; stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI (no Docker locally). Test stories "Chip launch"/"AI probe" are still in the dev DB. Brief workflow needs repo secrets set by the user.
-- Next: 3.3 web Archive dashboard (Next.js on top of `/archive` routes; `web/` not scaffolded yet).
+- Done: 3.3. `web/` Next.js Archive dashboard (briefings, sentence -> claim trace -> source link in one click, stages, rejections) on new `GET /archive/briefings[/{id}]`; types generated from `web/openapi.json`. Branch `phase3/dashboard` stacks on `phase3/langfuse` (3.2) and `phase3/claim-trace` (3.1, PR #11); `main` needs PR #12 first. None merged yet.
+- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI. Test stories "Chip launch"/"AI probe" and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live (no keys).
+- Next: 4.1 standards-desk `clear_for_air()` (read the standards-desk and editor nodes; the air-gate invariant is in AGENTS.md).
