@@ -23,6 +23,8 @@ Guardrails on both ends: clears approved scripts for air and screens Caller inpu
   source), `opinion` (evaluative word in an unattributed sentence). `story_dropped`: a story whose every factual line
   is blocked loses its transitions. Sets the briefing `cleared`; if nothing survives, `failed` and `NotClearedError`
   (`.blocked`).
+- `async def clear_stored(briefing_id) -> ClearedScript` and `load_script(briefing_id) -> Script` (`stored.py`, task 4.2):
+  rebuild the stored script (lines, current claims, cited sources) and clear it. `BriefingNotFoundError`.
 - `ClearedScript(briefing_id, lines: tuple[ClearedLine(id, story_id, order, text, claim_ids)], blocked:
   tuple[Block(line_id, order, rule: BlockRule, reason)])`: immutable; `ClearedScript(...)` raises `TypeError`.
 - `async def screen_caller(transcript: str) -> ScreenResult` (abusive, off-topic, prompt injection)
@@ -50,3 +52,4 @@ run on briefing `3873a08c` (2026-11-19): 5 of 16 lines cleared (exactly the line
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-19: `clear_for_air()` and the `ClearedScript` gate (task 4.1, decision 0016).
+- 2026-11-19: `clear_stored()` / `load_script()` for the Anchor (task 4.2).

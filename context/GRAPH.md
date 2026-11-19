@@ -21,7 +21,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | - |
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002, 0011, 0013, 0014 |
 | [web](nodes/web.md) | app | in-progress | 3 | `web/` | anchor, archive | - | - |
-| [anchor](nodes/anchor.md) | component | planned | 4 | `app/anchor/` | standards-desk, producer, archive | web | 0004, 0016 |
+| [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, archive | web | 0004, 0016, 0017 |
 | [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer | 0016 |
 | [caller](nodes/caller.md) | component | planned | 5 | `app/caller/` | archive | standards-desk, producer | 0004 |
 
@@ -29,7 +29,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 
 ```mermaid
 flowchart LR
-  anchor["anchor (planned)"]
+  anchor["anchor (in-progress)"]
   archive["archive (in-progress)"]
   caller["caller (planned)"]
   data_model["data-model (done)"]

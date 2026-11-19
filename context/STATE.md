@@ -8,7 +8,7 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 
 ## Active task
 
-4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
+4.3 web: Player with synced, clickable transcript
 
 ## Tasks
 
@@ -39,7 +39,7 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 
 ### Phase 4: Anchor (voice out)
 - [x] 4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
-- [ ] 4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
+- [x] 4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
 - [ ] 4.3 web: Player with synced, clickable transcript (acceptance: briefing plays in browser)
 
 ### Phase 5: Caller and Producer (voice in)
@@ -68,6 +68,6 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 4.1. `app/standards_desk/` `clear_for_air(reviewed) -> ClearedScript` (unforgeable type) with deterministic rules (decision 0016); `newsroom brief` shows blocked lines. Live (read-only) on `3873a08c`: 5/16 lines clear, exactly the approved ones. Branch `phase4/clear-for-air`.
-- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live, and pending lines now never air). Standards rules are heuristics to tune with task 6.1. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 4.2 anchor (Pipecat + Cartesia; needs `NEWSROOM_CARTESIA_API_KEY`). `speak()` takes only a `ClearedScript`.
+- Done: 4.2. `app/anchor/`: Pipecat 1.16 pipeline, Cartesia + fake TTS adapters, audio-clock line timestamps, WebSocket `/anchor/briefings/{id}/live` with pause/resume (decision 0017); `newsroom speak` CLI. Live with Cartesia on `3873a08c` (5 lines, 28.9 s). Branch `phase4/anchor` builds on `phase4/clear-for-air` (PR #16, 4.1); neither merged.
+- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, and pending lines never air). Standards rules are heuristics (tune in 6.1). Cartesia cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 4.3 web Player: play the WebSocket PCM in the browser (AudioWorklet), highlight lines from `line` events, click a line to open its claim trace.

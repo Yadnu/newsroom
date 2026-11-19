@@ -27,7 +27,9 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   line (blocked lines struck through with `BLOCKED <rule>: reason`) with each claim's verdict,
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
   judge's reason. JSON adds `cleared` and per-line `on_air` / `block`. Exit 1 on `NoStoriesError`, `WriterError`,
-  or when nothing clears (the report is still printed). Progress goes to stderr, the script to stdout.
+  or when nothing clears (the report is still printed).
+- CLI `newsroom speak <briefing_id> [--out brief.wav]`: `clear_stored` -> `anchor.speak` into a WAV file; prints each
+  line's start/end ms. Exit 1 for an unknown briefing, nothing cleared, or TTS not configured. Progress goes to stderr, the script to stdout.
   `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh; free-tier embed pacing) runs it live with repo secrets
   `NEWSROOM_DATABASE_URL`, `NEWSROOM_GROQ_API_KEY`, `NEWSROOM_VOYAGE_API_KEY`; uploads `brief.json` + logs, writes a job summary.
 - `async def handle_call(question: CallerQuestion) -> CallerAnswerPlan`: pause, run a fast Reporter -> Writer -> Editor loop, resume.
@@ -58,3 +60,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-18: `newsroom brief` CLI prints the reviewed script with verdict and sources per claim (task 2.5).
 - 2026-11-18: manual `Brief` GitHub workflow runs the live pipeline.
 - 2026-11-19: `newsroom brief` clears the script for air and shows blocked lines (task 4.1).
+- 2026-11-19: `newsroom speak <briefing_id> [--out file.wav]` voices a stored briefing (task 4.2).

@@ -4,6 +4,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Awaitable, Callable, Sequence
+from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -21,7 +22,7 @@ from app.producer import NoStoriesError, Rundown, build_rundown
 from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.reporter.rank import StorySourceRef, TopStory, top_stories
 from app.shared import llm
-from app.standards_desk import Block, NotClearedError, clear_for_air
+from app.standards_desk import Block, BriefingNotFoundError, NotClearedError, clear_for_air
 from app.writer import DraftClaim, WriterError, draft_script
 
 app = typer.Typer(help="Newsroom: voice-first AI news anchor.", no_args_is_help=True)
@@ -255,6 +256,47 @@ def brief(
     if not any_cleared:
         err.print("[red]Nothing cleared for air:[/] every line was blocked by the Standards Desk.")
         raise typer.Exit(code=1)
+
+
+@app.command()
+def speak(
+    briefing_id: Annotated[str, typer.Argument(help="Briefing to voice.")],
+    out: Annotated[Path, typer.Option("--out", "-o", help="WAV file to write.")] = Path(
+        "brief.wav"
+    ),
+) -> None:
+    """Clear a stored briefing for air, voice it to a WAV file, and print each line's timing."""
+    from app.anchor import AnchorConfigError, WavFileSession
+    from app.anchor import speak as voice
+    from app.standards_desk import clear_stored
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    try:
+        bid = UUID(briefing_id)
+    except ValueError as e:
+        err.print(f"[red]Not a briefing id:[/] {briefing_id}")
+        raise typer.Exit(code=2) from e
+
+    async def go() -> Any:
+        cleared = await clear_stored(bid)
+        err.print(f"cleared {len(cleared.lines)} lines ({len(cleared.blocked)} blocked); speaking")
+        session = WavFileSession(out, get_settings().anchor_sample_rate)
+        return await voice(cleared, session)
+
+    try:
+        report = _run(go)
+    except BriefingNotFoundError as e:
+        err.print(f"[red]Unknown briefing:[/] {e}")
+        raise typer.Exit(code=1) from e
+    except NotClearedError as e:
+        err.print(f"[red]Nothing cleared for air:[/] {e}")
+        raise typer.Exit(code=1) from e
+    except AnchorConfigError as e:
+        err.print(f"[red]Text-to-speech is not configured:[/] {e}")
+        raise typer.Exit(code=1) from e
+    for t in report.lines:
+        console.print(f"  line {t.order:>2}  {t.start_ms:>7} ms -> {t.end_ms:>7} ms")
+    console.print(f"wrote {out} ({report.audio_ms / 1000:.1f} s, {len(report.lines)} lines)")
 
 
 def main() -> None:
