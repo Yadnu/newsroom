@@ -13,6 +13,7 @@ TABLES = {
     "script_lines",
     "claims",
     "claim_evidence",
+    "claim_sources",
     "traces",
 }
 
@@ -33,11 +34,15 @@ def test_trace_chain_foreign_keys() -> None:
     assert _fk("claims", "script_line_id").column.table.name == "script_lines"
     assert _fk("claim_evidence", "claim_id").column.table.name == "claims"
     assert _fk("claim_evidence", "source_id").column.table.name == "sources"
+    assert _fk("claim_sources", "claim_id").column.table.name == "claims"
+    assert _fk("claim_sources", "source_id").column.table.name == "sources"
 
 
 def test_delete_rules_keep_the_chain_intact() -> None:
     assert _fk("script_lines", "briefing_id").ondelete == "CASCADE"
     assert _fk("claims", "script_line_id").ondelete == "CASCADE"
+    assert _fk("claim_sources", "claim_id").ondelete == "CASCADE"
+    assert _fk("claim_sources", "source_id").ondelete == "RESTRICT"
     assert _fk("claim_evidence", "claim_id").ondelete == "CASCADE"
     assert _fk("claim_evidence", "source_id").ondelete == "RESTRICT"
     assert _fk("script_lines", "story_id").ondelete == "SET NULL"

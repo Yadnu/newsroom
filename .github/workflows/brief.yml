@@ -1,0 +1,93 @@
+name: Brief
+
+# Live run of the text pipeline: ingest -> embed -> cluster -> rundown -> draft -> judge.
+# Manual only: every run spends Groq and Voyage quota and writes a briefing to the database.
+# Needs repo secrets NEWSROOM_DATABASE_URL, NEWSROOM_GROQ_API_KEY, NEWSROOM_VOYAGE_API_KEY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: Target length in minutes
+        default: "3"
+        required: true
+      topic:
+        description: Optional topic filter (substring of story or source title)
+        default: ""
+        required: false
+      refresh:
+        description: Ingest, embed and cluster first
+        type: boolean
+        default: true
+
+concurrency:
+  group: brief
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEWSROOM_ENV: prod
+      NEWSROOM_LOG_JSON: "true"
+      NEWSROOM_DATABASE_URL: ${{ secrets.NEWSROOM_DATABASE_URL }}
+      NEWSROOM_GROQ_API_KEY: ${{ secrets.NEWSROOM_GROQ_API_KEY }}
+      NEWSROOM_VOYAGE_API_KEY: ${{ secrets.NEWSROOM_VOYAGE_API_KEY }}
+      # Free-tier Voyage pacing (decision 0015); set the two per-minute repo variables to 0 once the account has billing.
+      NEWSROOM_EMBED_REQUESTS_PER_MINUTE: ${{ vars.NEWSROOM_EMBED_REQUESTS_PER_MINUTE || '3' }}
+      NEWSROOM_EMBED_TOKENS_PER_MINUTE: ${{ vars.NEWSROOM_EMBED_TOKENS_PER_MINUTE || '9000' }}
+      NEWSROOM_EMBED_BATCH_MAX_TOKENS: ${{ vars.NEWSROOM_EMBED_BATCH_MAX_TOKENS || '9000' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --locked
+      - name: Migrate
+        run: uv run alembic upgrade head
+      - name: Refresh and list top stories
+        if: inputs.refresh
+        run: uv run newsroom stories --refresh --top 10 2> stories.log
+      - name: Brief
+        env:
+          MINUTES: ${{ inputs.minutes }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          args=(--minutes "$MINUTES" --json)
+          if [ -n "$TOPIC" ]; then args+=(--topic "$TOPIC"); fi
+          uv run newsroom brief "${args[@]}" > brief.json 2> brief.log
+      - name: Summary
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r = json.load(open("brief.json"))
+          c = r["counts"]
+          print(f"## Briefing `{r['briefing_id']}`\n")
+          print(f"{r['stories']} stories, {len(r['lines'])} lines, rewrite rounds {r['rounds']}. "
+                f"approved {c['approved']}, rewrite {c['rewrite']}, "
+                f"rejected {c['rejected']}, pending {c['pending']}\n")
+          story = None
+          for line in r["lines"]:
+              if line["story"] != story:
+                  story = line["story"]
+                  print(f"\n### {story}\n")
+              print(f"- {line['text']}")
+              for cl in line["claims"]:
+                  src = ", ".join(f"[{s['outlet']}]({s['url']})" for s in cl["sources"]) or "no source"
+                  score = f" {cl['score']:.2f}" if cl["score"] is not None else ""
+                  print(f"  - **{cl['verdict']}**{score}: {cl['text']} ({src})")
+                  if cl["verdict"] != "approved" and cl["reason"]:
+                      print(f"    - _{cl['reason']}_")
+          EOF
+      - name: Upload output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brief-${{ github.run_id }}
+          path: |
+            brief.json
+            brief.log
+            stories.log
+          if-no-files-found: ignore
