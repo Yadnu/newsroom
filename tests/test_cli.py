@@ -7,9 +7,6 @@ import pytest
 from typer.testing import CliRunner
 
 import app.cli as cli
-from app.reporter.ingest import IngestReport
-from app.reporter.rank import StorySourceRef, TopStory
-from app.shared.llm import LLMConfigError
 from app.db.models import Verdict
 from app.editor import ClaimVerdict, EvidencePassage, ReviewedScript
 from app.producer import NoStoriesError, Rundown, RundownItem
@@ -25,7 +22,6 @@ WHEN = datetime(2026, 11, 16, 9, 30, tzinfo=UTC)
 def _story(title: str, outlets: list[str]) -> TopStory:
     refs = [
         StorySourceRef(
-            outlet=o, title=f"{title} ({o})", url=f"https://{o}.test/x", published_at=WHEN
             id=uuid4(),
             outlet=o,
             title=f"{title} ({o})",
