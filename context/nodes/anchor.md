@@ -4,7 +4,7 @@ type: component
 status: in-progress
 phase: 4
 code: app/anchor/
-depends_on: [standards-desk, producer, archive]
+depends_on: [standards-desk, producer, caller, archive]
 feeds: [web]
 decisions: [0004, 0016, 0017]
 ---
@@ -27,6 +27,8 @@ Voice output. Streams the cleared script as speech and records audio timestamps 
   end_ms}`, `paused{at_ms}`, `resumed{at_ms}`, `done{audio_ms, completed}`. Audio is PCM16 mono at `anchor_sample_rate`.
 - WebSocket `/anchor/briefings/{id}/live` (`routes.py`): clears the stored briefing (`standards_desk.clear_stored`),
   streams it; client sends `{"type": "pause"|"resume"}`. Close codes 4404 unknown, 4409 nothing cleared, 4500 no TTS.
+  The same socket carries push-to-talk mic audio for the Caller (`caller.live.CallIn`, task 5.1); sends are
+  serialised in `WebSocketSession`, which also tracks `current_line_id`.
 - `make_tts(settings)` (`tts.py`): `anchor_tts` = `cartesia` (needs `cartesia_api_key`, `cartesia_voice_id`; optional
   `cartesia_model`) or `fake` (`FakeTTSService`: silent PCM, 60 ms per word). `AnchorConfigError` if misconfigured.
 - Settings: `anchor_sample_rate` 24000, `anchor_line_gap_ms` 300, `anchor_send_ahead_ms` 250, `anchor_line_timeout_s` 30.
@@ -56,3 +58,4 @@ replaying line 0. Not yet: Cartesia cost accounting, word-level timestamps, the 
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-19: Pipecat pipeline, Cartesia + fake adapters, audio-clock timestamps, live WebSocket (task 4.2, decision 0017).
+- 2026-11-19: WebSocket carries Caller mic audio; pipeline shutdown is cancellation-safe (task 5.1).

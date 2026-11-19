@@ -4,11 +4,11 @@ Last updated: 2026-11-19 by: Claude Code
 
 ## Current phase
 
-Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
+Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 
 ## Active task
 
-4.3 web: Player with synced, clickable transcript
+5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
 
 ## Tasks
 
@@ -40,11 +40,11 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 ### Phase 4: Anchor (voice out)
 - [x] 4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
 - [x] 4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
-- [ ] 4.3 web: Player with synced, clickable transcript (acceptance: briefing plays in browser)
+- [x] 4.3 web: Player with synced, clickable transcript (acceptance: briefing plays in browser)
 
 ### Phase 5: Caller and Producer (voice in)
-- [ ] 5.1 caller: Deepgram adapter, intent classification
-- [ ] 5.2 standards-desk: `screen_caller()`
+- [x] 5.1 caller: Deepgram adapter, intent classification
+- [x] 5.2 standards-desk: `screen_caller()`
 - [ ] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
 - [ ] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
 
@@ -68,6 +68,6 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 4.2. `app/anchor/`: Pipecat 1.16 pipeline, Cartesia + fake TTS adapters, audio-clock line timestamps, WebSocket `/anchor/briefings/{id}/live` with pause/resume (decision 0017); `newsroom speak` CLI. Live with Cartesia on `3873a08c` (5 lines, 28.9 s). Branch `phase4/anchor` builds on `phase4/clear-for-air` (PR #16, 4.1); neither merged.
-- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, and pending lines never air). Standards rules are heuristics (tune in 6.1). Cartesia cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 4.3 web Player: play the WebSocket PCM in the browser (AudioWorklet), highlight lines from `line` events, click a line to open its claim trace.
+- Done: 5.2. `standards_desk.screen_caller()`: rules (injection, insults, empty, too long, off-topic intent) then LLM moderation on `gpt-oss-20b`, fail open on LLM errors (decision 0019); every Caller question carries the verdict and blocked ones show "not taken" in the Player. Live: 8/8 typed cases right, spoken injection blocked. Also fixed transcripts cut short when audio arrives faster than real time. Branch `phase5/screen-caller` stacks on #19 to #16; none merged.
+- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, pending lines never air). Standards rules are heuristics (tune in 6.1 red team). Cartesia/Deepgram cost not tracked. In-browser mic use not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 5.3 producer: answer allowed questions fast (latency budget), auto-pause on speech (barge-in), resume the briefing.

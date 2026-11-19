@@ -27,6 +27,9 @@ async function Briefing({ params, searchParams }: PageProps<"/briefings/[id]">) 
         <Link href="/">Briefings</Link> / <span className="mono">{shortId(b.id)}</span>
       </p>
       <h1>Briefing of {when(b.created_at)}</h1>
+      <p>
+        <Link href={`/briefings/${b.id}/listen`}>▶ Listen to this briefing</Link>
+      </p>
       <p className="sub">
         {b.target_minutes} minutes · {b.status} · <VerdictCounts verdicts={b.verdicts} />
       </p>

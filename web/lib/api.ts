@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import type { components } from "./api-types";
+import { wsBase } from "./player";
 
 type S = components["schemas"];
 export type BriefingSummary = S["BriefingSummary"];
@@ -18,6 +19,11 @@ export type Judgement = S["Judgement"];
 export type Rejection = S["Rejection"];
 
 const API_URL = (process.env.NEWSROOM_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+
+/** WebSocket base the *browser* uses for the live Anchor stream (the API as the listener sees it). */
+export function publicWsUrl(): string {
+  return wsBase(process.env.NEWSROOM_PUBLIC_API_URL ?? API_URL);
+}
 
 export class ApiError extends Error {
   constructor(
