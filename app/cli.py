@@ -369,5 +369,24 @@ def ask(
         raise typer.Exit(code=1)
 
 
+@app.command()
+def search(
+    query: Annotated[str, typer.Argument(help="What to search the news for.")],
+    days: Annotated[int, typer.Option(min=1, max=30, help="How many days back.")] = 7,
+) -> None:
+    """Live news search (Tavily, Firecrawl for full text); results are stored as sources."""
+    from app.reporter.search import search_live
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    found = _run(lambda: search_live(query, days=days))
+    if not found:
+        err.print("Nothing found (or search is not configured: NEWSROOM_TAVILY_API_KEY).")
+        raise typer.Exit(code=1)
+    for src in found:
+        when = src.published_at.strftime("%Y-%m-%d") if src.published_at else "undated"
+        console.print(f"[bold]{escape(src.outlet)}[/] {when}  {escape(src.title)}")
+        console.print(f"  [dim]{escape(src.url)}[/]")
+
+
 def main() -> None:
     app()

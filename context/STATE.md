@@ -4,11 +4,11 @@ Last updated: 2026-11-19 by: Claude Code
 
 ## Current phase
 
-Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
+Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl
+6.1 red team set (satire, stale, prompt injection), eval run in CI
 
 ## Tasks
 
@@ -46,7 +46,7 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 - [x] 5.1 caller: Deepgram adapter, intent classification
 - [x] 5.2 standards-desk: `screen_caller()`
 - [x] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
-- [ ] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
+- [x] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
 
 ### Phase 6: Evals and polish
 - [ ] 6.1 red team set (satire, stale, prompt injection), eval run in CI
@@ -68,6 +68,6 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 5.3. Allowed questions are answered on air: `producer.answer_question` (Writer `draft_answer` -> Editor judge -> Standards Desk) -> `session.interject` -> resume; safe fixed line on failure (decision 0020). Answer lines are `script_lines.kind='answer'` (migration `a3c9e5d71b20`, applied to the dev DB). Embed pacing is now a sliding window. Live: answer spoken 6.6 s after the question (8.1 s from release), traces to TechCrunch. Branch `phase5/answer` stacks on #20 to #16; none merged.
-- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`; an answer then falls back to the safe line). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram cost not tracked. In-browser mic not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 5.4 reporter `search_live()` (Tavily/Exa + Firecrawl keys needed) so answers can use fresh sources beyond the briefing.
+- Done: 5.4. `reporter.search_live()` (Tavily news + Firecrawl full text, stored as sources, deduped, cached) and the Producer's answer loop searches in parallel with the first draft, redrafting from live sources when the briefing's don't cover the question (decision 0021). `newsroom search` CLI. Branch `phase5/search-live` stacks on #21 to #16; none merged.
+- Open: live check of search waits for `NEWSROOM_TAVILY_API_KEY` / `NEWSROOM_FIRECRAWL_API_KEY` in `.env` (see the PR). Groq free tier 8000 TPM on the judge (answers can fall back). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram/Tavily/Firecrawl cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 6.1 red team set: satire, stale and prompt-injection cases for the judge, the Standards Desk and the caller screen, run in CI.

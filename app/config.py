@@ -139,6 +139,14 @@ class Settings(BaseSettings):
     reporter_cluster_threshold: float = Field(default=0.80, gt=0.0, le=1.0)
     reporter_cluster_window_hours: int = Field(default=24, ge=1)
     reporter_embed_max_chars: int = 8000
+    # Live search for answers (task 5.4, decision 0021): Tavily, Firecrawl for full text.
+    reporter_search_days: int = Field(default=7, ge=1, le=30)
+    reporter_search_max_results: int = Field(default=5, ge=1, le=20)
+    reporter_search_min_chars: int = Field(default=1200, ge=0)  # shorter -> fetch with Firecrawl
+    reporter_fetch_max_chars: int = Field(default=20000, ge=1000)
+    reporter_search_trust: float = Field(default=0.5, ge=0.0, le=1.0)
+    reporter_search_cache_s: int = Field(default=600, ge=0)
+    reporter_search_timeout_s: float = Field(default=8.0, gt=0)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)
@@ -174,6 +182,8 @@ class Settings(BaseSettings):
     producer_answer_max_sources: int = Field(default=6, ge=1)
     producer_answer_max_lines: int = Field(default=3, ge=1, le=6)
     producer_answer_source_max_chars: int = Field(default=3000, ge=500)
+    producer_answer_search: bool = True  # live search when the briefing's sources fall short
+    producer_answer_search_timeout_s: float = Field(default=20.0, gt=0)  # answer limit with search
 
     # Writer (task 2.1). ~150 spoken words per minute.
     writer_words_per_second: float = Field(default=2.5, gt=0)

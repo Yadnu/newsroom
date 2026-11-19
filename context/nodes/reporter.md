@@ -6,7 +6,7 @@ phase: 1
 code: app/reporter/
 depends_on: [data-model, llm-gateway, archive]
 feeds: [producer]
-decisions: [0003, 0010]
+decisions: [0003, 0010, 0021]
 ---
 
 # reporter
@@ -35,7 +35,14 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[`StorySourceRef`: id, outlet, title, url, published_at].
 - CLI (`app/cli.py`, script `newsroom`): `newsroom stories --top N [--hours 24] [--min-sources 2] [--refresh] [--json]`.
   `--refresh` runs ingest, then embed, then cluster first. Logs go to stderr, results to stdout.
-- Planned: `async def search_live(query: str) -> list[Source]` (Tavily/Exa + Firecrawl, task 5.4).
+- `async def search_live(query, *, max_results=None, days=None, settings=None, transport=None, store=..., lookup=...)
+  -> list[LiveSource(id, url, outlet, title, published_at)]` (`search.py`, task 5.4, decision 0021): Tavily news
+  search (`topic=news`, `reporter_search_days` 7, `reporter_search_max_results` 5, `include_raw_content`); results
+  whose text is under `reporter_search_min_chars` (1200) are fetched with Firecrawl `/v1/scrape` (markdown, main
+  content). Stored through `insert_new_sources` (url and content_hash dedupe, normalised URL, outlet from the
+  domain, `reporter_search_trust` 0.5, capped at `reporter_fetch_max_chars`); known URLs are reused without a
+  fetch; identical queries cached `reporter_search_cache_s` (600). Fails soft: no key or a provider error -> `[]`.
+  Spans `reporter/search_live` > `reporter/fetch_page`. CLI `newsroom search "query" [--days N]`.
 - Every `Source` carries url, outlet, trust_score, published_at, content, content_hash.
 
 ## Invariants
@@ -77,3 +84,4 @@ blocks its DLL.
 - 2026-11-16: `top_stories()` ranking + `newsroom stories` CLI (task 1.6, acceptance pending Voyage key).
 - 2026-11-17: `StorySourceRef` gains the source `id` (needed by the Writer, task 2.1).
 - 2026-11-18: 10 more default feeds; task 1.6 acceptance met on a live run.
+- 2026-11-19: `search_live()` with Tavily + Firecrawl for on-air answers (task 5.4).

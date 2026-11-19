@@ -25,6 +25,7 @@ from app.config import Settings, get_settings
 from app.db.session import get_engine
 from app.editor import ReviewedScript, judge
 from app.log import get_logger
+from app.reporter.search import LiveSource, search_live
 from app.shared.llm import LLMError
 from app.standards_desk import ClearedScript, NotClearedError, clear_for_air
 from app.writer import Script, WriterError
@@ -107,22 +108,36 @@ async def answer_question(
         story_id = question.story_id or (script.lines[0].story_id if script.lines else UUID(int=0))
         cleared: ClearedScript | None = None
         reason = ""
+        searching = settings.producer_answer_search
+        limit = (
+            settings.producer_answer_search_timeout_s
+            if searching
+            else settings.producer_answer_timeout_s
+        )
+        search_task: asyncio.Task[list[LiveSource]] | None = None
+        asked = question.restated or question.transcript
         try:
-            async with asyncio.timeout(settings.producer_answer_timeout_s):
+            async with asyncio.timeout(limit):
                 story_id, title, sources = await answer_sources(
                     question, script, settings.producer_answer_max_sources
                 )
                 mark("sources_ms")
-                if sources:
-                    asked = question.restated or question.transcript
-                    drafted = await draft_answer(
-                        asked,
-                        title,
-                        sources,
-                        max_lines=settings.producer_answer_max_lines,
-                        max_chars=settings.producer_answer_source_max_chars,
-                    )
-                    mark("draft_ms")
+                if searching:  # speculative: only awaited if the briefing's sources fall short
+                    search_task = asyncio.create_task(search_live(f"{asked} {title}".strip()))
+                drafted = await _draft(asked, title, sources, settings) if sources else []
+                mark("draft_ms")
+                if search_task is not None and not any(ln.claims for ln in drafted):
+                    live = await search_task
+                    mark("search_ms")
+                    s.set(searched=True, live_sources=len(live))
+                    if live:
+                        texts = await load_sources([src.id for src in live])
+                        pool = [texts[src.id] for src in live if src.id in texts] + sources
+                        drafted = await _draft(
+                            asked, title, pool[: settings.producer_answer_max_sources], settings
+                        )
+                        mark("live_draft_ms")
+                if drafted:
                     lines = await store_answer(
                         script.briefing_id, story_id, question.transcript, drafted
                     )
@@ -151,6 +166,9 @@ async def answer_question(
             reason = "nothing cleared"
         except (WriterError, LLMError) as e:
             reason = type(e).__name__
+        finally:
+            if search_task is not None and not search_task.done():
+                search_task.cancel()
         fallback = cleared is None
         if cleared is None:
             cleared = await _safe_answer(question, script, story_id)
@@ -166,6 +184,18 @@ async def answer_question(
         if fallback:
             log.info("producer.answer_fallback", reason=reason)
     return AnswerResult(cleared, fallback, total)
+
+
+async def _draft(
+    asked: str, title: str, sources: list[SourceText], settings: Settings
+) -> list[CleanLine]:
+    return await draft_answer(
+        asked,
+        title,
+        sources,
+        max_lines=settings.producer_answer_max_lines,
+        max_chars=settings.producer_answer_source_max_chars,
+    )
 
 
 class Session(Protocol):
