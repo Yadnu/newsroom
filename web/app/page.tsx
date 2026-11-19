@@ -51,7 +51,15 @@ async function BriefingTable() {
                   {shortId(b.id)}
                 </Link>
               </td>
-              <td>{b.status}</td>
+              <td>
+                {b.status}
+                {(b.status === "cleared" || b.status === "aired") && (
+                  <>
+                    {" · "}
+                    <Link href={`/briefings/${b.id}/listen`}>listen</Link>
+                  </>
+                )}
+              </td>
               <td className="num">{b.target_minutes} min</td>
               <td className="num">{b.lines}</td>
               <td>

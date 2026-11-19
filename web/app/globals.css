@@ -348,3 +348,46 @@ details summary {
   color: var(--muted);
   font-size: 13px;
 }
+
+.player {
+  padding: 12px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.controls button {
+  font: 600 14px var(--sans);
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--panel);
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.transcript a.heard {
+  color: var(--ink);
+}
+
+.transcript a.speaking {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.transcript a.held {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
