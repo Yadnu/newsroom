@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-17 by: Claude Code
+Last updated: 2026-11-18 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Active task
 
-2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
+2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ## Tasks
 
@@ -27,9 +27,9 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
 - [x] 2.1 writer: `draft_script()` with claim tagging, prompts in `prompts/`
-- [ ] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
-- [ ] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
-- [ ] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
+- [x] 2.2 editor: retrieval of evidence passages + `judge_claim()` with the 5-check rubric
+- [x] 2.3 rewrite loop: rejected claims go back to Writer, max 2 rounds
+- [x] 2.4 evals v1: 100 labelled claims + 30 planted falsehoods, `evals/run_evals.py` (acceptance: catch rate recorded)
 - [ ] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ### Phase 3: Archive
@@ -62,11 +62,12 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 
 ## Latest eval numbers
 
-(none yet)
+- 2026-11-18, judge_v1 (130 cases), prompt `dad2a081`, `gpt-oss-120b`: catch rate 1.00 (30/30), precision 0.904,
+  recall 0.971, false flag rate 0.113. Results in `evals/results/judge_v1-dad2a081.*`.
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 2.1. `draft_script()` in `app/writer/` with prompts in `prompts/writer/`. A new `claim_sources` table holds Writer citations (migration `f41cfce23b88`, decision 0011), and `StorySourceRef` now has the source `id`. It is on branch `phase2/writer-draft`, stacked on `phase2/producer-rundown` (PR #3), which is stacked on PR #2.
-- Half done: nothing has run against a real LLM (no `NEWSROOM_GROQ_API_KEY`), so prompt quality is unknown. The 1.6 acceptance is still blocked on `NEWSROOM_VOYAGE_API_KEY`.
-- Next: task 2.2. The Editor retrieves evidence passages from the sources in `claim_sources` (embedding similarity over chunks), and `judge_claim()` goes through `llm.complete("judge", ...)`. The judge must never see the Writer's reasoning.
+- Done: 2.4. `evals/run_evals.py` + `evals/data/judge_v1.json` (20 synthetic stories, 100 labelled + 30 planted), and the baseline is recorded (above). Also: gateway fallback models and partial-failure handling (decision 0014). PRs #3 to #7 are open and stacked (#3 -> main, each next PR on the one before).
+- Half done: judge weaknesses from the eval: it demands attribution for facts outlets report plainly (6 of 7 false flags), and it misses `sensitive` on election and central-bank figures. No prompt change yet; rerun the eval after any change. Groq free-tier rate limits fail about 23% of calls at concurrency 2; the runner resumes, so use `--concurrency 1`. Voyage key still missing.
+- Next: task 2.5, the `newsroom brief --minutes 3` CLI: build_rundown -> draft_script -> review_script, then print each line with its claims' verdicts and source outlets.

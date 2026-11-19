@@ -224,11 +224,35 @@ async def test_two_invalid_outputs_raise(
     long_quote = '"' + " ".join(["word"] * 20) + '" Acme said.'
     bad = seg(line(long_quote, ("Acme said words.", ["S1"])))
     groq(bad, bad)
-    with pytest.raises(WriterError, match="quote of 20 words"):
+    with pytest.raises(WriterError, match="no story could be drafted"):
         await draft_script(_rundown(_item(0, [s1])))
     assert db["stored"] is None
     seg_span = next(t for t in trace_sink.traces if t.event == "draft_segment")
-    assert seg_span.payload["attempts"] == 2 and seg_span.error is not None
+    assert seg_span.payload["attempts"] == 2 and "quote of 20 words" in (seg_span.error or "")
+
+
+async def test_one_failed_story_is_skipped_not_fatal(
+    db: dict[str, Any], trace_sink: MemorySink
+) -> None:
+    s1, s2 = _src(1), _src(2)
+    db["sources"] = {s1.id: s1, s2.id: s2}
+    long_quote = '"' + " ".join(["word"] * 20) + '" Acme said.'
+    bad = seg(line(long_quote, ("Acme said words.", ["S1"])))
+
+    def routed(req: httpx.Request) -> httpx.Response:
+        user = json.loads(req.content)["messages"][1]["content"]
+        fails = "Story: Story 0" in user
+        return FakeGroq(bad if fails else GOOD)(req)
+
+    settings = Settings(_env_file=None, groq_api_key="gsk-test")  # type: ignore[call-arg]
+    llm.set_gateway(llm.Gateway(settings, transport=httpx.MockTransport(routed)))
+    try:
+        await draft_script(_rundown(_item(0, [s1]), _item(1, [s2])))
+    finally:
+        llm.set_gateway(None)
+    assert [i.order for i in db["stored"][1]] == [1]
+    outer = next(t for t in trace_sink.traces if t.event == "draft_script")
+    assert outer.payload["failed"] == 1
 
 
 async def test_story_without_usable_sources_is_skipped(groq: Any, db: dict[str, Any]) -> None:

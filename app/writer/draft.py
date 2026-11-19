@@ -224,6 +224,15 @@ async def load_sources(ids: Sequence[UUID]) -> dict[UUID, SourceText]:
     return {r.id: SourceText(r.id, r.outlet, r.title, r.content, r.published_at) for r in rows}
 
 
+async def _draft_or_skip(item: RundownItem, sources: Sequence[SourceText]) -> list[CleanLine]:
+    """One story's lines, or ``[]`` if it failed: one bad story must not sink the briefing."""
+    try:
+        return await draft_segment(item, sources)
+    except (WriterError, llm.LLMError) as e:
+        log.warning("writer.story_failed", story_id=str(item.story_id), error=str(e)[:300])
+        return []
+
+
 async def draft_script(rundown: Rundown) -> Script:
     with span("writer", "draft_script", rundown.briefing_id, stories=len(rundown.items)) as s:
         texts = await load_sources([ref.id for item in rundown.items for ref in item.sources])
@@ -239,12 +248,18 @@ async def draft_script(rundown: Rundown) -> Script:
         if not work:
             raise WriterError("no rundown item has usable sources")
 
-        segments = await asyncio.gather(*(draft_segment(item, srcs) for item, srcs in work))
-        script = await _store(rundown.briefing_id, [item for item, _ in work], segments)
+        results = await asyncio.gather(*(_draft_or_skip(item, srcs) for item, srcs in work))
+        done = [(item, lines) for (item, _), lines in zip(work, results, strict=True) if lines]
+        if not done:
+            raise WriterError("no story could be drafted")
+        script = await _store(
+            rundown.briefing_id, [item for item, _ in done], [lines for _, lines in done]
+        )
         s.set(
             lines=len(script.lines),
             claims=sum(len(line.claims) for line in script.lines),
             skipped=len(rundown.items) - len(work),
+            failed=len(work) - len(done),
         )
     return script
 

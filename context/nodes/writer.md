@@ -6,7 +6,7 @@ phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
 feeds: [editor]
-decisions: [0002, 0011]
+decisions: [0002, 0011, 0013, 0014]
 ---
 
 # writer
@@ -17,10 +17,15 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 
 - `async def draft_script(rundown: Rundown) -> Script`: one `llm.complete("draft", ..., DraftSegment)` call per
   rundown item, run concurrently. Stores `script_lines` (order sequential across the briefing), `claims`
-  (`verdict=pending`) and `claim_sources` in one transaction. Raises `WriterError` if a segment is still invalid
-  after one resample, or if no item has usable (non-retracted) sources. An item with no usable sources is skipped.
+  (`verdict=pending`) and `claim_sources` in one transaction. An item with no usable sources, or whose segment fails
+  (`WriterError` after one resample, or `LLMError`), is skipped (decision 0014). Raises `WriterError` only if no
+  item has usable sources or none could be drafted.
 - `Script`: briefing_id, lines[`DraftLine`: id, story_id, order, text, claims[`DraftClaim`: id, text, source_ids]].
-- Planned (task 2.3): `async def rewrite_line(line: ScriptLine, rejected: list[ClaimVerdict]) -> ScriptLine`.
+- `async def rewrite_line(line: DraftLine, feedback: Sequence[ClaimFeedback], round_no: int) -> DraftLine`: one
+  `"draft"` call using the story's non-retracted sources and `prompts/writer/rewrite_user.md` (`$line`, `$feedback`).
+  The output must be exactly one valid line (one resample, then `WriterError`). It keeps the line id and order, replaces
+  the text, and replaces the line's claims with new `pending` ones carrying `rewrite_round` (decision 0013).
+- `ClaimFeedback(text, verdict, reason)`: the Editor's feedback, in a Writer-owned type (no import of the Editor).
 - Prompts: `prompts/writer/draft_system.md` (static rules) and `draft_user.md` (`$story_title`, `$target_words`,
   `$sources`). Sources go in `<source id="S<n>" outlet published>` blocks with `<`, `>` and `&` escaped, in the user turn only.
 - Length: `target_seconds * writer_words_per_second` (2.5) words. Source text is capped at `writer_source_max_chars` (6000).
@@ -36,8 +41,11 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 
 `draft_script()` done (task 2.1) in `app/writer/draft.py` and `prompts.py`. Spans: `writer/draft_script`
 (briefing_id), with a child `writer/draft_segment` per story (attempts, lines, claims, words, problems).
-Tested with a fake Groq through `httpx.MockTransport` and on Postgres. Not yet run against a real model (no
-`NEWSROOM_GROQ_API_KEY`), so prompt quality and length accuracy are unmeasured.
+`rewrite_line()` (task 2.3) in `rewrite.py`, span `writer/rewrite_line`. The draft prompt now requires attributing
+a party's statements; in a live run 6 of 7 claims were approved on the first pass, and a rewrite fixed the other.
+Tested with a fake Groq through `httpx.MockTransport` and on Postgres. One live smoke run (2026-11-18,
+`openai/gpt-oss-20b`, 2 hand-written sources, 30 s target): 75/75 words, valid on the first try, ignored an injected
+instruction. It states company-reported facts without attribution, which the Editor's `attributed` check flags as rewrite.
 
 ## Open questions
 
@@ -48,3 +56,5 @@ Tested with a fake Groq through `httpx.MockTransport` and on Postgres. Not yet r
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-17: `draft_script()` with claim tagging, validation + one resample, prompts in `prompts/writer/` (task 2.1).
+- 2026-11-18: `rewrite_line()` + attribution rule in the draft prompt (task 2.3, decision 0013).
+- 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).
