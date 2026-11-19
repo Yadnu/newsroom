@@ -3,7 +3,7 @@
 import asyncio
 import json
 import sys
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -21,6 +21,7 @@ from app.producer import NoStoriesError, Rundown, build_rundown
 from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.reporter.rank import StorySourceRef, TopStory, top_stories
 from app.shared import llm
+from app.standards_desk import Block, NotClearedError, clear_for_air
 from app.writer import DraftClaim, WriterError, draft_script
 
 app = typer.Typer(help="Newsroom: voice-first AI news anchor.", no_args_is_help=True)
@@ -127,8 +128,12 @@ def claim_sources(
     return [refs[i] for i in dict.fromkeys(ids) if i in refs]
 
 
-def brief_report(rundown: Rundown, reviewed: ReviewedScript) -> dict[str, Any]:
-    """Plain data for printing: stories in rundown order, each line with its claims."""
+def brief_report(
+    rundown: Rundown, reviewed: ReviewedScript, blocks: Sequence[Block] = ()
+) -> dict[str, Any]:
+    """Plain data for printing: stories in rundown order, each line with its claims and
+    whether the Standards Desk cleared it for air."""
+    blocked = {b.line_id: b for b in blocks}
     refs = {s.id: s for item in rundown.items for s in item.sources}
     verdicts = {v.claim_id: v for v in reviewed.verdicts}
     titles = {item.story_id: item.title for item in rundown.items}
@@ -153,6 +158,12 @@ def brief_report(rundown: Rundown, reviewed: ReviewedScript) -> dict[str, Any]:
                 "story": titles.get(line.story_id, ""),
                 "order": line.order,
                 "text": line.text,
+                "on_air": line.id not in blocked,
+                "block": (
+                    {"rule": blocked[line.id].rule.value, "reason": blocked[line.id].reason}
+                    if line.id in blocked
+                    else None
+                ),
                 "claims": claims,
             }
         )
@@ -162,6 +173,7 @@ def brief_report(rundown: Rundown, reviewed: ReviewedScript) -> dict[str, Any]:
         "stories": len(rundown.items),
         "rounds": reviewed.rounds,
         "counts": {v.value: reviewed.count(v) for v in Verdict},
+        "cleared": sum(ln["on_air"] for ln in lines),
         "lines": lines,
     }
 
@@ -172,7 +184,12 @@ def print_brief(report: dict[str, Any]) -> None:
         if line["story"] != story:
             story = line["story"]
             console.print(f"\n[bold]{escape(story)}[/]")
-        console.print(f"  {escape(line['text'])}")
+        if line["on_air"]:
+            console.print(f"  {escape(line['text'])}")
+        else:
+            console.print(f"  [strike dim]{escape(line['text'])}[/]")
+            block = line["block"]
+            console.print(f"    [red]BLOCKED {block['rule']}[/]: [dim]{escape(block['reason'])}[/]")
         for c in line["claims"]:
             style = VERDICT_STYLE[Verdict(c["verdict"])]
             score = f" {c['score']:.2f}" if c["score"] is not None else ""
@@ -188,7 +205,8 @@ def print_brief(report: dict[str, Any]) -> None:
         f"\nbriefing {report['briefing_id']}: {report['stories']} stories,"
         f" {len(report['lines'])} lines, rewrite rounds {report['rounds']}."
         f" approved {counts['approved']}, rewrite {counts['rewrite']},"
-        f" rejected {counts['rejected']}, pending {counts['pending']}"
+        f" rejected {counts['rejected']}, pending {counts['pending']}."
+        f" Cleared for air {report['cleared']}/{len(report['lines'])} lines"
     )
 
 
@@ -206,7 +224,7 @@ def brief(
     """Build a rundown, write the script, fact-check it, and print each claim's verdict."""
     configure_logging(get_settings(), stream=sys.stderr)
 
-    async def go() -> tuple[Rundown, ReviewedScript]:
+    async def go() -> tuple[Rundown, ReviewedScript, tuple[Block, ...], bool]:
         if do_refresh:
             summary = await refresh(get_settings().producer_freshness_hours)
             err.print(f"refreshed: {summary['new_sources']} new sources")
@@ -214,21 +232,29 @@ def brief(
         err.print(f"rundown: {len(rundown.items)} stories, {rundown.total_seconds}s")
         script = await draft_script(rundown)
         err.print(f"drafted: {len(script.lines)} lines; judging")
-        return rundown, await review_script(script)
+        reviewed = await review_script(script)
+        try:
+            cleared = await clear_for_air(reviewed)
+        except NotClearedError as e:
+            return rundown, reviewed, e.blocked, False
+        return rundown, reviewed, cleared.blocked, True
 
     try:
-        rundown, reviewed = _run(go)
+        rundown, reviewed, blocks, any_cleared = _run(go)
     except NoStoriesError as e:
         err.print(f"[red]No stories:[/] {e}. Try --refresh, or `newsroom stories` to check.")
         raise typer.Exit(code=1) from e
     except WriterError as e:
         err.print(f"[red]Writer failed:[/] {e}")
         raise typer.Exit(code=1) from e
-    report = brief_report(rundown, reviewed)
+    report = brief_report(rundown, reviewed, blocks)
     if as_json:
         typer.echo(json.dumps(report, indent=2))
-        return
-    print_brief(report)
+    else:
+        print_brief(report)
+    if not any_cleared:
+        err.print("[red]Nothing cleared for air:[/] every line was blocked by the Standards Desk.")
+        raise typer.Exit(code=1)
 
 
 def main() -> None:

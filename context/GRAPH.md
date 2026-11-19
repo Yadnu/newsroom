@@ -21,9 +21,9 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | - |
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002, 0011, 0013, 0014 |
 | [web](nodes/web.md) | app | in-progress | 3 | `web/` | anchor, archive | - | - |
-| [anchor](nodes/anchor.md) | component | planned | 4 | `app/anchor/` | standards-desk, producer, archive | web | 0004 |
+| [anchor](nodes/anchor.md) | component | planned | 4 | `app/anchor/` | standards-desk, producer, archive | web | 0004, 0016 |
+| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer | 0016 |
 | [caller](nodes/caller.md) | component | planned | 5 | `app/caller/` | archive | standards-desk, producer | 0004 |
-| [standards-desk](nodes/standards-desk.md) | component | planned | 5 | `app/standards_desk/` | editor, caller, archive | anchor, producer | - |
 
 ## Edges
 
@@ -37,7 +37,7 @@ flowchart LR
   llm_gateway["llm-gateway (in-progress)"]
   producer["producer (in-progress)"]
   reporter["reporter (in-progress)"]
-  standards_desk["standards-desk (planned)"]
+  standards_desk["standards-desk (in-progress)"]
   web["web (in-progress)"]
   writer["writer (in-progress)"]
   anchor --> web

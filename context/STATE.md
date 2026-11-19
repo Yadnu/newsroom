@@ -8,7 +8,7 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 
 ## Active task
 
-4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
+4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
 
 ## Tasks
 
@@ -38,7 +38,7 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 - [x] 3.3 web: Archive dashboard (acceptance: any sentence traces to its source URL in one click)
 
 ### Phase 4: Anchor (voice out)
-- [ ] 4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
+- [x] 4.1 standards-desk: `clear_for_air()` and the `ClearedScript` type gate
 - [ ] 4.2 anchor: Pipecat pipeline, Cartesia adapter, per-line audio timestamps
 - [ ] 4.3 web: Player with synced, clickable transcript (acceptance: briefing plays in browser)
 
@@ -68,6 +68,6 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 3.3. `web/` Next.js Archive dashboard (briefings, sentence -> claim trace -> source link in one click, stages, rejections) on new `GET /archive/briefings[/{id}]`; types generated from `web/openapi.json`. All of phase 3 is on `main` (PRs #11, #13, #14, after #12 fixed the bad PR #10 merge); CI green, including the new `web` job.
-- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI. Test stories "Chip launch"/"AI probe" and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live (no keys).
-- Next: 4.1 standards-desk `clear_for_air()` (read the standards-desk and editor nodes; the air-gate invariant is in AGENTS.md).
+- Done: 4.1. `app/standards_desk/` `clear_for_air(reviewed) -> ClearedScript` (unforgeable type) with deterministic rules (decision 0016); `newsroom brief` shows blocked lines. Live (read-only) on `3873a08c`: 5/16 lines clear, exactly the approved ones. Branch `phase4/clear-for-air`.
+- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live, and pending lines now never air). Standards rules are heuristics to tune with task 6.1. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 4.2 anchor (Pipecat + Cartesia; needs `NEWSROOM_CARTESIA_API_KEY`). `speak()` takes only a `ClearedScript`.

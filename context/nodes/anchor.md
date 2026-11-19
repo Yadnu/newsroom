@@ -6,7 +6,7 @@ phase: 4
 code: app/anchor/
 depends_on: [standards-desk, producer, archive]
 feeds: [web]
-decisions: [0004]
+decisions: [0004, 0016]
 ---
 
 # anchor

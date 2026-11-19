@@ -140,6 +140,10 @@ class Settings(BaseSettings):
     reporter_cluster_window_hours: int = Field(default=24, ge=1)
     reporter_embed_max_chars: int = 8000
 
+    # Standards Desk air gate (task 4.1, decision 0016).
+    standards_max_copied_words: int = Field(default=12, ge=5)
+    standards_max_transition_words: int = Field(default=10, ge=1)
+
     # Producer rundown (task 2.0).
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)
