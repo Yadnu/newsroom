@@ -36,3 +36,5 @@ air gate checks a line's claims, and a line that kept its old rejected claims co
 Only a line's current claims are in `claims`. Older claims of a rewritten line live only in
 `traces`. The Editor's reason (LLM output that may echo source text) goes into the Writer's user
 turn escaped, never into a system prompt.
+From task 3.1 the judge span also records `line_id`; the Archive's `claim_trace()` history and `rejection_log()`
+read these spans, so the `superseded` column was not needed.

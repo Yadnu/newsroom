@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -35,12 +35,16 @@ class Harness:
     def __init__(self, rule: Callable[[str], Verdict]) -> None:
         self.rule = rule
         self.judged: list[list[str]] = []  # claim texts per judge_all call
+        self.line_ids: list[dict[UUID, UUID]] = []  # line_ids per judge_all call
         self.stored: list[tuple[list[ClaimVerdict], UUID | None]] = []
         self.rewrites: list[tuple[str, list[ClaimFeedback], int]] = []
         self.rewrite_text: Callable[[str, int], str | None] = lambda t, r: f"Acme says {t}"
 
-    async def judge_all(self, claims: Sequence[DraftClaim]) -> list[ClaimVerdict]:
+    async def judge_all(
+        self, claims: Sequence[DraftClaim], line_ids: Mapping[UUID, UUID] | None = None
+    ) -> list[ClaimVerdict]:
         self.judged.append([c.text for c in claims])
+        self.line_ids.append(dict(line_ids or {}))
         return [verdict_for(c, self.rule(c.text)) for c in claims]
 
     async def store(
@@ -118,6 +122,8 @@ async def test_failed_line_is_rewritten_with_reasons_and_rejudged(
         )
     ]
     assert h.judged[1] == ["Acme says it ships Nova."]  # only the new claims are re-judged
+    assert set(h.line_ids[0].values()) == {good.id, bad.id}
+    assert set(h.line_ids[1].values()) == {bad.id}  # new claims keep the rewritten line's id
     assert out.script.lines[0] == good
     assert (
         out.script.lines[1].text == "Acme says it ships Nova." and out.script.lines[1].id == bad.id

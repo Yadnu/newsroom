@@ -89,6 +89,7 @@ async def review_script(script: Script) -> ReviewedScript:
                     )
                 )
                 new_claims: list[DraftClaim] = []
+                line_ids: dict[UUID, UUID] = {}
                 for i, new in zip(todo, results, strict=True):
                     if new is None:
                         continue
@@ -96,7 +97,8 @@ async def review_script(script: Script) -> ReviewedScript:
                         verdicts.pop(c.id)
                     lines[i] = new
                     new_claims.extend(new.claims)
-                fresh = await judge.judge_all(new_claims)
+                    line_ids.update({c.id: new.id for c in new.claims})
+                fresh = await judge.judge_all(new_claims, line_ids)
                 await judge.store_verdicts(fresh)
                 verdicts.update({v.claim_id: v for v in fresh})
                 rs.set(

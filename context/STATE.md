@@ -8,7 +8,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 
 ## Active task
 
-3.1 `claim_trace()` API + rejection log API
+3.2 Langfuse integration in llm-gateway
 
 ## Tasks
 
@@ -33,7 +33,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 - [x] 2.5 CLI `newsroom brief --minutes 3` prints a script with verdict and source per claim
 
 ### Phase 3: Archive
-- [ ] 3.1 `claim_trace()` API + rejection log API
+- [x] 3.1 `claim_trace()` API + rejection log API
 - [ ] 3.2 Langfuse integration in llm-gateway
 - [ ] 3.3 web: Archive dashboard (acceptance: any sentence traces to its source URL in one click)
 
@@ -68,6 +68,6 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 1.6 acceptance. 10 more default feeds (`app/config.py`); a live refresh embedded 263 sources and the top 10 all have 2+ sources. `tests/conftest.py` now exits if `NEWSROOM_TEST_DATABASE_URL` is the app database (integration fixtures TRUNCATE; that is how test stories "Chip launch"/"AI probe", outlets A/B/C, got into the dev DB, where they still are).
-- Open: Groq free tier 8000 TPM on the judge: about half of claims went `pending` in the live brief; chat calls have no pacing (stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event (Anthropic IPO) in two. Judge weaknesses from 2.4. `main` has only up to PR #3; phase 2 is on `phase2/evals-v1` with no PR to main yet.
-- Next: 3.1 `claim_trace()` + rejection log API (archive node).
+- Done: 3.1. `app/archive/trace.py` (`claim_trace`, `rejection_log`) and `routes.py` (`GET /archive/lines/{id}/trace`, `GET /archive/rejections`). Editor judge spans now carry `line_id`, so history works for briefings judged from now on; older spans have null line info. Phase 2 merged to `main` (PR #8); this work is on `phase3/claim-trace`.
+- Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live; stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI (no Docker locally). Test stories "Chip launch"/"AI probe" are still in the dev DB. Brief workflow needs repo secrets set by the user.
+- Next: 3.2 Langfuse in llm-gateway (needs Langfuse keys in `.env`).
