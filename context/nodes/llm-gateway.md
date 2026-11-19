@@ -26,7 +26,12 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
   `Gateway(..., sleep=, clock=)` are injectable for tests.
 - Errors: `LLMConfigError` (missing key, route, or price), `LLMProviderError` (`status_code`),
   `StructuredOutputError`; all subclass `LLMError`.
-- `get_gateway()` / `set_gateway(Gateway)` / `aclose()` manage the process-wide instance.
+- `get_gateway()` / `set_gateway(Gateway)` / `aclose()` manage the process-wide instance. `aclose()` also
+  flushes the Langfuse buffer, so entry points must call it before exit.
+- Langfuse export (decision 0005): `Gateway(..., langfuse=Langfuse(settings))`, on only when
+  `langfuse_public_key` and `langfuse_secret_key` are both set. Settings `langfuse_host`,
+  `langfuse_capture_content` (default true; false = usage only), `langfuse_flush_interval_s` (5),
+  `langfuse_batch_size` (50). Langfuse trace id = the gateway's archive span id; `sessionId` = briefing id.
 - Routing table `Settings.llm_routes` (task -> model) and prices `Settings.llm_prices`
   (model -> USD per 1M in/out). Both can be overridden from env as JSON.
 - Fallbacks `Settings.llm_fallbacks` (task -> model; default draft/classify/answer -> `gpt-oss-120b`, no judge
@@ -37,6 +42,7 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
 
 - No provider SDK imports outside this folder (today: none at all, httpx only).
 - Every call records tokens, cost in USD, latency, and model name, in a `traces` row via `span()`.
+- Langfuse export never raises into the caller, never sends API keys, and never sends embedding texts.
 - Every routed model and the embedding model must have a price, or `Gateway()` fails at startup.
 - Embeddings are always `EMBEDDING_DIM` (from `app.db.models`); any other length raises an error.
 
@@ -49,7 +55,10 @@ cover 408/409/429/5xx and transport errors with exponential backoff, honor `retr
 capped by `llm_max_attempts`. Embeddings go to Voyage in batches of at most 1000 texts and a token cap, one request at a time, paced
 per minute when limits are set (decision 0015). A 429 without `retry-after` backs off 15 s per attempt. Usage is logged as a
 structlog `llm.call` event and recorded on an archive span (`complete.<task>` / `embed`,
-with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse is not wired yet (task 3.2). Live Groq calls work (writer/editor smoke runs). Live Voyage embedding works
+with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse export (task 3.2, `langfuse.py`): plain httpx to `POST /api/public/ingestion`, no SDK; one trace
+per call plus one generation per model tried (fallbacks show as an `ERROR` generation then a `DEFAULT` one),
+with messages and output clipped to 20K chars each. Events are batched from a background task; send
+failures are logged by status and dropped. Not yet run against a live Langfuse project (no keys in `.env`). Live Groq calls work (writer/editor smoke runs). Live Voyage embedding works
 with free-tier pacing: 96 sources in under 2 minutes, no 429 (2026-11-18). Chat is not paced: Groq's free tier
 allows 8000 TPM on `gpt-oss-120b` and a judge call is about 4K tokens, so at `editor_max_concurrency` 8 a live
 3-minute brief left 7 of 14 claims `pending` (429 after retries, honouring `retry-after`).
@@ -67,3 +76,4 @@ allows 8000 TPM on `gpt-oss-120b` and a judge call is about 4K tokens, so at `ed
 - 2026-11-16: `complete()`/`embed()` run inside archive spans (task 1.3).
 - 2026-11-18: per-task fallback model on invalid output or exhausted retries (decision 0014).
 - 2026-11-18: token-capped embed batches, per-minute pacing, longer 429 backoff (decision 0015).
+- 2026-11-19: Langfuse export of chat and embed calls over the ingestion API (task 3.2, decision 0005).

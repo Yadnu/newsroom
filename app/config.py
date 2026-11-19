@@ -123,6 +123,10 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
+    # Langfuse export of LLM calls (decision 0005). Off unless both keys are set.
+    langfuse_capture_content: bool = True  # send prompts and outputs; false = usage only
+    langfuse_flush_interval_s: float = Field(default=5.0, gt=0)
+    langfuse_batch_size: int = Field(default=50, ge=1, le=500)
 
     # Reporter RSS ingest (decision 0003).
     # Feeds override as a JSON list of {url, outlet, trust_score}.

@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-18 by: Claude Code
+Last updated: 2026-11-19 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 
 ## Active task
 
-3.2 Langfuse integration in llm-gateway
+3.3 web: Archive dashboard
 
 ## Tasks
 
@@ -34,7 +34,7 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 
 ### Phase 3: Archive
 - [x] 3.1 `claim_trace()` API + rejection log API
-- [ ] 3.2 Langfuse integration in llm-gateway
+- [x] 3.2 Langfuse integration in llm-gateway
 - [ ] 3.3 web: Archive dashboard (acceptance: any sentence traces to its source URL in one click)
 
 ### Phase 4: Anchor (voice out)
@@ -68,6 +68,6 @@ Phase 3: Archive. Phases 1 and 2 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 3.1. `app/archive/trace.py` (`claim_trace`, `rejection_log`) and `routes.py` (`GET /archive/lines/{id}/trace`, `GET /archive/rejections`). Editor judge spans now carry `line_id`, so history works for briefings judged from now on; older spans have null line info. Phase 2 merged to `main` (PR #8); this work is on `phase3/claim-trace`.
+- Done: 3.2. `app/shared/llm/langfuse.py` exports each gateway call (trace id = archive span id, generations with prompts, output, tokens, cost) over the ingestion API; off until `NEWSROOM_LANGFUSE_PUBLIC_KEY`/`SECRET_KEY` are set, never run live yet. 3.1 is PR #11 and 3.2 is on `phase3/langfuse` (stacked on it); `main` needs PR #12 (undo the bad PR #10 merge) first.
 - Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live; stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI (no Docker locally). Test stories "Chip launch"/"AI probe" are still in the dev DB. Brief workflow needs repo secrets set by the user.
-- Next: 3.2 Langfuse in llm-gateway (needs Langfuse keys in `.env`).
+- Next: 3.3 web Archive dashboard (Next.js on top of `/archive` routes; `web/` not scaffolded yet).

@@ -3,21 +3,26 @@
 Providers are reached over plain HTTP (httpx), so no provider SDK is needed:
 - chat: Groq's OpenAI-compatible ``/chat/completions`` (decision 0008)
 - embeddings: Voyage ``/embeddings`` (decision 0007)
+
+Each call is also exported to Langfuse when keys are set (decision 0005, ``langfuse.py``).
 """
 
 import asyncio
 import json
 import time
 from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.archive import Span, span
+from app.archive import Span, current_span, span
 from app.config import Settings
 from app.db.models import EMBEDDING_DIM
 from app.log import get_logger
+from app.shared.llm.langfuse import Langfuse
 from app.shared.llm.schema import strict_json_schema
 from app.shared.llm.types import (
     TASK_NAMES,
@@ -55,8 +60,10 @@ class Gateway:
         transport: httpx.AsyncBaseTransport | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         clock: Callable[[], float] = time.monotonic,
+        langfuse: Langfuse | None = None,
     ) -> None:
         self._s = settings
+        self.langfuse = langfuse if langfuse is not None else Langfuse(settings)
         self._sleep = sleep
         self._clock = clock
         # Embedding pacing (decision 0015): one request at a time, next start no earlier than this.
@@ -75,6 +82,7 @@ class Gateway:
                 raise LLMConfigError(f"no price configured for model {model!r}")
 
     async def aclose(self) -> None:
+        await self.langfuse.aclose()
         await self._http.aclose()
 
     def model_for(self, task: TaskName) -> str:
@@ -96,6 +104,7 @@ class Gateway:
         with span("llm-gateway", f"complete.{task}", schema=schema.__name__) as s:
             model = self.model_for(task)
             s.set(model=model)
+            self._lf_trace(s, schema=schema.__name__, task=task)
             fallback = self.fallback_for(task)
             try:
                 result, usage = await self._complete(task, messages, schema, model)
@@ -131,7 +140,9 @@ class Gateway:
             },
         }
         start = time.perf_counter()
+        started_at = datetime.now(UTC)
         t_in = t_out = attempts = 0
+        content: str | None = None
         last_err: Exception | None = None
         try:
             for _ in range(STRUCTURED_ATTEMPTS):
@@ -152,16 +163,20 @@ class Gateway:
                 t_out += int(usage.get("completion_tokens", 0))
                 try:
                     content = data["choices"][0]["message"]["content"]
-                    return schema.model_validate_json(content), self._usage(
-                        model, t_in, t_out, start, attempts, task=task
-                    )
+                    parsed = schema.model_validate_json(content)
                 except (KeyError, IndexError, TypeError, ValidationError) as e:
                     last_err = e
+                    continue
+                usage = self._usage(model, t_in, t_out, start, attempts, task=task)
+                self._lf_chat(task, model, started_at, messages, content, usage)
+                return parsed, usage
             raise StructuredOutputError(
                 f"{model} gave no valid {schema.__name__} after {STRUCTURED_ATTEMPTS} tries"
             ) from last_err
         except Exception as e:
             log.warning("llm.call_failed", task=task, model=model, error=type(e).__name__)
+            failed = Usage(model, t_in, t_out, self._cost(model, t_in, t_out) or 0.0, 0.0, attempts)
+            self._lf_chat(task, model, started_at, messages, content, failed, error=e)
             raise
 
     # ---- embeddings -------------------------------------------------------------------
@@ -169,9 +184,24 @@ class Gateway:
     async def embed(
         self, texts: Sequence[str], input_type: EmbedInputType | None = "document"
     ) -> tuple[list[list[float]], Usage]:
-        with span("llm-gateway", "embed", model=self._s.embedding_model, n_texts=len(texts)) as s:
-            vectors, usage = await self._embed(texts, input_type)
+        model = self._s.embedding_model
+        with span("llm-gateway", "embed", model=model, n_texts=len(texts)) as s:
+            if not texts:
+                vectors, usage = await self._embed(texts, input_type)
+                _record(s, usage)
+                return vectors, usage
+            self._lf_trace(s, n_texts=len(texts))
+            started_at = datetime.now(UTC)
+            meta = {"n_texts": len(texts), "input_type": input_type}  # counts only, never texts
+            try:
+                vectors, usage = await self._embed(texts, input_type)
+            except Exception as e:
+                self._lf_generation(s.id, "embed", model, started_at, meta, None, 0, 0, None, e)
+                raise
             _record(s, usage)
+            self._lf_generation(
+                s.id, "embed", model, started_at, meta, None, usage.tokens_in, 0, usage.cost_usd
+            )
             return vectors, usage
 
     async def _embed(
@@ -226,6 +256,75 @@ class Gateway:
         delay = self._embed_next_at - self._clock()
         if delay > 0:
             await self._sleep(delay)
+
+    # ---- Langfuse export (decision 0005) -----------------------------------------------
+
+    def _lf_trace(self, s: Span, **metadata: Any) -> None:
+        self.langfuse.trace(
+            s.id, s.event, briefing_id=s.briefing_id, parent_span_id=s.parent_id, metadata=metadata
+        )
+
+    def _lf_chat(
+        self,
+        task: str,
+        model: str,
+        started_at: datetime,
+        messages: Sequence[Message],
+        content: str | None,
+        usage: Usage,
+        error: Exception | None = None,
+    ) -> None:
+        s = current_span()
+        if s is None or not self.langfuse.enabled:
+            return
+        self._lf_generation(
+            s.id,
+            f"complete.{task}",
+            model,
+            started_at,
+            self.langfuse.chat_input(messages),
+            self.langfuse.chat_output(content) if content is not None else None,
+            usage.tokens_in,
+            usage.tokens_out,
+            usage.cost_usd,
+            error,
+            attempts=usage.attempts,
+        )
+
+    def _lf_generation(
+        self,
+        trace_id: UUID,
+        name: str,
+        model: str,
+        started_at: datetime,
+        input: Any,
+        output: Any,
+        tokens_in: int,
+        tokens_out: int,
+        cost: float | None,
+        error: Exception | None = None,
+        **metadata: Any,
+    ) -> None:
+        self.langfuse.generation(
+            trace_id,
+            name,
+            model=model,
+            start=started_at,
+            end=datetime.now(UTC),
+            input=input,
+            output=output,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            cost_usd=cost,
+            metadata=metadata,
+            error=f"{type(error).__name__}: {error}"[:500] if error else None,
+        )
+
+    def _cost(self, model: str, t_in: int, t_out: int) -> float | None:
+        try:
+            return cost_usd(self._s.llm_prices, model, t_in, t_out)
+        except LLMConfigError:
+            return None
 
     # ---- internals --------------------------------------------------------------------
 
