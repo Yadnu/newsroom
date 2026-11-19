@@ -19,3 +19,6 @@ The claim trace is a user-facing feature, so it must live in our database. LLM p
 
 ## Consequences
 Two trace sinks. Archive writes must be async and never fail the main path.
+
+Implemented in task 3.2 (2026-11-19) over Langfuse's public ingestion API with httpx, not the SDK, to keep
+the gateway SDK-free. The Langfuse trace id is the archive span id, so the two sinks join on id.
