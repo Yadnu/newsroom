@@ -1,12 +1,12 @@
 ---
 id: writer
 type: component
-status: planned
+status: in-progress
 phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
 feeds: [editor]
-decisions: [0002]
+decisions: [0002, 0011, 0013, 0014]
 ---
 
 # writer
@@ -15,18 +15,37 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 
 ## Contract
 
-- `async def draft_script(rundown: Rundown) -> Script`
-- `async def rewrite_line(line: ScriptLine, rejected: list[ClaimVerdict]) -> ScriptLine`
-- Each `ScriptLine` has text, story_id, order, and `claims: list[Claim]` (claim text + source ids it relied on).
+- `async def draft_script(rundown: Rundown) -> Script`: one `llm.complete("draft", ..., DraftSegment)` call per
+  rundown item, run concurrently. Stores `script_lines` (order sequential across the briefing), `claims`
+  (`verdict=pending`) and `claim_sources` in one transaction. An item with no usable sources, or whose segment fails
+  (`WriterError` after one resample, or `LLMError`), is skipped (decision 0014). Raises `WriterError` only if no
+  item has usable sources or none could be drafted.
+- `Script`: briefing_id, lines[`DraftLine`: id, story_id, order, text, claims[`DraftClaim`: id, text, source_ids]].
+- `async def rewrite_line(line: DraftLine, feedback: Sequence[ClaimFeedback], round_no: int) -> DraftLine`: one
+  `"draft"` call using the story's non-retracted sources and `prompts/writer/rewrite_user.md` (`$line`, `$feedback`).
+  The output must be exactly one valid line (one resample, then `WriterError`). It keeps the line id and order, replaces
+  the text, and replaces the line's claims with new `pending` ones carrying `rewrite_round` (decision 0013).
+- `ClaimFeedback(text, verdict, reason)`: the Editor's feedback, in a Writer-owned type (no import of the Editor).
+- Prompts: `prompts/writer/draft_system.md` (static rules) and `draft_user.md` (`$story_title`, `$target_words`,
+  `$sources`). Sources go in `<source id="S<n>" outlet published>` blocks with `<`, `>` and `&` escaped, in the user turn only.
+- Length: `target_seconds * writer_words_per_second` (2.5) words. Source text is capped at `writer_source_max_chars` (6000).
 
 ## Invariants
 
 - Paraphrase only; quotes under 15 words and attributed.
-- No sentence with a factual statement goes out without at least one claim tag.
+- No sentence with a factual statement goes out without at least one claim tag. Enforced by `validate_segment()`:
+  every `factual` line has a claim, every claim cites a known `S<n>`, and quotes are at most 14 words.
+- The Writer never writes `claim_evidence` (decision 0011).
 
 ## Current state
 
-Empty package scaffolded at `app/writer/` (docstring only, no public surface yet). Logic not started. Planned for phase 2.
+`draft_script()` done (task 2.1) in `app/writer/draft.py` and `prompts.py`. Spans: `writer/draft_script`
+(briefing_id), with a child `writer/draft_segment` per story (attempts, lines, claims, words, problems).
+`rewrite_line()` (task 2.3) in `rewrite.py`, span `writer/rewrite_line`. The draft prompt now requires attributing
+a party's statements; in a live run 6 of 7 claims were approved on the first pass, and a rewrite fixed the other.
+Tested with a fake Groq through `httpx.MockTransport` and on Postgres. One live smoke run (2026-11-18,
+`openai/gpt-oss-20b`, 2 hand-written sources, 30 s target): 75/75 words, valid on the first try, ignored an injected
+instruction. It states company-reported facts without attribution, which the Editor's `attributed` check flags as rewrite.
 
 ## Open questions
 
@@ -36,3 +55,6 @@ Empty package scaffolded at `app/writer/` (docstring only, no public surface yet
 
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
+- 2026-11-17: `draft_script()` with claim tagging, validation + one resample, prompts in `prompts/writer/` (task 2.1).
+- 2026-11-18: `rewrite_line()` + attribution rule in the draft prompt (task 2.3, decision 0013).
+- 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).

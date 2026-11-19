@@ -70,6 +70,16 @@ class Settings(BaseSettings):
             "judge": "openai/gpt-oss-120b",
         }
     )
+    # Task -> fallback model, tried once when the routed model gives invalid output twice or a
+    # transient error outlives the retries (decision 0014). No judge fallback: a weaker judge is
+    # worse than no verdict. Env override is JSON.
+    llm_fallbacks: dict[str, str] = Field(
+        default_factory=lambda: {
+            "draft": "openai/gpt-oss-120b",
+            "classify": "openai/gpt-oss-120b",
+            "answer": "openai/gpt-oss-120b",
+        }
+    )
     # Model -> (input, output) USD per 1M tokens. Groq list prices 2026-11-16; free tier bills $0
     # but we record list cost so budgets hold after upgrading. Voyage price unconfirmed (0007).
     llm_prices: dict[str, tuple[float, float]] = Field(
@@ -106,6 +116,19 @@ class Settings(BaseSettings):
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)
     producer_seconds_per_story: int = Field(default=45, ge=10)
+
+    # Writer (task 2.1). ~150 spoken words per minute.
+    writer_words_per_second: float = Field(default=2.5, gt=0)
+    writer_source_max_chars: int = Field(default=6000, ge=500)
+
+    # Editor (task 2.2, decision 0012). Evidence chunks are embedded on the fly, not stored.
+    editor_chunk_chars: int = Field(default=700, ge=200)
+    editor_chunk_overlap: int = Field(default=120, ge=0)
+    editor_source_max_chars: int = Field(default=20000, ge=1000)
+    editor_top_k: int = Field(default=4, ge=1, le=12)
+    editor_max_concurrency: int = Field(default=8, ge=1)
+    # Rewrite loop (task 2.3, decision 0013): rounds of Writer rewrites for non-approved claims.
+    rewrite_max_rounds: int = Field(default=2, ge=0, le=5)
 
 
 @lru_cache

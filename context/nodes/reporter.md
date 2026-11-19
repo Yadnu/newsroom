@@ -32,7 +32,7 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   Idempotent; serialized by a Postgres advisory lock.
 - `async def top_stories(limit=10, window_hours=24, min_sources=2) -> list[TopStory]` (`rank.py`):
   stories whose newest non-retracted source is in the window, with `min_sources`+ sources, ranked by
-  distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[outlet, title, url, published_at].
+  distinct outlets, then source count, then recency. `TopStory`: id, title, n_sources, outlets, latest_at, sources[`StorySourceRef`: id, outlet, title, url, published_at].
 - CLI (`app/cli.py`, script `newsroom`): `newsroom stories --top N [--hours 24] [--min-sources 2] [--refresh] [--json]`.
   `--refresh` runs ingest, then embed, then cluster first. Logs go to stderr, results to stdout.
 - Planned: `async def search_live(query: str) -> list[Source]` (Tavily/Exa + Firecrawl, task 5.4).
@@ -75,3 +75,4 @@ blocks its DLL.
 - 2026-11-16: RSS ingest with url/content_hash dedupe, ARQ cron job (task 1.4).
 - 2026-11-16: embed pending sources + greedy centroid clustering into stories (task 1.5, decision 0010).
 - 2026-11-16: `top_stories()` ranking + `newsroom stories` CLI (task 1.6, acceptance pending Voyage key).
+- 2026-11-17: `StorySourceRef` gains the source `id` (needed by the Writer, task 2.1).
