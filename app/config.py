@@ -144,6 +144,15 @@ class Settings(BaseSettings):
     standards_max_copied_words: int = Field(default=12, ge=5)
     standards_max_transition_words: int = Field(default=10, ge=1)
 
+    # Anchor voice output (task 4.2, decisions 0004 and 0017).
+    anchor_tts: Literal["cartesia", "fake"] = "cartesia"
+    cartesia_voice_id: str | None = None
+    cartesia_model: str | None = None  # None: Pipecat's default Cartesia model
+    anchor_sample_rate: int = Field(default=24000, ge=8000, le=48000)
+    anchor_line_gap_ms: int = Field(default=300, ge=0)
+    anchor_send_ahead_ms: int = Field(default=250, ge=0)  # client buffer for realtime sessions
+    anchor_line_timeout_s: float = Field(default=30.0, gt=0)
+
     # Producer rundown (task 2.0).
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)

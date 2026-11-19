@@ -15,7 +15,8 @@ Next.js player and Archive dashboard.
 
 ## Contract
 
-- Player (task 4.3, not built): audio, synced transcript, click a sentence to open its claim trace.
+- Player (task 4.3, not built): audio, synced transcript, click a sentence to open its claim trace. It will consume
+  the Anchor's WebSocket `/anchor/briefings/{id}/live` (PCM16 + JSON line events, decision 0017).
 - Archive dashboard (task 3.3): `/` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
   cited source links, evidence passages, earlier verdicts), stage table, and the briefing's rejections;
