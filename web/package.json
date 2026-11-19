@@ -9,7 +9,7 @@
     "lint": "eslint",
     "gen:api": "openapi-typescript openapi.json -o lib/api-types.ts",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test lib/"
+    "test": "node --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "next": "16.4.6",
