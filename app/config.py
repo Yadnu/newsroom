@@ -17,7 +17,7 @@ class FeedConfig(BaseModel):
     trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
-# v1 topic scope default: AI and tech news (STATE open question). All checked reachable 2026-11-16.
+# v1 topic scope default: AI and tech news (STATE open question).
 # Trust scores are a uniform 0.5 placeholder until the Editor calibrates them.
 DEFAULT_FEEDS = (
     FeedConfig(
@@ -32,6 +32,25 @@ DEFAULT_FEEDS = (
     FeedConfig(url="https://www.technologyreview.com/feed/", outlet="MIT Technology Review"),
     FeedConfig(url="https://www.wired.com/feed/tag/ai/latest/rss", outlet="Wired"),
     FeedConfig(url="https://feeds.bbci.co.uk/news/technology/rss.xml", outlet="BBC News"),
+    # Added 2026-11-18 (all returned 200 with entries) so the same event shows up in 2+ outlets.
+    FeedConfig(url="https://arstechnica.com/ai/feed/", outlet="Ars Technica"),
+    FeedConfig(
+        url="https://www.theregister.com/software/ai_ml/headlines.atom", outlet="The Register"
+    ),
+    FeedConfig(url="https://www.engadget.com/rss.xml", outlet="Engadget"),
+    FeedConfig(url="https://www.zdnet.com/topic/artificial-intelligence/rss.xml", outlet="ZDNET"),
+    FeedConfig(
+        url="https://www.theguardian.com/technology/artificialintelligenceai/rss",
+        outlet="The Guardian",
+    ),
+    FeedConfig(
+        url="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+        outlet="The New York Times",
+    ),
+    FeedConfig(url="https://siliconangle.com/category/ai/feed/", outlet="SiliconANGLE"),
+    FeedConfig(url="https://the-decoder.com/feed/", outlet="The Decoder"),
+    FeedConfig(url="https://www.cnbc.com/id/19854910/device/rss/rss.html", outlet="CNBC"),
+    FeedConfig(url="https://feeds.bloomberg.com/technology/news.rss", outlet="Bloomberg"),
 )
 
 

@@ -4,11 +4,11 @@ Last updated: 2026-11-18 by: Claude Code
 
 ## Current phase
 
-Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 acceptance run. Phase 2 is complete.
+Phase 3: Archive. Phases 1 and 2 are complete.
 
 ## Active task
 
-1.6 acceptance: enough sources for 10 multi-source stories
+3.1 `claim_trace()` API + rejection log API
 
 ## Tasks
 
@@ -22,7 +22,7 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 - [x] 1.3 archive (minimal): `span()` writing to `traces`, used by everything from here on
 - [x] 1.4 reporter: RSS ingest with dedupe by URL and content_hash, scheduled job
 - [x] 1.5 reporter: clustering into stories by embedding similarity
-- [ ] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources). Code done; Voyage works now (decision 0015). Acceptance not met: 96 sources from the default feeds give only 2 real stories with 2+ sources.
+- [x] 1.6 CLI `newsroom stories --top 10` (acceptance: today's top 10 stories, each with 2+ sources)
 
 ### Phase 2: Writer and Editor (text only)
 - [x] 2.0 producer: simple `build_rundown()` (top N fresh stories, even time split)
@@ -68,6 +68,6 @@ Phase 2: Writer and Editor (text only). Phase 1 is complete except the 1.6 accep
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: decision 0015 (llm-gateway): token-capped Voyage batches + per-minute pacing; free-tier values in `.env.example`, the local `.env` and the Brief workflow. 96 sources embedded, no 429. Live `newsroom brief --minutes 3 -t Altman -t Anthropic` printed verdicts + sources (briefing `3873a08c`): 2.5 ticked.
-- Open: (1) 1.6: only 2 real stories have 2+ sources; the dev DB also holds integration-test stories (outlets A/B/C) that rank in the top 10. (2) Groq free tier is 8000 TPM on gpt-oss-120b, about 2 judge calls a minute: 7 of 14 claims went `pending`. The chat path has no pacing; `NEWSROOM_EDITOR_MAX_CONCURRENCY=1` is the stopgap. (3) One story failed strict JSON on both draft models. (4) Judge weaknesses from 2.4.
-- Next: 1.6. More feeds (reporter), and the test fixtures removed from the dev DB, then rerun `newsroom stories --refresh`. After that, 3.1.
+- Done: 1.6 acceptance. 10 more default feeds (`app/config.py`); a live refresh embedded 263 sources and the top 10 all have 2+ sources. `tests/conftest.py` now exits if `NEWSROOM_TEST_DATABASE_URL` is the app database (integration fixtures TRUNCATE; that is how test stories "Chip launch"/"AI probe", outlets A/B/C, got into the dev DB, where they still are).
+- Open: Groq free tier 8000 TPM on the judge: about half of claims went `pending` in the live brief; chat calls have no pacing (stopgap `NEWSROOM_EDITOR_MAX_CONCURRENCY=1`). Clustering may split one event (Anthropic IPO) in two. Judge weaknesses from 2.4. `main` has only up to PR #3; phase 2 is on `phase2/evals-v1` with no PR to main yet.
+- Next: 3.1 `claim_trace()` + rejection log API (archive node).

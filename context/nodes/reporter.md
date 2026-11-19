@@ -54,14 +54,14 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
 RSS ingest done (task 1.4): `parse.py` (feedparser, HTML to text, normalization, hash) and
 `ingest.py` (concurrent httpx fetch, conditional GET by ETag/Last-Modified cached per process and
 saved only after a successful store, in-run dedupe, Postgres insert). Spans: `reporter/ingest_feeds`
-with a child `reporter/fetch_feed` per feed. Default feeds are 6 AI/tech outlets with a uniform
-trust_score of 0.5 (placeholder). Live run on 2026-11-16: 91 sources from 6 outlets, a re-run
+with a child `reporter/fetch_feed` per feed. Default feeds: 16 feeds from 15 AI/tech outlets (10 added 2026-11-18, all
+returned 200; VentureBeat 429 and Semafor 404 left out), uniform trust_score 0.5 (placeholder). Live run on 2026-11-16: 91 sources from 6 outlets, a re-run
 inserted 0. Content is the feed body only: often a summary of about 100 chars, and full text for
 some outlets (capped at 20k chars). Clustering done (task 1.5) in `cluster.py`: pure `assign()`
-plus DB functions. Spans are `reporter/embed_sources` and `reporter/cluster_stories`. Verified on
-Postgres with a fake Voyage endpoint only, because there is no Voyage key yet. The 0.80 threshold
-is uncalibrated. `top_stories` and the CLI are built (task 1.6). A live `newsroom stories --refresh`
-ingested 91 sources but found 0 stories, because there is no Voyage key. Tests avoid `numpy.random` because Windows Application Control on the dev box
+plus DB functions. Spans are `reporter/embed_sources` and `reporter/cluster_stories`. The 0.80 threshold
+is uncalibrated. `top_stories` and the CLI are built (task 1.6). Live `newsroom stories --refresh`
+(2026-11-18, 7 min with Voyage free-tier pacing): 263 new sources embedded, top 10 all with 2+ sources and up to
+4 outlets (task 1.6 acceptance). Two top stories look like one event (Anthropic IPO) split in two clusters. Tests avoid `numpy.random` because Windows Application Control on the dev box
 blocks its DLL.
 
 ## Open questions
@@ -76,3 +76,4 @@ blocks its DLL.
 - 2026-11-16: embed pending sources + greedy centroid clustering into stories (task 1.5, decision 0010).
 - 2026-11-16: `top_stories()` ranking + `newsroom stories` CLI (task 1.6, acceptance pending Voyage key).
 - 2026-11-17: `StorySourceRef` gains the source `id` (needed by the Writer, task 2.1).
+- 2026-11-18: 10 more default feeds; task 1.6 acceptance met on a live run.
