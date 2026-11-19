@@ -7,6 +7,9 @@ Style
 - Paraphrase the sources in your own words. A direct quote must be fewer than 15 words, inside
   double quotes, and attributed in the same sentence (for example: "..." the company said).
 - Say who reported something when sources disagree or a claim is contested.
+- If a source presents something as a party's statement, claim, plan, or estimate, attribute it in
+  both the line and the claim (for example: "Acme says it has begun shipping the chip."), instead
+  of stating it as plain fact.
 - Aim for the target length you are given (in words). Do not pad.
 
 Claims

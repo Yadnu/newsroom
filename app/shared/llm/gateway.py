@@ -59,7 +59,11 @@ class Gateway:
         missing = [t for t in TASK_NAMES if t not in settings.llm_routes]
         if missing:
             raise LLMConfigError(f"llm_routes has no model for tasks: {missing}")
-        for model in {*settings.llm_routes.values(), settings.embedding_model}:
+        for model in {
+            *settings.llm_routes.values(),
+            *settings.llm_fallbacks.values(),
+            settings.embedding_model,
+        }:
             if model not in settings.llm_prices:
                 raise LLMConfigError(f"no price configured for model {model!r}")
 
@@ -74,19 +78,38 @@ class Gateway:
 
     # ---- chat -------------------------------------------------------------------------
 
+    def fallback_for(self, task: TaskName) -> str | None:
+        return self._s.llm_fallbacks.get(task)
+
     async def complete[T: BaseModel](
         self, task: TaskName, messages: Sequence[Message], schema: type[T]
     ) -> tuple[T, Usage]:
+        """Call the task's model. If it fails with invalid output or a provider error that
+        survived the retries, try the task's fallback model once (decision 0014)."""
         with span("llm-gateway", f"complete.{task}", schema=schema.__name__) as s:
-            s.set(model=self.model_for(task))
-            result, usage = await self._complete(task, messages, schema)
+            model = self.model_for(task)
+            s.set(model=model)
+            fallback = self.fallback_for(task)
+            try:
+                result, usage = await self._complete(task, messages, schema, model)
+            except (StructuredOutputError, LLMProviderError) as e:
+                if fallback is None or not _fallback_worthy(e):
+                    raise
+                log.warning(
+                    "llm.fallback",
+                    task=task,
+                    model=model,
+                    fallback=fallback,
+                    error=type(e).__name__,
+                )
+                s.set(fallback_from=model, fallback_reason=type(e).__name__, model=fallback)
+                result, usage = await self._complete(task, messages, schema, fallback)
             _record(s, usage)
             return result, usage
 
     async def _complete[T: BaseModel](
-        self, task: TaskName, messages: Sequence[Message], schema: type[T]
+        self, task: TaskName, messages: Sequence[Message], schema: type[T], model: str
     ) -> tuple[T, Usage]:
-        model = self.model_for(task)
         key = self._key(self._s.groq_api_key, "NEWSROOM_GROQ_API_KEY")
         body = {
             "model": model,
@@ -238,6 +261,15 @@ class Gateway:
             attempts=attempts,
         )
         return usage
+
+
+def _fallback_worthy(e: Exception) -> bool:
+    """Invalid output, or a transient provider failure. Not auth or bad-request errors."""
+    if isinstance(e, StructuredOutputError):
+        return True
+    return isinstance(e, LLMProviderError) and (
+        e.status_code is None or e.status_code in RETRYABLE_STATUS
+    )
 
 
 def _record(s: Span, usage: Usage) -> None:

@@ -180,25 +180,61 @@ def no_evidence(claim_id: UUID) -> ClaimVerdict:
     )
 
 
+def judge_failed(claim_id: UUID, error: Exception) -> ClaimVerdict:
+    """The judge call failed: the claim stays ``pending`` (never airs) and is not stored."""
+    return ClaimVerdict(
+        claim_id=claim_id,
+        verdict=Verdict.pending,
+        score=0.0,
+        reason=f"judge failed: {type(error).__name__}",
+        checks=dict.fromkeys(CHECKS, False),
+        sensitive=False,
+        evidence=[],
+    )
+
+
 # ---- judging --------------------------------------------------------------------------------
 
 
-async def _judge(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
-    with span("editor", "judge_claim", claim_id=claim.id, passages=len(passages)) as s:
+async def judge_passages(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
+    # The claim text and reason are recorded so rejections survive a rewrite (decision 0013).
+    with span(
+        "editor", "judge_claim", claim_id=claim.id, claim=claim.text, passages=len(passages)
+    ) as s:
         if not passages:
             v = no_evidence(claim.id)
         else:
             messages, refs = judge_messages(claim.text, passages)
-            out = await llm.complete("judge", messages, JudgeOut)
-            v = decide(claim.id, out, refs)
+            try:
+                out = await llm.complete("judge", messages, JudgeOut)
+            except llm.LLMError as e:
+                v = judge_failed(claim.id, e)
+            else:
+                v = decide(claim.id, out, refs)
         s.set(
             verdict=v.verdict.value,
             score=v.score,
+            reason=v.reason,
             checks=v.checks,
             sensitive=v.sensitive,
             evidence=len(v.evidence),
         )
     return v
+
+
+async def judge_all(claims: Sequence[DraftClaim]) -> list[ClaimVerdict]:
+    """Retrieve evidence once for all claims and judge them concurrently. Does not store."""
+    refs = [_ref(c) for c in claims]
+    if not refs:
+        return []
+    passages = await retrieve_evidence(refs)
+    limit = asyncio.Semaphore(get_settings().editor_max_concurrency)
+
+    async def one(c: ClaimRef) -> ClaimVerdict:
+        async with limit:
+            return await judge_passages(c, passages[c.id])
+
+    return list(await asyncio.gather(*(one(c) for c in refs)))
 
 
 def _ref(claim: DraftClaim) -> ClaimRef:
@@ -209,31 +245,26 @@ async def judge_claim(claim: DraftClaim) -> ClaimVerdict:
     """Retrieve evidence, judge one claim, and store the verdict and its evidence."""
     ref = _ref(claim)
     passages = await retrieve_evidence([ref])
-    verdict = await _judge(ref, passages[ref.id])
-    await _store([verdict])
+    verdict = await judge_passages(ref, passages[ref.id])
+    await store_verdicts([verdict])
     return verdict
 
 
 async def judge_script(script: Script) -> JudgedScript:
     """Judge every claim in the script concurrently; mark the briefing ``judged``."""
-    claims = [_ref(c) for line in script.lines for c in line.claims]
+    claims = [c for line in script.lines for c in line.claims]
     with span("editor", "judge_script", script.briefing_id, claims=len(claims)) as s:
-        passages = await retrieve_evidence(claims)
-        limit = asyncio.Semaphore(get_settings().editor_max_concurrency)
-
-        async def one(c: ClaimRef) -> ClaimVerdict:
-            async with limit:
-                return await _judge(c, passages[c.id])
-
-        verdicts = list(await asyncio.gather(*(one(c) for c in claims)))
-        await _store(verdicts, briefing_id=script.briefing_id)
+        verdicts = await judge_all(claims)
+        await store_verdicts(verdicts, briefing_id=script.briefing_id)
         judged = JudgedScript(briefing_id=script.briefing_id, verdicts=verdicts)
         s.set(**{v.value: judged.count(v) for v in Verdict if v != Verdict.pending})
     return judged
 
 
-async def _store(verdicts: Sequence[ClaimVerdict], briefing_id: UUID | None = None) -> None:
-    """Write verdicts and evidence in one transaction. Re-judging replaces old evidence."""
+async def store_verdicts(verdicts: Sequence[ClaimVerdict], briefing_id: UUID | None = None) -> None:
+    """Write verdicts and evidence in one transaction. Re-judging replaces old evidence.
+    ``pending`` verdicts (judge failed) are not written: the claim keeps its stored state."""
+    verdicts = [v for v in verdicts if v.verdict != Verdict.pending]
     for v in verdicts:
         if v.verdict == Verdict.approved and not v.evidence:
             raise AssertionError(f"claim {v.claim_id}: approved without evidence")
