@@ -35,7 +35,8 @@ Voice input. Streams listener audio to text and classifies intent.
 - `CallIn` (`live.py`): push-to-talk on the Anchor WebSocket. Client `mic_start{sample_rate}`, binary PCM16 chunks,
   `mic_end`; server `caller_interim{text}`, `caller_question{id, transcript, intent, story_id, story_title, restated}`,
   `caller_error{message}`; `caller_question` also carries `allowed`, `screen_category`, `screen_reason`. One question
-  at a time; the current story is the line being read at `mic_start`.
+  at a time; the current story is the line being read at `mic_start`. `CallIn(on_question=...)` hands each
+  question to the Producer (`handle_question`, task 5.3); a new mic_start waits until the answer is done.
 - CLI `newsroom ask --briefing <id> --wav q.wav [--realtime]`.
 
 ## Invariants
@@ -68,3 +69,4 @@ than real time ("What did..." became "What"), so the settle now waits until the 
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-19: Deepgram + fake STT, intent classification, push-to-talk on the Anchor WebSocket (task 5.1, decision 0018).
 - 2026-11-19: questions screened by the Standards Desk; settle waits for finals to cover the audio (task 5.2).
+- 2026-11-19: `CallIn` hands questions to the Producer for an on-air answer (task 5.3).

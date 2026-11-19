@@ -8,7 +8,7 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 
 ## Active task
 
-5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
+5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl
 
 ## Tasks
 
@@ -45,7 +45,7 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ### Phase 5: Caller and Producer (voice in)
 - [x] 5.1 caller: Deepgram adapter, intent classification
 - [x] 5.2 standards-desk: `screen_caller()`
-- [ ] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
+- [x] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
 - [ ] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
 
 ### Phase 6: Evals and polish
@@ -68,6 +68,6 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 5.2. `standards_desk.screen_caller()`: rules (injection, insults, empty, too long, off-topic intent) then LLM moderation on `gpt-oss-20b`, fail open on LLM errors (decision 0019); every Caller question carries the verdict and blocked ones show "not taken" in the Player. Live: 8/8 typed cases right, spoken injection blocked. Also fixed transcripts cut short when audio arrives faster than real time. Branch `phase5/screen-caller` stacks on #19 to #16; none merged.
-- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, pending lines never air). Standards rules are heuristics (tune in 6.1 red team). Cartesia/Deepgram cost not tracked. In-browser mic use not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 5.3 producer: answer allowed questions fast (latency budget), auto-pause on speech (barge-in), resume the briefing.
+- Done: 5.3. Allowed questions are answered on air: `producer.answer_question` (Writer `draft_answer` -> Editor judge -> Standards Desk) -> `session.interject` -> resume; safe fixed line on failure (decision 0020). Answer lines are `script_lines.kind='answer'` (migration `a3c9e5d71b20`, applied to the dev DB). Embed pacing is now a sliding window. Live: answer spoken 6.6 s after the question (8.1 s from release), traces to TechCrunch. Branch `phase5/answer` stacks on #20 to #16; none merged.
+- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`; an answer then falls back to the safe line). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram cost not tracked. In-browser mic not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 5.4 reporter `search_live()` (Tavily/Exa + Firecrawl keys needed) so answers can use fresh sources beyond the briefing.

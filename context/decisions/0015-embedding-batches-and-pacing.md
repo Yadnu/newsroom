@@ -32,3 +32,7 @@ ended long before the minute window rolled.
 ## Consequences
 On the free tier, the 96 pending sources (about 83K chars) embedded in under 2 minutes with no 429.
 Pacing is per process; two processes sharing a key can still hit 429, which the longer backoff covers.
+
+Amended 2026-11-19 (task 5.3): pacing is a sliding 60 s window instead of evenly spaced requests. Even
+spacing (one request per 20 s at 3 RPM) made an on-air answer, which needs two embed calls, wait 20 s; a
+window allows the same number of requests per minute but sends a short burst at once.

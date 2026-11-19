@@ -21,7 +21,8 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
 - `async def embed_with_usage(...) -> tuple[list[list[float]], Usage]`
 - `TaskName = Literal["draft", "judge", "classify", "answer"]`; `Message` is a `{role, content}` TypedDict.
 - `Usage(model, tokens_in, tokens_out, cost_usd, latency_ms, attempts)`, totalled across retries.
-- Embedding pacing (decision 0015): `Settings.embed_requests_per_minute`, `embed_tokens_per_minute` (0 = no limit)
+- Embedding pacing (decision 0015, sliding 60 s window since task 5.3): a request goes out at once while fewer than
+  `embed_requests_per_minute` requests and `embed_tokens_per_minute` tokens were sent in the last 60 s (0 = no limit)
   and `embed_batch_max_tokens` (default 100000). `embed_batches(texts, max_tokens)` and `estimate_tokens(text)`.
   `Gateway(..., sleep=, clock=)` are injectable for tests.
 - Errors: `LLMConfigError` (missing key, route, or price), `LLMProviderError` (`status_code`),
@@ -77,3 +78,4 @@ allows 8000 TPM on `gpt-oss-120b` and a judge call is about 4K tokens, so at `ed
 - 2026-11-18: per-task fallback model on invalid output or exhausted retries (decision 0014).
 - 2026-11-18: token-capped embed batches, per-minute pacing, longer 429 backoff (decision 0015).
 - 2026-11-19: Langfuse export of chat and embed calls over the ingestion API (task 3.2, decision 0005).
+- 2026-11-19: embed pacing is a sliding 60 s window, so bursts within the limits go out at once (task 5.3).

@@ -141,6 +141,9 @@ function Script({
             scroll={false}
             aria-current={ln.id === selected ? "true" : undefined}
           >
+            {ln.kind === "answer" && (
+              <span className="badge">Answer to: {ln.question ?? "a listener"}</span>
+            )}{" "}
             {ln.text}
             <VerdictDots verdicts={ln.verdicts} />
           </Link>

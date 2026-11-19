@@ -6,7 +6,7 @@ phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
 feeds: [editor]
-decisions: [0002, 0011, 0013, 0014]
+decisions: [0002, 0011, 0013, 0014, 0020]
 ---
 
 # writer
@@ -21,6 +21,11 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
   (`WriterError` after one resample, or `LLMError`), is skipped (decision 0014). Raises `WriterError` only if no
   item has usable sources or none could be drafted.
 - `Script`: briefing_id, lines[`DraftLine`: id, story_id, order, text, claims[`DraftClaim`: id, text, source_ids]].
+- `async def draft_answer(question, story_title, sources, *, max_lines=3, max_chars=4000) -> list[CleanLine]`
+  (`answer.py`, task 5.3): the anchor's short answer on the `answer` route, same schema and `validate_segment` as
+  segments, one retry then `WriterError`; prompts `writer/answer_system.md` / `answer_user.md` (question escaped in
+  `<question>`). Not covered -> one claimless line. `store_answer(briefing_id, story_id, question, lines)` stores
+  `kind='answer'` lines at order >= 1000 with pending claims and `claim_sources`.
 - `async def rewrite_line(line: DraftLine, feedback: Sequence[ClaimFeedback], round_no: int) -> DraftLine`: one
   `"draft"` call using the story's non-retracted sources and `prompts/writer/rewrite_user.md` (`$line`, `$feedback`).
   The output must be exactly one valid line (one resample, then `WriterError`). It keeps the line id and order, replaces
@@ -58,3 +63,4 @@ instruction. It states company-reported facts without attribution, which the Edi
 - 2026-11-17: `draft_script()` with claim tagging, validation + one resample, prompts in `prompts/writer/` (task 2.1).
 - 2026-11-18: `rewrite_line()` + attribution rule in the draft prompt (task 2.3, decision 0013).
 - 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).
+- 2026-11-19: `draft_answer()` / `store_answer()` for on-air answers (task 5.3).

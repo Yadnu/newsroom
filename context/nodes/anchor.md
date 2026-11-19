@@ -6,7 +6,7 @@ phase: 4
 code: app/anchor/
 depends_on: [standards-desk, producer, caller, archive]
 feeds: [web]
-decisions: [0004, 0016, 0017]
+decisions: [0004, 0016, 0017, 0020]
 ---
 
 # anchor
@@ -23,6 +23,9 @@ Voice output. Streams the cleared script as speech and records audio timestamps 
 - `VoiceSession` (`session.py`): `send_audio(pcm16)`, `send_event(dict)`, `close()`, `realtime`; barge-in
   `await session.pause()` (cuts the current line now) / `await session.resume()` (replays it from its start).
   Sinks: `WebSocketSession`, `WavFileSession(path, sample_rate)`, `MemorySession(realtime=False)`.
+- Answers (task 5.3): `session.interject(cleared: ClearedScript, question_id)` queues a cleared answer (anything
+  else raises `TypeError`); `speak()` voices it before the next briefing line, on the same pipeline and clock.
+  `SpeakReport.answers` counts them. `line`/`line_end` events carry `kind` (`script`|`answer`) and `question_id`.
 - Events: `start{briefing_id, sample_rate, lines}`, `line{line_id, order, text, start_ms}`, `line_end{line_id,
   end_ms}`, `paused{at_ms}`, `resumed{at_ms}`, `done{audio_ms, completed}`. Audio is PCM16 mono at `anchor_sample_rate`.
 - WebSocket `/anchor/briefings/{id}/live` (`routes.py`): clears the stored briefing (`standards_desk.clear_stored`),
@@ -59,3 +62,4 @@ replaying line 0. Not yet: Cartesia cost accounting, word-level timestamps, the 
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-19: Pipecat pipeline, Cartesia + fake adapters, audio-clock timestamps, live WebSocket (task 4.2, decision 0017).
 - 2026-11-19: WebSocket carries Caller mic audio; pipeline shutdown is cancellation-safe (task 5.1).
+- 2026-11-19: answers spoken as interjections between briefing lines (task 5.3).

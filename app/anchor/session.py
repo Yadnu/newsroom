@@ -10,6 +10,7 @@ Events (also the WebSocket protocol for the web Player, decision 0017):
 
 import asyncio
 import wave
+from collections import deque
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ class VoiceSession:
         self._unpaused.set()
         self._on_pause: list[Callable[[], Awaitable[None]]] = []
         self._on_resume: list[Callable[[], Awaitable[None]]] = []
+        self._interjections: deque[tuple[Any, str]] = deque()
         self.pauses = 0
 
     # ---- sink ------------------------------------------------------------------------------
@@ -66,6 +68,20 @@ class VoiceSession:
 
     async def wait_unpaused(self) -> None:
         await self._unpaused.wait()
+
+    # ---- answers (task 5.3) ----------------------------------------------------------------
+
+    def interject(self, script: Any, question_id: str) -> None:
+        """Queue a cleared answer; ``speak()`` voices it before the next briefing line. Only a
+        ``ClearedScript`` is accepted, so an answer cannot skip the Standards Desk."""
+        from app.standards_desk import ClearedScript
+
+        if not isinstance(script, ClearedScript):
+            raise TypeError("the Anchor speaks only a ClearedScript (standards_desk.clear_for_air)")
+        self._interjections.append((script, question_id))
+
+    def take_interjection(self) -> tuple[Any, str] | None:
+        return self._interjections.popleft() if self._interjections else None
 
     def on_pause(self, cb: Callable[[], Awaitable[None]]) -> None:
         self._on_pause.append(cb)

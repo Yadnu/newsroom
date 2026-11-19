@@ -419,3 +419,16 @@ details summary {
   font: italic 15px/1.4 var(--serif);
   margin: 4px 0;
 }
+
+.caller .answer {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 16px/1.5 var(--serif);
+  background: var(--hover);
+}
+
+.caller .answer.speaking {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}

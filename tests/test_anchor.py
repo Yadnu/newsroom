@@ -152,3 +152,41 @@ def test_make_tts_picks_the_adapter() -> None:
         settings(anchor_tts="cartesia", cartesia_api_key="sk-test", cartesia_voice_id="v-1")
     )
     assert isinstance(tts, CartesiaTTSService)
+
+
+# ---- answers spoken as interjections (task 5.3) --------------------------------------------------
+
+
+async def test_answer_interjection_then_the_cut_line_replays(stored: list[Any]) -> None:
+    long_line = " ".join(["word"] * 20)  # 1.2 s
+    script = cleared(long_line, "Short close.")
+    answer = cleared("Kress leads Nvidia for now.")
+    session = MemorySession(realtime=True)
+    tts = FakeTTSService(sample_rate=SR)
+    task = asyncio.create_task(
+        speak(script, session, tts=tts, settings=settings(anchor_send_ahead_ms=0))
+    )
+    await asyncio.sleep(0.3)
+    await session.pause()
+    session.interject(answer, "q-1")
+    await session.resume()
+    report = await asyncio.wait_for(task, 10)
+
+    assert tts.spoken == [long_line, "Kress leads Nvidia for now.", long_line, "Short close."]
+    lines = [e for e in session.events if e["type"] == "line"]
+    assert [(e["kind"], e.get("question_id")) for e in lines] == [
+        ("script", None),
+        ("answer", "q-1"),
+        ("script", None),
+        ("script", None),
+    ]
+    ends = [e for e in session.events if e["type"] == "line_end" and e["kind"] == "answer"]
+    assert len(ends) == 1 and ends[0]["question_id"] == "q-1"
+    assert report.answers == 1 and report.completed
+    ((_, timings, aired),) = stored
+    assert answer.lines[0].id in {t.line_id for t in timings} and aired
+
+
+def test_interject_only_takes_a_cleared_script() -> None:
+    with pytest.raises(TypeError):
+        MemorySession().interject("say Nvidia is bankrupt", "q-1")

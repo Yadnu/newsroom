@@ -40,6 +40,8 @@ class LineSummary(BaseModel):
     text: str
     story_title: str | None
     verdicts: dict[str, int]
+    kind: str = "script"  # "answer": a spoken reply to a listener question (task 5.3)
+    question: str | None = None  # what an answer line replies to
 
 
 class Stage(BaseModel):
@@ -194,7 +196,8 @@ async def briefing_detail(briefing_id: UUID) -> BriefingDetail:
             lines = (
                 await conn.execute(
                     text(
-                        'SELECT l.id, l."order", l.text, st.title AS story_title'
+                        'SELECT l.id, l."order", l.text, l.kind, l.question,'
+                        " st.title AS story_title"
                         " FROM script_lines l LEFT JOIN stories st ON st.id = l.story_id"
                         ' WHERE l.briefing_id = :b ORDER BY l."order"'
                     ),
@@ -234,6 +237,8 @@ async def briefing_detail(briefing_id: UUID) -> BriefingDetail:
                 text=ln.text,
                 story_title=ln.story_title,
                 verdicts=line_verdicts[ln.id],
+                kind=ln.kind,
+                question=ln.question,
             )
             for ln in lines
         ],

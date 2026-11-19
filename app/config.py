@@ -166,6 +166,14 @@ class Settings(BaseSettings):
     producer_freshness_hours: int = Field(default=24, ge=1)
     producer_min_sources: int = Field(default=2, ge=1)
     producer_seconds_per_story: int = Field(default=45, ge=10)
+    # Answering listener questions (task 5.3, decision 0020).
+    producer_answer_budget_s: float = Field(
+        default=8.0, gt=0
+    )  # logged as over_budget when exceeded
+    producer_answer_timeout_s: float = Field(default=12.0, gt=0)  # then the safe line is spoken
+    producer_answer_max_sources: int = Field(default=6, ge=1)
+    producer_answer_max_lines: int = Field(default=3, ge=1, le=6)
+    producer_answer_source_max_chars: int = Field(default=3000, ge=500)
 
     # Writer (task 2.1). ~150 spoken words per minute.
     writer_words_per_second: float = Field(default=2.5, gt=0)

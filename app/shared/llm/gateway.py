@@ -10,6 +10,7 @@ Each call is also exported to Langfuse when keys are set (decision 0005, ``langf
 import asyncio
 import json
 import time
+from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -41,6 +42,7 @@ EMBED_CHARS_PER_TOKEN = 3  # conservative estimate for sizing batches before the
 STRUCTURED_ATTEMPTS = 2  # resample once when the output fails validation
 _MAX_BACKOFF_S = 30.0
 _RATE_LIMIT_BACKOFF_S = 15.0
+EMBED_WINDOW_S = 60.0  # the providers' per-minute limits, as a sliding window
 
 log = get_logger(__name__)
 
@@ -68,7 +70,9 @@ class Gateway:
         self._clock = clock
         # Embedding pacing (decision 0015): one request at a time, next start no earlier than this.
         self._embed_lock = asyncio.Lock()
-        self._embed_next_at = 0.0
+        # Sliding 60 s window of (sent_at, tokens) per embed request: a request goes out at once
+        # while both per-minute limits have room, so short bursts (an on-air answer) don't wait.
+        self._embed_window: deque[tuple[float, int]] = deque()
         self._http = httpx.AsyncClient(timeout=settings.llm_timeout_s, transport=transport)
         missing = [t for t in TASK_NAMES if t not in settings.llm_routes]
         if missing:
@@ -221,14 +225,13 @@ class Gateway:
                 "input_type": input_type,
                 "output_dimension": EMBEDDING_DIM,
             }
+            estimated = sum(estimate_tokens(t) for t in batch)
             async with self._embed_lock:
-                await self._wait_embed_slot()
+                await self._wait_embed_slot(estimated)
                 sent_at = self._clock()
                 data, n = await self._post(f"{self._s.voyage_base_url}/embeddings", key, body)
                 used = int((data.get("usage") or {}).get("total_tokens", 0))
-                self._embed_next_at = sent_at + self._embed_interval(
-                    used or sum(estimate_tokens(t) for t in batch)
-                )
+                self._embed_window.append((sent_at, used or estimated))
             attempts += n
             tokens += used
             rows = sorted(data["data"], key=lambda r: r["index"])
@@ -247,14 +250,27 @@ class Gateway:
             cap = min(cap, self._s.embed_tokens_per_minute)
         return cap
 
-    def _embed_interval(self, tokens: int) -> float:
-        """Seconds to wait after a request so neither per-minute limit is exceeded."""
+    def _embed_wait(self, tokens: int) -> float:
+        """Seconds until a request of ``tokens`` fits both per-minute limits (0 = send now)."""
         rpm, tpm = self._s.embed_requests_per_minute, self._s.embed_tokens_per_minute
-        return max(60.0 / rpm if rpm else 0.0, 60.0 * tokens / tpm if tpm else 0.0)
+        now = self._clock()
+        window = self._embed_window
+        while window and window[0][0] <= now - EMBED_WINDOW_S:
+            window.popleft()
+        wait = 0.0
+        if rpm and len(window) >= rpm:
+            wait = window[len(window) - rpm][0] + EMBED_WINDOW_S - now
+        if tpm:
+            used = sum(t for _, t in window)
+            for sent_at, t in window:  # the oldest requests leave the window first
+                if used + tokens <= tpm:
+                    break
+                used -= t
+                wait = max(wait, sent_at + EMBED_WINDOW_S - now)
+        return max(0.0, wait)
 
-    async def _wait_embed_slot(self) -> None:
-        delay = self._embed_next_at - self._clock()
-        if delay > 0:
+    async def _wait_embed_slot(self, tokens: int) -> None:
+        while (delay := self._embed_wait(tokens)) > 0:
             await self._sleep(delay)
 
     # ---- Langfuse export (decision 0005) -----------------------------------------------
