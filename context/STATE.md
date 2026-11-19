@@ -68,6 +68,6 @@ Phase 4: Anchor (voice out). Phases 1 to 3 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 3.3. `web/` Next.js Archive dashboard (briefings, sentence -> claim trace -> source link in one click, stages, rejections) on new `GET /archive/briefings[/{id}]`; types generated from `web/openapi.json`. Branch `phase3/dashboard` stacks on `phase3/langfuse` (3.2) and `phase3/claim-trace` (3.1, PR #11); `main` needs PR #12 first. None merged yet.
+- Done: 3.3. `web/` Next.js Archive dashboard (briefings, sentence -> claim trace -> source link in one click, stages, rejections) on new `GET /archive/briefings[/{id}]`; types generated from `web/openapi.json`. All of phase 3 is on `main` (PRs #11, #13, #14, after #12 fixed the bad PR #10 merge); CI green, including the new `web` job.
 - Open: Groq free tier 8000 TPM on the judge (about half of claims `pending` live). Clustering may split one event. Judge weaknesses from 2.4. Integration tests run only in CI. Test stories "Chip launch"/"AI probe" and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live (no keys).
 - Next: 4.1 standards-desk `clear_for_air()` (read the standards-desk and editor nodes; the air-gate invariant is in AGENTS.md).
