@@ -23,9 +23,11 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   - Creates a `briefings` row (`status=draft`, `target_minutes`). `NoStoriesError` if nothing matches (no briefing created).
 - `Rundown`: briefing_id, minutes, items, `total_seconds`. `RundownItem`: story_id, order, target_seconds, title, sources (`StorySourceRef`).
 - CLI (`app/cli.py`): `newsroom brief --minutes 3 [--topic T]... [--refresh] [--json]` runs
-  `build_rundown` -> `writer.draft_script` -> `editor.review_script` and prints every line with each claim's verdict,
+  `build_rundown` -> `writer.draft_script` -> `editor.review_script` -> `standards_desk.clear_for_air` and prints every
+  line (blocked lines struck through with `BLOCKED <rule>: reason`) with each claim's verdict,
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
-  judge's reason. Exit 1 on `NoStoriesError` or `WriterError`. Progress goes to stderr, the script to stdout.
+  judge's reason. JSON adds `cleared` and per-line `on_air` / `block`. Exit 1 on `NoStoriesError`, `WriterError`,
+  or when nothing clears (the report is still printed). Progress goes to stderr, the script to stdout.
   `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh; free-tier embed pacing) runs it live with repo secrets
   `NEWSROOM_DATABASE_URL`, `NEWSROOM_GROQ_API_KEY`, `NEWSROOM_VOYAGE_API_KEY`; uploads `brief.json` + logs, writes a job summary.
 - `async def handle_call(question: CallerQuestion) -> CallerAnswerPlan`: pause, run a fast Reporter -> Writer -> Editor loop, resume.
@@ -55,3 +57,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-17: simple `build_rundown()` with an even time split and a briefing row (task 2.0).
 - 2026-11-18: `newsroom brief` CLI prints the reviewed script with verdict and sources per claim (task 2.5).
 - 2026-11-18: manual `Brief` GitHub workflow runs the live pipeline.
+- 2026-11-19: `newsroom brief` clears the script for air and shows blocked lines (task 4.1).

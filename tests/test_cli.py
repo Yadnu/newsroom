@@ -13,6 +13,8 @@ from app.producer import NoStoriesError, Rundown, RundownItem
 from app.reporter.ingest import IngestReport
 from app.reporter.rank import StorySourceRef, TopStory
 from app.shared.llm import LLMConfigError
+from app.standards_desk import Block, BlockRule, ClearedLine, ClearedScript, NotClearedError
+from app.standards_desk.types import _CLEARANCE
 from app.writer import DraftClaim, DraftLine, Script, WriterError
 
 runner = CliRunner()
@@ -190,10 +192,19 @@ def brief_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         seen["steps"].append("review")
         return reviewed
 
+    async def fake_clear(r: ReviewedScript) -> ClearedScript:
+        seen["steps"].append("clear")
+        block = Block(line2.id, 1, BlockRule.unapproved, "claim is rewrite: 'It is twice as fast.'")
+        if seen.get("nothing_cleared"):
+            raise NotClearedError("all 2 lines were blocked", (block,))
+        cleared = (ClearedLine(line1.id, story.id, 0, line1.text, (c1.id,)),)
+        return ClearedScript._issue(_CLEARANCE, script.briefing_id, cleared, (block,))
+
     monkeypatch.setattr(cli, "configure_logging", lambda *_a, **_k: None)
     monkeypatch.setattr(cli, "build_rundown", fake_rundown)
     monkeypatch.setattr(cli, "draft_script", fake_draft)
     monkeypatch.setattr(cli, "review_script", fake_review)
+    monkeypatch.setattr(cli, "clear_for_air", fake_clear)
     seen["c1"], seen["c2"] = c1, c2
     return seen
 
@@ -201,15 +212,17 @@ def brief_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 def test_brief_prints_verdict_and_source_per_claim(brief_calls: dict[str, Any]) -> None:
     result = runner.invoke(cli.app, ["brief", "--minutes", "3"])
     assert result.exit_code == 0, result.output
-    assert brief_calls["steps"] == [("rundown", 3.0, None), "draft", "review"]
+    assert brief_calls["steps"] == [("rundown", 3.0, None), "draft", "review", "clear"]
     out = result.stdout
     assert "Chip launch" in out
     approved = next(ln for ln in out.splitlines() if "ships in March" in ln)
     assert "approved" in approved and "(Wired)" in approved  # evidence source, not every citation
-    rewrite = next(ln for ln in out.splitlines() if "twice as fast" in ln)
+    rewrite = next(ln for ln in out.splitlines() if "twice as fast" in ln and "BLOCKED" not in ln)
     assert "rewrite" in rewrite and "(BBC)" in rewrite  # no evidence: falls back to cited source
     assert "needs attribution" in out
     assert "approved 1, rewrite 1, rejected 0" in out
+    flat = " ".join(out.split())  # rich wraps long lines
+    assert "BLOCKED unapproved" in flat and "Cleared for air 1/2 lines" in flat
 
 
 def test_brief_json(brief_calls: dict[str, Any]) -> None:
@@ -222,6 +235,17 @@ def test_brief_json(brief_calls: dict[str, Any]) -> None:
     assert first["claims"][0]["verdict"] == "approved"
     assert first["claims"][0]["sources"] == [{"outlet": "Wired", "url": "https://Wired.test/x"}]
     assert second["claims"][0]["sources"][0]["outlet"] == "BBC"
+    assert report["cleared"] == 1
+    assert first["on_air"] is True and first["block"] is None
+    assert second["on_air"] is False and second["block"]["rule"] == "unapproved"
+
+
+def test_brief_nothing_cleared_prints_then_exits_nonzero(brief_calls: dict[str, Any]) -> None:
+    brief_calls["nothing_cleared"] = True
+    result = runner.invoke(cli.app, ["brief", "--json"])
+    assert result.exit_code == 1
+    assert json.loads(result.stdout)["lines"][1]["on_air"] is False
+    assert "Nothing cleared for air" in result.stderr
 
 
 def test_brief_claim_without_verdict_is_pending(brief_calls: dict[str, Any]) -> None:
