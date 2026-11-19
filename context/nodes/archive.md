@@ -6,7 +6,7 @@ phase: 1
 code: app/archive/
 depends_on: [data-model]
 feeds: [web]
-decisions: [0005, 0009]
+decisions: [0005, 0009, 0013]
 ---
 
 # archive
@@ -26,7 +26,16 @@ Observability. Records every component event and builds the claim-to-source trac
   `get_sink()`, `set_sink(sink) -> previous`.
 - `await start_archive()` / `await stop_archive()`: start the background writer / stop and flush.
   Every long-running process calls both. The API lifespan already does.
-- Planned (phase 3): `async def claim_trace(script_line_id: UUID) -> ClaimTrace`.
+- `async def claim_trace(script_line_id: UUID) -> ClaimTrace` (`trace.py`): the line (briefing, story title, order,
+  text, audio ms), its current `claims` as `TracedClaim` (verdict, score, reason, rewrite_round, judged_at,
+  `cited: list[SourceRef]`, `evidence: list[EvidenceRef(source, passage, score)]`), and `history: list[Judgement]`:
+  every `editor/judge_claim` span whose payload `line_id` is this line, oldest first. `TraceNotFoundError` if no line.
+- `async def rejection_log(briefing_id=None, limit=100, include_rewrite=True) -> list[Rejection]`: judge spans with
+  verdict `rejected` (and `rewrite`), newest first. `Rejection` = `Judgement` + briefing_id, line_id, line_text.
+  `Judgement.current` is true while the claim still exists (false once a rewrite replaced it).
+- `SourceRef(id, outlet, title, url, published_at, retracted)`. Payload parsing: `judgement_from_trace()`, `line_id_of()`.
+- HTTP (`routes.py`, mounted in `app/main.py`): `GET /archive/lines/{line_id}/trace` -> `ClaimTrace` (404 unknown);
+  `GET /archive/rejections?briefing_id=&limit=1..500&include_rewrite=` -> `list[Rejection]`.
 - LLM-level traces also go to Langfuse through the llm-gateway (phase 3).
 
 ## Invariants
@@ -42,7 +51,12 @@ Minimal span done (task 1.3, decision 0009). The `app/archive/` files are `span.
 `complete.<task>` and `embed()` as `embed`, with tokens, cost and model. `app/main.py` lifespan calls
 `start_archive`/`stop_archive`. `tests/conftest.py` installs a `MemorySink` for every test.
 Verified against Postgres 16 + pgvector in `tests/integration/test_archive_db.py`: parent link,
-usage columns, and an FK-violating row is dropped alone. `claim_trace()` is not built yet (task 3.1).
+usage columns, and an FK-violating row is dropped alone. Read API done (task 3.1): history and the rejection
+log read trace rows (decision 0013), so they need the Editor's judge spans to carry `line_id` (from 3.1 on).
+Spans recorded earlier come back with `line_id`/`line_text` null and are absent from a line's history. Both reads
+run in `archive/claim_trace` / `archive/rejection_log` spans. Unit tests cover payload parsing and routes;
+`tests/integration/test_archive_trace_db.py` covers the SQL (CI only; no local test DB). Read-only live check on
+the dev DB (briefing `3873a08c`): a sentence traced to its TechCrunch URL; 7 rejections listed.
 
 ## Open questions
 
@@ -53,3 +67,4 @@ usage columns, and an FK-violating row is dropped alone. `claim_trace()` is not 
 - 2026-11-16: node created from the design doc.
 - 2026-11-16: empty package scaffolded (task 0.1).
 - 2026-11-16: `span()`, buffered `DbSink`, gateway spans, lifespan wiring (task 1.3, decision 0009).
+- 2026-11-18: `claim_trace()`, `rejection_log()` and `/archive` routes (task 3.1).

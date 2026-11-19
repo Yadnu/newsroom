@@ -11,7 +11,7 @@ computed here from those answers (decision 0012):
 """
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from uuid import UUID
 
@@ -199,7 +199,12 @@ def judge_failed(claim_id: UUID, error: Exception) -> ClaimVerdict:
 async def judge_passages(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimVerdict:
     # The claim text and reason are recorded so rejections survive a rewrite (decision 0013).
     with span(
-        "editor", "judge_claim", claim_id=claim.id, claim=claim.text, passages=len(passages)
+        "editor",
+        "judge_claim",
+        claim_id=claim.id,
+        line_id=claim.line_id,
+        claim=claim.text,
+        passages=len(passages),
     ) as s:
         if not passages:
             v = no_evidence(claim.id)
@@ -222,9 +227,13 @@ async def judge_passages(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimV
     return v
 
 
-async def judge_all(claims: Sequence[DraftClaim]) -> list[ClaimVerdict]:
-    """Retrieve evidence once for all claims and judge them concurrently. Does not store."""
-    refs = [_ref(c) for c in claims]
+async def judge_all(
+    claims: Sequence[DraftClaim], line_ids: Mapping[UUID, UUID] | None = None
+) -> list[ClaimVerdict]:
+    """Retrieve evidence once for all claims and judge them concurrently. Does not store.
+    ``line_ids`` (claim id -> script line id) is recorded on each judge span."""
+    lines = line_ids or {}
+    refs = [_ref(c, lines.get(c.id)) for c in claims]
     if not refs:
         return []
     passages = await retrieve_evidence(refs)
@@ -237,8 +246,10 @@ async def judge_all(claims: Sequence[DraftClaim]) -> list[ClaimVerdict]:
     return list(await asyncio.gather(*(one(c) for c in refs)))
 
 
-def _ref(claim: DraftClaim) -> ClaimRef:
-    return ClaimRef(id=claim.id, text=claim.text, source_ids=list(claim.source_ids))
+def _ref(claim: DraftClaim, line_id: UUID | None = None) -> ClaimRef:
+    return ClaimRef(
+        id=claim.id, text=claim.text, source_ids=list(claim.source_ids), line_id=line_id
+    )
 
 
 async def judge_claim(claim: DraftClaim) -> ClaimVerdict:
@@ -254,7 +265,8 @@ async def judge_script(script: Script) -> JudgedScript:
     """Judge every claim in the script concurrently; mark the briefing ``judged``."""
     claims = [c for line in script.lines for c in line.claims]
     with span("editor", "judge_script", script.briefing_id, claims=len(claims)) as s:
-        verdicts = await judge_all(claims)
+        line_ids = {c.id: line.id for line in script.lines for c in line.claims}
+        verdicts = await judge_all(claims, line_ids)
         await store_verdicts(verdicts, briefing_id=script.briefing_id)
         judged = JudgedScript(briefing_id=script.briefing_id, verdicts=verdicts)
         s.set(**{v.value: judged.count(v) for v in Verdict if v != Verdict.pending})

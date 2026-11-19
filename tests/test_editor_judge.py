@@ -300,6 +300,8 @@ async def test_judge_script_judges_every_claim_and_traces(
     assert outer.payload["approved"] == 2 and outer.payload["rewrite"] == 1
     assert len(inner) == 3
     assert all(t.parent_id == outer.id and t.briefing_id == script.briefing_id for t in inner)
+    line_of = {str(c.id): str(ln.id) for ln in lines for c in ln.claims}
+    assert {t.payload["claim_id"]: t.payload["line_id"] for t in inner} == line_of
     judge_calls = [t for t in trace_sink.traces if t.event == "complete.judge"]
     assert {t.parent_id for t in judge_calls} == {t.id for t in inner}
 

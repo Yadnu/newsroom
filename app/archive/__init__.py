@@ -9,14 +9,34 @@ processes call ``await start_archive()`` at startup and ``await stop_archive()``
 
 from app.archive.sink import DbSink, MemorySink, TraceSink, get_sink, set_sink
 from app.archive.span import Span, current_span, span
+from app.archive.trace import (
+    ClaimTrace,
+    EvidenceRef,
+    Judgement,
+    Rejection,
+    SourceRef,
+    TracedClaim,
+    TraceNotFoundError,
+    claim_trace,
+    rejection_log,
+)
 
 __all__ = [
+    "ClaimTrace",
     "DbSink",
+    "EvidenceRef",
+    "Judgement",
     "MemorySink",
+    "Rejection",
+    "SourceRef",
     "Span",
+    "TraceNotFoundError",
     "TraceSink",
+    "TracedClaim",
+    "claim_trace",
     "current_span",
     "get_sink",
+    "rejection_log",
     "set_sink",
     "span",
     "start_archive",

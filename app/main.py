@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from app.archive import start_archive, stop_archive
+from app.archive.routes import router as archive_router
 from app.config import get_settings
 from app.log import configure_logging, get_logger
 
@@ -31,6 +32,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Newsroom", lifespan=lifespan)
+app.include_router(archive_router)
 
 
 @app.get("/health")

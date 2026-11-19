@@ -40,6 +40,7 @@ class ClaimRef:
     id: UUID
     text: str
     source_ids: list[UUID]
+    line_id: UUID | None = None  # recorded on the judge span so the Archive can find old judgements
 
 
 @dataclass(frozen=True, slots=True)
