@@ -21,10 +21,12 @@ Guardrails on both ends: clears approved scripts for air and screens Caller inpu
   (10) words, no digits, quotes, names or reported speech), `long_quote` (quotes under 15 words),
   `verbatim` (>= `standards_max_copied_words` (12) consecutive words outside quotes shared with a cited or evidence
   source), `opinion` (evaluative word in an unattributed sentence). `story_dropped`: a story whose every factual line
-  is blocked loses its transitions. Sets the briefing `cleared`; if nothing survives, `failed` and `NotClearedError`
+  is blocked loses its transitions. Sets the briefing `cleared` (unless `mark_briefing=False`, used for answers);
+  if nothing survives, `failed` and `NotClearedError`
   (`.blocked`).
 - `async def clear_stored(briefing_id) -> ClearedScript` and `load_script(briefing_id) -> Script` (`stored.py`, task 4.2):
-  rebuild the stored script (lines, current claims, cited sources) and clear it. `BriefingNotFoundError`.
+  rebuild the stored script (`kind='script'` lines only, so answers are not replayed) and clear it.
+  `BriefingNotFoundError`.
 - `ClearedScript(briefing_id, lines: tuple[ClearedLine(id, story_id, order, text, claim_ids)], blocked:
   tuple[Block(line_id, order, rule: BlockRule, reason)])`: immutable; `ClearedScript(...)` raises `TypeError`.
 - `async def screen_caller(transcript: str, intent: str | None = None) -> ScreenResult` (`screen.py`, task 5.2,
@@ -67,3 +69,4 @@ going bankrupt" was transcribed by Deepgram and blocked by the rules.
 - 2026-11-19: `clear_for_air()` and the `ClearedScript` gate (task 4.1, decision 0016).
 - 2026-11-19: `clear_stored()` / `load_script()` for the Anchor (task 4.2).
 - 2026-11-19: `screen_caller()`: rules then LLM moderation, fail open (task 5.2, decision 0019).
+- 2026-11-19: `clear_for_air(mark_briefing=False)` for answers; `load_script` skips answer lines (task 5.3).

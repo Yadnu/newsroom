@@ -24,6 +24,8 @@ Next.js player and Archive dashboard.
   `public/mic-worklet.js`, `lib/mic.ts` downsamples to 16 kHz PCM16), sends `mic_start` / chunks / `mic_end`, and
   shows live interim words and the classified question (intent badge, story). Resume continues the briefing.
   A question the Standards Desk blocked shows "not taken: <category>" with the reason (task 5.2).
+  Answers (task 5.3): the card shows "Checking sources...", then the answer lines, highlighted while spoken;
+  playback resumes by itself. The briefing page labels answer lines "Answer to: <question>".
 - `NEWSROOM_PUBLIC_API_URL`: the API as the browser reaches it (WebSocket base); defaults to `NEWSROOM_API_URL`.
 - Archive dashboard (task 3.3): `/` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
@@ -62,3 +64,4 @@ automated (no browser in the agent environment).
 - 2026-11-19: Archive dashboard scaffolded and built (task 3.3).
 - 2026-11-19: live Player with synced, clickable transcript (task 4.3).
 - 2026-11-19: push-to-talk questions in the Player (task 5.1).
+- 2026-11-19: answer card in the Player, answer lines labelled on the briefing page (task 5.3).

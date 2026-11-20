@@ -11,7 +11,16 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -103,7 +112,10 @@ class Briefing(SQLModel, table=True):
 
 class ScriptLine(SQLModel, table=True):
     __tablename__ = "script_lines"
-    __table_args__ = (UniqueConstraint("briefing_id", "order"),)
+    __table_args__ = (
+        UniqueConstraint("briefing_id", "order"),
+        CheckConstraint("kind IN ('script', 'answer')", name="ck_script_lines_kind"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     briefing_id: UUID = _fk("briefings.id", "CASCADE")
@@ -112,6 +124,12 @@ class ScriptLine(SQLModel, table=True):
     text: str = Field(sa_type=Text)
     audio_start_ms: int | None = None
     audio_end_ms: int | None = None
+    # "script" (the briefing) or "answer" (spoken reply to a listener question, decision 0020)
+    kind: str = Field(
+        default="script",
+        sa_column=Column(String(10), nullable=False, server_default="script"),
+    )
+    question: str | None = Field(default=None, sa_type=Text)  # what an answer line replies to
 
 
 class Claim(SQLModel, table=True):

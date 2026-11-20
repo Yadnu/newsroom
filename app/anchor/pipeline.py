@@ -62,6 +62,7 @@ class SpeakReport:
     lines: list[LineTiming] = field(default_factory=list)
     audio_ms: int = 0
     pauses: int = 0
+    answers: int = 0  # listener questions answered on air (task 5.3)
     completed: bool = False
 
 
@@ -79,15 +80,20 @@ class _Airing(FrameProcessor):
         self._ctx: str | None = None
         self._done: asyncio.Future[bool] | None = None
         self.line_start_ms: int | None = None
+        self._extra: dict[str, Any] = {"kind": "script"}
         self.last_audio_at: float | None = None  # perf_counter of the last chunk sent
 
     @property
     def clock_ms(self) -> int:
         return self.samples * 1000 // self.sample_rate
 
-    def expect(self, line: ClearedLine) -> asyncio.Future[bool]:
-        """Arm for one line. The future is True when it played out, False if interrupted."""
+    def expect(
+        self, line: ClearedLine, extra: dict[str, Any] | None = None
+    ) -> asyncio.Future[bool]:
+        """Arm for one line. The future is True when it played out, False if interrupted.
+        ``extra`` is added to the line's ``line`` event (``kind``, ``question_id``)."""
         self._line, self._ctx, self.line_start_ms = line, None, None
+        self._extra = extra or {"kind": "script"}
         self._done = asyncio.get_running_loop().create_future()
         return self._done
 
@@ -123,6 +129,7 @@ class _Airing(FrameProcessor):
                         "order": self._line.order,
                         "text": self._line.text,
                         "start_ms": self.line_start_ms,
+                        **self._extra,
                     }
                 )
             await self.play(frame.audio)
@@ -207,12 +214,11 @@ async def speak(
                     "lines": len(script.lines),
                 }
             )
-            i = 0
-            while i < len(script.lines):
-                line = script.lines[i]
-                await session.wait_unpaused()
-                with span("anchor", "line", line_id=line.id, order=line.order) as ls:
-                    played = airing.expect(line)
+
+            async def say(line: ClearedLine, extra: dict[str, Any]) -> LineTiming | None:
+                """Speak one line; ``None`` if a pause cut it (the caller replays it)."""
+                with span("anchor", "line", line_id=line.id, order=line.order, **extra) as ls:
+                    played = airing.expect(line, extra)
                     await worker.queue_frame(TTSSpeakFrame(line.text))
                     timeout = settings.anchor_line_timeout_s + len(line.text) / 10
                     try:
@@ -221,7 +227,7 @@ async def speak(
                         raise AnchorError(f"TTS gave no end for line {line.order}") from e
                     if not ok:
                         ls.set(interrupted=True)
-                        continue  # paused mid-line: replay it after resume
+                        return None
                     start = airing.line_start_ms
                     timing = LineTiming(
                         line.id,
@@ -232,11 +238,39 @@ async def speak(
                     report.lines.append(timing)
                     ls.set(start_ms=timing.start_ms, end_ms=timing.end_ms, chars=len(line.text))
                 await session.send_event(
-                    {"type": "line_end", "line_id": str(line.id), "end_ms": timing.end_ms}
+                    {"type": "line_end", "line_id": str(line.id), "end_ms": timing.end_ms, **extra}
                 )
+                return timing
+
+            async def answer_if_queued() -> bool:
+                """Speak a queued answer (task 5.3) before going on with the briefing."""
+                item = session.take_interjection()
+                if item is None:
+                    return False
+                answer, question_id = item
+                extra = {"kind": "answer", "question_id": question_id}
+                j = 0
+                while j < len(answer.lines):
+                    await session.wait_unpaused()
+                    if await say(answer.lines[j], extra) is None:
+                        continue  # paused mid-answer: replay that line
+                    j += 1
+                    await airing.silence(settings.anchor_line_gap_ms)
+                report.answers += 1
+                return True
+
+            i = 0
+            while i < len(script.lines):
+                await session.wait_unpaused()
+                if await answer_if_queued():
+                    continue
+                if await say(script.lines[i], {"kind": "script"}) is None:
+                    continue  # paused mid-line: replay it after resume
                 i += 1
                 if i < len(script.lines):
                     await airing.silence(settings.anchor_line_gap_ms)
+            while await answer_if_queued():  # a question asked during the last line
+                pass
             report.completed = True
         finally:
             report.audio_ms = airing.clock_ms
@@ -245,6 +279,7 @@ async def speak(
                 spoken=len(report.lines),
                 audio_ms=report.audio_ms,
                 pauses=report.pauses,
+                answers=report.answers,
                 completed=report.completed,
                 chars=sum(len(ln.text) for ln in script.lines),
             )

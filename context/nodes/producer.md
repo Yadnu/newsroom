@@ -6,7 +6,7 @@ phase: 2
 code: app/producer/
 depends_on: [reporter, caller, standards-desk, archive]
 feeds: [writer, anchor]
-decisions: []
+decisions: [0020, 0021]
 ---
 
 # producer
@@ -28,6 +28,19 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
   judge's reason. JSON adds `cleared` and per-line `on_air` / `block`. Exit 1 on `NoStoriesError`, `WriterError`,
   or when nothing clears (the report is still printed).
+- `async def answer_question(question, script: ClearedScript) -> AnswerResult(cleared, fallback, total_ms)`
+  (`answer.py`, task 5.3, decision 0020): sources of the question's story (else the whole briefing, best
+  `producer_answer_max_sources` 6) -> `writer.draft_answer` -> `store_answer` -> `editor.judge_all` + `store_verdicts`
+  -> `clear_for_air(mark_briefing=False)`. Nothing cleared, no sources, `WriterError`/`LLMError`, or over
+  `producer_answer_timeout_s` (12) -> the fixed claimless `SAFE_LINE`. Span `producer/answer` (sources/draft/judge/
+  clear/total ms, fallback, over_budget vs `producer_answer_budget_s` 8).
+  Live search (task 5.4, `producer_answer_search` on): `reporter.search_live(question + story title)` starts in
+  parallel with the first draft; only if that draft has no claims (not covered) is it awaited, and the answer is
+  redrafted from the live sources first, then the story's. Otherwise the search is cancelled. Limit with search:
+  `producer_answer_search_timeout_s` (20). Span adds `searched`, `live_sources`, `search_ms`, `live_draft_ms`.
+- `async def handle_question(question, script, session)`: allowed `follow_up`/`background` -> `answer_status`
+  thinking -> answer -> `answer_status` answering|unsure (+ lines) -> `session.interject` -> `session.resume()`;
+  anything else -> `declined` and resume. Import from `app.producer.answer` (the Writer imports `app.producer`).
 - CLI `newsroom speak <briefing_id> [--out brief.wav]`: `clear_stored` -> `anchor.speak` into a WAV file; prints each
   line's start/end ms. Exit 1 for an unknown briefing, nothing cleared, or TTS not configured. Progress goes to stderr, the script to stdout.
   `.github/workflows/brief.yml` (manual dispatch: minutes, topic, refresh; free-tier embed pacing) runs it live with repo secrets
@@ -62,3 +75,5 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-19: `newsroom brief` clears the script for air and shows blocked lines (task 4.1).
 - 2026-11-19: `newsroom speak <briefing_id> [--out file.wav]` voices a stored briefing (task 4.2).
 - 2026-11-19: `newsroom ask --briefing <id> --wav q.wav` transcribes and classifies a question (task 5.1).
+- 2026-11-19: answers listener questions on air with the full fact-check, then resumes (task 5.3).
+- 2026-11-19: answers fall back to live search when the briefing's sources don't cover them (task 5.4).

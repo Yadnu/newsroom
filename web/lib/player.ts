@@ -3,8 +3,16 @@
 
 export type AnchorEvent =
   | { type: "start"; briefing_id: string; sample_rate: number; lines: number }
-  | { type: "line"; line_id: string; order: number; text: string; start_ms: number }
-  | { type: "line_end"; line_id: string; end_ms: number }
+  | {
+      type: "line";
+      line_id: string;
+      order: number;
+      text: string;
+      start_ms: number;
+      kind?: "script" | "answer";
+      question_id?: string;
+    }
+  | { type: "line_end"; line_id: string; end_ms: number; kind?: string; question_id?: string }
   | { type: "paused"; at_ms: number }
   | { type: "resumed"; at_ms: number }
   | { type: "done"; audio_ms: number; completed: boolean }
@@ -21,7 +29,16 @@ export type AnchorEvent =
       screen_category: "ok" | "empty" | "too_long" | "abusive" | "injection" | "off_topic";
       screen_reason: string;
     }
-  | { type: "caller_error"; message: string };
+  | { type: "caller_error"; message: string }
+  | {
+      type: "answer_status";
+      question_id: string;
+      state: AnswerState;
+      lines?: { line_id: string; text: string }[];
+      total_ms?: number;
+    };
+
+export type AnswerState = "thinking" | "answering" | "unsure" | "declined" | "failed";
 
 export type CallerQuestionEvent = Extract<AnchorEvent, { type: "caller_question" }>;
 

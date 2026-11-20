@@ -26,7 +26,8 @@ async def load_script(briefing_id: UUID) -> Script:
             await conn.execute(
                 text(
                     'SELECT id, story_id, "order", text FROM script_lines'
-                    ' WHERE briefing_id = :b ORDER BY "order"'
+                    " WHERE briefing_id = :b AND kind = 'script'"
+                    ' ORDER BY "order"'
                 ),
                 {"b": briefing_id},
             )

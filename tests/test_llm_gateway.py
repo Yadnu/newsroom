@@ -288,7 +288,7 @@ def test_embed_batches_respect_token_cap_and_order() -> None:
     assert [len(b) for b in embed_batches(["x"] * 2500, 10**9)] == [1000, 1000, 500]
 
 
-async def test_embed_paces_requests_by_tokens_and_requests_per_minute() -> None:
+async def test_embed_pacing_is_a_sliding_window_on_tokens() -> None:
     clock = FakeClock()
     rec = Recorder(_embed_response, _embed_response, _embed_response)
     gw = Gateway(
@@ -298,14 +298,31 @@ async def test_embed_paces_requests_by_tokens_and_requests_per_minute() -> None:
         clock=clock,
     )
     # "abc" estimates as 1 token, so 30 texts fit one batch; the fake response reports 3 tokens
-    # per text, and pacing uses the reported count.
+    # per text, and the window counts the reported tokens.
     vectors, _ = await gw.embed(["abc"] * 30)
     assert len(vectors) == 30 and len(rec.requests) == 1
     assert clock.slept == []  # first request goes straight out
-    await gw.embed(["abc"] * 10)  # previous used 90 tokens -> 90s; rpm alone would be 20s
-    assert clock.slept == [pytest.approx(90.0)]
-    await gw.embed(["abc"])  # 30 tokens used -> max(20s rpm, 30s tpm)
-    assert clock.slept[1] == pytest.approx(30.0)
+    await gw.embed(["abc"] * 10)  # 90 tokens in the window: wait until it leaves (60 s)
+    assert clock.slept == [pytest.approx(60.0)]
+    await gw.embed(["abc"])  # 30 in the window + 1 fits 60, 1 request of 3: no wait
+    assert clock.slept == [pytest.approx(60.0)]
+
+
+async def test_embed_requests_per_minute_allows_a_burst_then_waits() -> None:
+    clock = FakeClock()
+    rec = Recorder(*[_embed_response] * 4)
+    gw = Gateway(
+        _settings(embed_requests_per_minute=3),
+        transport=httpx.MockTransport(rec),
+        sleep=clock.sleep,
+        clock=clock,
+    )
+    for _ in range(3):
+        await gw.embed(["abc"])
+    assert clock.slept == []  # three in a minute: a burst is fine
+    clock.now += 10
+    await gw.embed(["abc"])  # the fourth waits until the first is 60 s old
+    assert clock.slept == [pytest.approx(50.0)] and len(rec.requests) == 4
 
 
 async def test_embed_batch_capped_by_tokens_per_minute() -> None:
@@ -319,7 +336,7 @@ async def test_embed_batch_capped_by_tokens_per_minute() -> None:
     )
     await gw.embed(["abc"] * 30)  # 30 estimated tokens -> batches of 20 and 10
     assert [len(rec.body(i)["input"]) for i in range(2)] == [20, 10]
-    assert clock.slept == [pytest.approx(60.0 * 60 / 20)]  # 20 texts x 3 reported tokens
+    assert clock.slept == [pytest.approx(60.0)]  # 60 reported tokens fill the window
 
 
 async def test_embed_without_limits_never_sleeps() -> None:

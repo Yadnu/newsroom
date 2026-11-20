@@ -25,6 +25,7 @@ QUEUE_CHUNKS = 400  # ~12 s of 30 ms chunks buffered before frames are dropped
 
 Send = Callable[[dict[str, Any]], Awaitable[None]]
 Listener = Callable[..., AsyncIterator[Any]]
+OnQuestion = Callable[[CallerQuestion], Awaitable[None]]
 
 log = get_logger(__name__)
 
@@ -38,12 +39,14 @@ class CallIn:
         *,
         settings: Settings | None = None,
         listener: Listener | None = None,
+        on_question: OnQuestion | None = None,
     ) -> None:
         self.script = script
         self.send = send
         self.current_line = current_line
         self.settings = settings or get_settings()
         self.listener = listener or listen
+        self.on_question = on_question  # the Producer answers here (task 5.3)
         self._context: CallerContext | None = None
         self._queue: asyncio.Queue[bytes | None] | None = None
         self._task: asyncio.Task[None] | None = None
@@ -130,6 +133,8 @@ class CallIn:
                             "screen_reason": event.screen.reason if event.screen else "",
                         }
                     )
+                    if self.on_question is not None:
+                        await self.on_question(event)
         except CallerConfigError as e:
             log.warning("caller.not_configured", error=str(e))
             await self.send({"type": "caller_error", "message": "speech-to-text is not configured"})

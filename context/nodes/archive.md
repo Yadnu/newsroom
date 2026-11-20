@@ -39,7 +39,7 @@ Observability. Records every component event and builds the claim-to-source trac
 - `async def list_briefings(limit=50) -> list[BriefingSummary]` / `briefing_detail(id) -> BriefingDetail`
   (`briefings.py`, task 3.3). `BriefingSummary(id, created_at, status, target_minutes, lines, verdicts: dict[verdict,
   count], cost_usd, tokens_in, tokens_out, wall_ms)`; `BriefingDetail(briefing, lines: list[LineSummary(id, order,
-  text, story_title, verdicts)], stages: list[Stage])`. `BriefingNotFoundError`.
+  text, story_title, verdicts, kind, question)], stages: list[Stage])`. `BriefingNotFoundError`.
 - `stages_from_spans(rows) -> list[Stage(component, steps, latency_ms, llm_calls, llm_ms, cost_usd, tokens_in,
   tokens_out, errors)]`: entry spans (parent missing or in another component) give steps and latency; llm-gateway
   spans are charged to the nearest non-gateway ancestor. `GET /archive/briefings?limit=1..200`,
@@ -81,3 +81,4 @@ Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: pro
 - 2026-11-16: `span()`, buffered `DbSink`, gateway spans, lifespan wiring (task 1.3, decision 0009).
 - 2026-11-18: `claim_trace()`, `rejection_log()` and `/archive` routes (task 3.1).
 - 2026-11-19: briefing list/detail with per-stage latency and cost; read spans off the timeline (task 3.3).
+- 2026-11-19: `LineSummary.kind` / `question` so answer lines show in the timeline (task 5.3).

@@ -209,3 +209,63 @@ def test_wrong_mic_rate_is_refused(wired: dict[str, Any], mic: dict[str, Any]) -
         events = _until(ws, "done")
     (err,) = [e for e in events if e["type"] == "caller_error"]
     assert "16000 Hz" in err["message"]
+
+
+def test_allowed_question_is_answered_then_the_briefing_resumes(
+    wired: dict[str, Any], mic: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.producer import answer as answer_mod
+
+    script = wired["script"]
+    answer_line = ClearedLine(uuid4(), script.lines[0].story_id, 1000, "Nova ships in March.", ())
+
+    async def answerer(q: Any, s: ClearedScript) -> Any:
+        cleared = ClearedScript._issue(_CLEARANCE, s.briefing_id, (answer_line,), ())
+        return answer_mod.AnswerResult(cleared, False, 1500)
+
+    async def handle(q: Any, s: ClearedScript, session: Any) -> None:
+        await answer_mod.handle_question(q, s, session, answerer=answerer)
+
+    monkeypatch.setattr(routes, "handle_question", handle)
+    with TestClient(app).websocket_connect(f"/anchor/briefings/{script.briefing_id}/live") as ws:
+        _until(ws, "line")
+        ws.send_text(json.dumps({"type": "pause"}))
+        ws.send_text(json.dumps({"type": "mic_start", "sample_rate": 16000}))
+        for _ in range(10):
+            ws.send_bytes(b"\x01\x00" * 1600)
+        ws.send_text(json.dumps({"type": "mic_end"}))
+        events = _until(ws, "done")
+    states = [e["state"] for e in events if e["type"] == "answer_status"]
+    assert states == ["thinking", "answering"]
+    answers = [e for e in events if e["type"] == "line" and e.get("kind") == "answer"]
+    assert [e["text"] for e in answers] == ["Nova ships in March."]
+    kinds = [e["type"] for e in events]
+    assert kinds.index("answer_status") < kinds.index("resumed")
+    assert events[-1]["completed"] is True
+    assert answer_line.id in {t.line_id for t in wired["stored"][0][1]}
+
+
+def test_blocked_question_resumes_without_an_answer(
+    wired: dict[str, Any], mic: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.caller.pipeline as pipeline_mod
+    from app.standards_desk import ScreenResult
+
+    async def block(transcript: str, intent: str | None = None) -> ScreenResult:
+        return ScreenResult(False, "injection", "tries to instruct", "rules")
+
+    monkeypatch.setattr(pipeline_mod, "screen_caller", block)
+    script = wired["script"]
+    with TestClient(app).websocket_connect(f"/anchor/briefings/{script.briefing_id}/live") as ws:
+        _until(ws, "line")
+        ws.send_text(json.dumps({"type": "pause"}))
+        ws.send_text(json.dumps({"type": "mic_start", "sample_rate": 16000}))
+        for _ in range(10):
+            ws.send_bytes(b"\x01\x00" * 1600)
+        ws.send_text(json.dumps({"type": "mic_end"}))
+        events = _until(ws, "done")
+    (q,) = [e for e in events if e["type"] == "caller_question"]
+    assert q["allowed"] is False
+    assert [e["state"] for e in events if e["type"] == "answer_status"] == ["declined"]
+    assert not [e for e in events if e.get("kind") == "answer"]
+    assert events[-1]["completed"] is True

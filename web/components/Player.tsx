@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MIC_RATE, MicChunker } from "@/lib/mic";
 import {
   type AnchorEvent,
+  type AnswerState,
   AudioClock,
   type CallerQuestionEvent,
   type TimedLine,
@@ -32,6 +33,16 @@ const SCREEN_LABEL: Record<CallerQuestionEvent["screen_category"], string> = {
   abusive: "abusive",
   injection: "instructions, not a question",
   off_topic: "off topic",
+};
+
+type Answer = { state: AnswerState; lines: { line_id: string; text: string }[] };
+
+const ANSWER_NOTE: Record<AnswerState, string> = {
+  thinking: "Checking sources\u2026",
+  answering: "",
+  unsure: "",
+  declined: "Not answered. The briefing continues.",
+  failed: "Could not answer just now. The briefing continues.",
 };
 
 type Mic = { stream: MediaStream; nodes: AudioNode[]; chunker: MicChunker };
@@ -62,6 +73,7 @@ export function Player({
   const [heardText, setHeardText] = useState("");
   const [questions, setQuestions] = useState<CallerQuestionEvent[]>([]);
   const [callerError, setCallerError] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
 
   const ctxRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -143,6 +155,14 @@ export function Player({
       } else if (e.type === "caller_question") {
         setHeardText("");
         setQuestions((q) => [e, ...q]);
+      } else if (e.type === "answer_status") {
+        setAnswers((a) => ({
+          ...a,
+          [e.question_id]: { state: e.state, lines: e.lines ?? a[e.question_id]?.lines ?? [] },
+        }));
+        if (e.state === "answering" || e.state === "unsure" || e.state === "declined") {
+          setBoth("playing"); // the server resumes after the answer
+        }
       } else if (e.type === "caller_error") {
         setHeardText("");
         setCallerError(e.message);
@@ -174,6 +194,7 @@ export function Player({
     setActive(null);
     setElapsed(0);
     setQuestions([]);
+    setAnswers({});
     setHeardText("");
     setCallerError(null);
     workletReady.current = false;
@@ -332,11 +353,20 @@ export function Player({
               {q.restated && q.restated !== q.transcript && (
                 <div className="muted">heard: &ldquo;{q.transcript}&rdquo;</div>
               )}
+              {answers[q.id] && ANSWER_NOTE[answers[q.id].state] && (
+                <div className="muted">{ANSWER_NOTE[answers[q.id].state]}</div>
+              )}
+              {answers[q.id]?.lines.map((ln) => (
+                <p
+                  key={ln.line_id}
+                  className={`answer${ln.line_id === active ? " speaking" : ""}`}
+                >
+                  {ln.text}
+                </p>
+              ))}
             </div>
           ))}
-          {questions.length > 0 && status === "paused" && (
-            <p className="muted">Answers arrive in a later step. Press Resume to continue.</p>
-          )}
+
         </div>
       )}
       <ol className="script transcript">

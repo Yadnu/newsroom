@@ -237,8 +237,15 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default script
+             */
+            kind: string;
             /** Order */
             order: number;
+            /** Question */
+            question?: string | null;
             /** Story Title */
             story_title: string | null;
             /** Text */

@@ -20,6 +20,7 @@ from app.anchor.session import WebSocketSession
 from app.anchor.tts import AnchorConfigError
 from app.caller.live import CallIn
 from app.log import get_logger
+from app.producer.answer import handle_question
 from app.standards_desk import BriefingNotFoundError, NotClearedError
 from app.standards_desk import stored as stored_mod
 
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/anchor", tags=["anchor"])
 log = get_logger(__name__)
 
 
-CALLER_DRAIN_S = 20.0  # after the briefing ends, let a question in flight finish
+CALLER_DRAIN_S = 30.0  # after the briefing ends, let a question in flight be answered
 
 
 async def _controls(ws: WebSocket, session: WebSocketSession, callin: CallIn) -> None:
@@ -67,7 +68,12 @@ async def live(ws: WebSocket, briefing_id: UUID) -> None:
         await ws.close(code=4409, reason="nothing cleared for air")
         return
     session = WebSocketSession(ws)
-    callin = CallIn(script, session.send_event, lambda: session.current_line_id)
+    callin = CallIn(
+        script,
+        session.send_event,
+        lambda: session.current_line_id,
+        on_question=lambda q: handle_question(q, script, session),
+    )
     controls = asyncio.create_task(_controls(ws, session, callin))
     try:
         await speak(script, session)

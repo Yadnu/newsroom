@@ -340,9 +340,25 @@
             "title": "Id",
             "type": "string"
           },
+          "kind": {
+            "default": "script",
+            "title": "Kind",
+            "type": "string"
+          },
           "order": {
             "title": "Order",
             "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
           },
           "story_title": {
             "anyOf": [

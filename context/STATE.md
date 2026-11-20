@@ -4,11 +4,11 @@ Last updated: 2026-11-19 by: Claude Code
 
 ## Current phase
 
-Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
+Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
+6.1 red team set (satire, stale, prompt injection), eval run in CI
 
 ## Tasks
 
@@ -45,8 +45,8 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ### Phase 5: Caller and Producer (voice in)
 - [x] 5.1 caller: Deepgram adapter, intent classification
 - [x] 5.2 standards-desk: `screen_caller()`
-- [ ] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
-- [ ] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
+- [x] 5.3 producer: rundown builder + barge-in handling + fast answer loop with latency budget
+- [x] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
 
 ### Phase 6: Evals and polish
 - [ ] 6.1 red team set (satire, stale, prompt injection), eval run in CI
@@ -68,6 +68,6 @@ Phase 5: Caller and Producer (voice in). Phases 1 to 4 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 5.2. `standards_desk.screen_caller()`: rules (injection, insults, empty, too long, off-topic intent) then LLM moderation on `gpt-oss-20b`, fail open on LLM errors (decision 0019); every Caller question carries the verdict and blocked ones show "not taken" in the Player. Live: 8/8 typed cases right, spoken injection blocked. Also fixed transcripts cut short when audio arrives faster than real time. Branch `phase5/screen-caller` stacks on #19 to #16; none merged.
-- Open: Groq free tier 8000 TPM on the judge (half of claims `pending`, pending lines never air). Standards rules are heuristics (tune in 6.1 red team). Cartesia/Deepgram cost not tracked. In-browser mic use not automated here. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` are in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 5.3 producer: answer allowed questions fast (latency budget), auto-pause on speech (barge-in), resume the briefing.
+- Done: 5.4. `reporter.search_live()` (Tavily news + Firecrawl full text, stored as sources, deduped, cached) and the Producer's answer loop searches in parallel with the first draft, redrafting from live sources when the briefing's don't cover the question (decision 0021). `newsroom search` CLI. Branch `phase5/search-live` stacks on #21 to #16; none merged.
+- Open: live check of search waits for `NEWSROOM_TAVILY_API_KEY` / `NEWSROOM_FIRECRAWL_API_KEY` in `.env` (see the PR). Groq free tier 8000 TPM on the judge (answers can fall back). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram/Tavily/Firecrawl cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
+- Next: 6.1 red team set: satire, stale and prompt-injection cases for the judge, the Standards Desk and the caller screen, run in CI.

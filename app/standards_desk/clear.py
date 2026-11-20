@@ -284,7 +284,7 @@ def drop_orphaned_stories(lines: Sequence[DraftLine], blocks: dict[UUID, Block])
 # ---- entry point ----------------------------------------------------------------------------
 
 
-async def clear_for_air(reviewed: ReviewedScript) -> ClearedScript:
+async def clear_for_air(reviewed: ReviewedScript, *, mark_briefing: bool = True) -> ClearedScript:
     """Clear a reviewed script for air. Blocked lines are logged with a reason and left out;
     nothing is deleted. Sets the briefing to ``cleared``, or ``failed`` if nothing survives."""
     settings = get_settings()
@@ -327,7 +327,9 @@ async def clear_for_air(reviewed: ReviewedScript) -> ClearedScript:
             rules[b.rule.value] += 1
         s.set(cleared=len(cleared), blocked=len(blocked), rules=dict(rules))
         if not cleared:
-            await set_status(script.briefing_id, BriefingStatus.failed)
+            if mark_briefing:
+                await set_status(script.briefing_id, BriefingStatus.failed)
             raise NotClearedError(f"all {len(lines)} lines were blocked", blocked)
-        await set_status(script.briefing_id, BriefingStatus.cleared)
+        if mark_briefing:  # False for answers: they must not change the briefing status
+            await set_status(script.briefing_id, BriefingStatus.cleared)
     return ClearedScript._issue(_CLEARANCE, script.briefing_id, cleared, blocked)
