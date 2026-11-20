@@ -8,7 +8,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-6.1 red team set (satire, stale, prompt injection), eval run in CI
+6.2 correction pipeline: source retraction flags affected briefings
 
 ## Tasks
 
@@ -49,7 +49,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 - [x] 5.4 reporter: `search_live()` with Tavily/Exa + Firecrawl (acceptance: spoken follow-up gets a sourced answer, then the briefing resumes)
 
 ### Phase 6: Evals and polish
-- [ ] 6.1 red team set (satire, stale, prompt injection), eval run in CI
+- [x] 6.1 red team set (satire, stale, prompt injection), eval run in CI
 - [ ] 6.2 correction pipeline: source retraction flags affected briefings
 - [ ] 6.3 contradiction detection in Editor
 - [ ] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
@@ -64,10 +64,15 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 - 2026-11-18, judge_v1 (130 cases), prompt `dad2a081`, `gpt-oss-120b`: catch rate 1.00 (30/30), precision 0.904,
   recall 0.971, false flag rate 0.113. Results in `evals/results/judge_v1-dad2a081.*`.
+- 2026-11-20, judge_v1, prompt `30f59e69` (satire line added): 120/130 judged (10 rate-limited), catch rate 1.00
+  (27/27), precision 0.881, recall 0.952, false flag rate 0.138 (8, all over-strict attributed/corroborated).
+- 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 23/24 attacks, 0/9 false blocks
+  (1 known gap); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
+  attacks, 2/5 controls flagged.
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 5.4. `reporter.search_live()` (Tavily news + Firecrawl full text, stored as sources, deduped, cached) and the Producer's answer loop searches in parallel with the first draft, redrafting from live sources when the briefing's don't cover the question (decision 0021). `newsroom search` CLI. Branch `phase5/search-live` stacks on #21 to #16; none merged.
-- Open: live check of search waits for `NEWSROOM_TAVILY_API_KEY` / `NEWSROOM_FIRECRAWL_API_KEY` in `.env` (see the PR). Groq free tier 8000 TPM on the judge (answers can fall back). Standards rules are heuristics (tune in 6.1). Cartesia/Deepgram/Tavily/Firecrawl cost not tracked. Integration tests run only in CI. Test stories and a `draft` briefing `42c6f7d3` in the dev DB. Brief workflow needs repo secrets. Langfuse untested live.
-- Next: 6.1 red team set: satire, stale and prompt-injection cases for the judge, the Standards Desk and the caller screen, run in CI.
+- Done: 6.1. Red team set `evals/data/redteam_v1.json` (judge, screen, clear suites) and `evals/run_redteam.py`; the offline part gates CI (decision 0022), `--live` via the manual `Evals` workflow. Fixes it drove: `injection` line rule and stricter transitions in `clear_for_air`, screen patterns that stop blocking news look-alikes, judge and screen prompt lines. Branch `phase6/redteam` stacks on #22 to #16; none merged.
+- Open: judge false flags (over-strict `attributed`) rose to 0.138; 10 judge_v1 cases still pending (Groq 8000 TPM). Opinion rule known gap (attribution exempts a sentence). Groq free tier 8000 TPM on the judge (answers can fall back). Live search check waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Test data in the dev DB. Langfuse untested live.
+- Next: 6.2 correction pipeline: a source retraction flags the briefings whose claims cited it or used it as evidence.

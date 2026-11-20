@@ -35,6 +35,8 @@ jobs:
         run: uv run mypy app
       - name: Tests
         run: uv run pytest -q
+      - name: Red team (offline gate)
+        run: uv run python evals/run_redteam.py --quiet
       - name: Context graph
         run: python scripts/context_graph.py check
       - name: OpenAPI schema is current

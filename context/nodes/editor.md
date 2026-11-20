@@ -6,7 +6,7 @@ phase: 2
 code: app/editor/
 depends_on: [writer, llm-gateway, data-model, archive]
 feeds: [standards-desk, writer]
-decisions: [0002, 0012, 0013, 0014]
+decisions: [0002, 0012, 0013, 0014, 0022]
 ---
 
 # editor
@@ -56,6 +56,9 @@ re-judge replaces evidence). Live smoke run (2026-11-18, `openai/gpt-oss-120b`, 
 falsehood rejected; a company-reported fact stated as plain fact got rewrite (attributed). ~1.8 s per judgement. Eval set `evals/data/judge_v1.json` (task 2.4): fixed passages, so retrieval is not measured. False flag rate 0.113
 (7/62): 6 are over-strict `attributed` on facts the outlets state plainly, 1 is corroboration. Misses: 2 of 6
 single-outlet sensitive claims (election turnout, central-bank remark) were not marked `sensitive`.
+Red team (task 6.1, decision 0022, `evals/run_redteam.py --live`): prompt `dad2a081` approved 3 of 4 satire claims;
+the judge prompt now says satire, parody and humor are not evidence (`30f59e69`): 15/15 attacks caught (satire,
+stale, injected passages and claims), 2 of 5 controls got rewrite (over-strict `attributed`).
 
 ## Open questions
 
@@ -66,6 +69,7 @@ single-outlet sensitive claims (election turnout, central-bank remark) were not 
 | Date | Prompt version | Catch rate | Precision | Recall |
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | `dad2a081` (gpt-oss-120b), judge_v1 | 1.00 (30/30) | 0.904 | 0.971 |
+| 2026-11-20 | `30f59e69` (gpt-oss-120b), judge_v1, 120/130 judged (10 rate-limited) | 1.00 (27/27) | 0.881 | 0.952 |
 
 ## Changelog
 
@@ -76,3 +80,4 @@ single-outlet sensitive claims (election turnout, central-bank remark) were not 
 - 2026-11-18: judge failure -> pending; loop tolerates LLM errors (decision 0014).
 - 2026-11-18: judge eval v1 baseline: catch 1.00, precision 0.904, recall 0.971 (task 2.4).
 - 2026-11-18: judge spans carry `line_id` for the Archive (task 3.1).
+- 2026-11-20: judge prompt: satire/parody is not evidence (task 6.1 red team); judge_v1 re-run.

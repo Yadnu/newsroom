@@ -17,11 +17,11 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007, 0011, 0020 |
 | [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor, caller | 0002, 0005, 0007, 0008, 0014, 0015 |
 | [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive | producer | 0003, 0010, 0021 |
-| [editor](nodes/editor.md) | component | in-progress | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002, 0012, 0013, 0014 |
+| [editor](nodes/editor.md) | component | in-progress | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002, 0012, 0013, 0014, 0022 |
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | 0020, 0021 |
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002, 0011, 0013, 0014, 0020 |
 | [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017, 0020 |
-| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller | 0016, 0019 |
+| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller | 0016, 0019, 0022 |
 | [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive | - | - |
 | [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018, 0019 |
 

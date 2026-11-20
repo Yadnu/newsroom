@@ -25,20 +25,34 @@ CheckedBy = Literal["rules", "llm", "intent"]
 MIN_WORDS = 2
 
 # Instruction hijacking. Each pattern needs the whole move, so news questions that merely contain
-# "system", "act" or "instructions" pass ("What did the system update change?").
+# "system", "act", "rules" or "instructions" pass ("Did the regulator ignore the rules on exports?",
+# "Who leaked the system prompt of that chatbot?"). Tuned against evals/data/redteam_v1.json.
+_SEP = r"[\s.,:;!-]+"
+_QUAL = r"(your|previous|prior|above|earlier|preceding|these|those|my|all|any|every)"
+_OBJ = (
+    r"(instructions?|rules?|guidelines?|prompts?|polic(y|ies)|programming|safeguards?|filters?|"
+    r"guardrails?)"
+)
 INJECTION_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in (
-        r"\b(ignore|disregard|forget|override|bypass)\b.{0,30}\b(instructions?|rules?|guidelines?|"
-        r"prompts?|polic(y|ies)|programming|safeguards?|filters?)\b",
-        r"\b(system|hidden|initial|original)\s+prompt\b",
-        r"\b(reveal|show|print|repeat|read( me)?|tell me|what are)\b.{0,20}\byour\b.{0,15}"
-        r"\b(instructions?|rules|prompt|guidelines|configuration)\b",
+        rf"\b(ignore|disregard|forget|override|bypass){_SEP}(the{_SEP})?({_QUAL}{_SEP}){{1,3}}"
+        rf"(\w+{_SEP})?{_OBJ}\b",
+        r"\b(forget|ignore|disregard)\s+(everything|all)\s+(you\s*('ve| have| were)( been)? told|"
+        r"above|before|so far)",
+        r"\byour\s+(system|hidden|initial|original|secret)\s+(prompt|instructions?)\b",
+        r"\b(show|print|reveal|repeat|read|give)( me)?\s+the\s+(system|hidden|initial|original|"
+        r"secret)\s+prompt\b",
+        r"\b(reveal|show|print|repeat|read( me)?|tell me|what are|translate|summari[sz]e|spell out|"
+        r"list)\b.{0,20}\byour\b.{0,15}\b(instructions?|rules|prompt|guidelines|configuration)\b",
         r"\byou are now\b|\bfrom now on,? you\b",
         r"\b(pretend|act|behave)\b.{0,10}\b(to be|as if you|like you are|as an? (ai|assistant|"
         r"bot|model|chatbot|different))\b",
-        r"\b(developer|god|debug|admin|dan)\s+mode\b|\bjail ?break",
-        r"\b(say|repeat) (exactly|after me|the words?|the phrase)\b",
+        r"\b(enable|enter|activate|switch (to|on|into)|turn on|go into|unlock)\b.{0,12}"
+        r"\b(developer|god|debug|admin|dan|jailbreak|unrestricted|unfiltered)\s+mode\b|"
+        r"\bjail ?break (yourself|the (anchor|assistant|bot|system))\b|^\W*jail ?break\b",
+        r"\b(say|repeat)\s+(after me|the (following|words?|phrase))\b|"
+        r"\bsay exactly (this|these|what i)\b",
         r"</?\s*(system|assistant|user|instructions?)\s*>|\[/?inst\]|^\s*#{2,}",
     )
 ]
