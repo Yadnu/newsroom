@@ -5,8 +5,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.archive import briefings, trace
+from app.archive import briefings, corrections, trace
 from app.archive.briefings import BriefingDetail, BriefingNotFoundError, BriefingSummary
+from app.archive.corrections import CorrectionRef
 from app.archive.trace import ClaimTrace, Rejection, TraceNotFoundError
 
 router = APIRouter(prefix="/archive", tags=["archive"])
@@ -44,3 +45,11 @@ async def get_rejections(
 ) -> list[Rejection]:
     """Editor judgements that were not approved, newest first."""
     return await trace.rejection_log(briefing_id, limit=limit, include_rewrite=include_rewrite)
+
+
+@router.get("/corrections")
+async def get_corrections(
+    briefing_id: UUID | None = None, limit: Annotated[int, Query(ge=1, le=500)] = 100
+) -> list[CorrectionRef]:
+    """Claims affected by a retracted source, newest first (task 6.2)."""
+    return await corrections.list_corrections(briefing_id, limit)

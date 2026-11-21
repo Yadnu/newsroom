@@ -6,7 +6,7 @@ phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
 feeds: [editor]
-decisions: [0002, 0011, 0013, 0014, 0020]
+decisions: [0002, 0011, 0013, 0014, 0020, 0023]
 ---
 
 # writer
@@ -34,6 +34,7 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
 - Prompts: `prompts/writer/draft_system.md` (static rules) and `draft_user.md` (`$story_title`, `$target_words`,
   `$sources`). Sources go in `<source id="S<n>" outlet published>` blocks with `<`, `>` and `&` escaped, in the user turn only.
 - Length: `target_seconds * writer_words_per_second` (2.5) words. Source text is capped at `writer_source_max_chars` (6000).
+- `DraftLine.kind`: `script` (default) or `correction` (a Standards Desk template line, task 6.2).
 
 ## Invariants
 
@@ -64,3 +65,4 @@ instruction. It states company-reported facts without attribution, which the Edi
 - 2026-11-18: `rewrite_line()` + attribution rule in the draft prompt (task 2.3, decision 0013).
 - 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).
 - 2026-11-19: `draft_answer()` / `store_answer()` for on-air answers (task 5.3).
+- 2026-11-21: `DraftLine.kind` for correction lines (task 6.2, decision 0023).

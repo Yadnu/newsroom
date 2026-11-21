@@ -25,8 +25,8 @@ async def load_script(briefing_id: UUID) -> Script:
         lines = (
             await conn.execute(
                 text(
-                    'SELECT id, story_id, "order", text FROM script_lines'
-                    " WHERE briefing_id = :b AND kind = 'script'"
+                    'SELECT id, story_id, "order", text, kind FROM script_lines'
+                    " WHERE briefing_id = :b AND kind IN ('script', 'correction')"
                     ' ORDER BY "order"'
                 ),
                 {"b": briefing_id},
@@ -57,6 +57,7 @@ async def load_script(briefing_id: UUID) -> Script:
                 order=ln.order,
                 text=ln.text,
                 claims=claims.get(ln.id, []),
+                kind=ln.kind,
             )
             for ln in lines
             if ln.story_id is not None

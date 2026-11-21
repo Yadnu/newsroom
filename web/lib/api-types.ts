@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/archive/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Corrections
+         * @description Claims affected by a retracted source, newest first (task 6.2).
+         */
+        get: operations["get_corrections_archive_corrections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/archive/lines/{line_id}/trace": {
         parameters: {
             query?: never;
@@ -111,6 +131,11 @@ export interface components {
         /** BriefingDetail */
         BriefingDetail: {
             briefing: components["schemas"]["BriefingSummary"];
+            /**
+             * Corrections
+             * @default []
+             */
+            corrections: components["schemas"]["CorrectionRef"][];
             /** Lines */
             lines: components["schemas"]["LineSummary"][];
             /** Stages */
@@ -118,6 +143,11 @@ export interface components {
         };
         /** BriefingSummary */
         BriefingSummary: {
+            /**
+             * Corrections
+             * @default 0
+             */
+            corrections: number;
             /** Cost Usd */
             cost_usd: number;
             /**
@@ -175,6 +205,56 @@ export interface components {
             story_title: string | null;
             /** Text */
             text: string;
+        };
+        /** CorrectionRef */
+        CorrectionRef: {
+            /**
+             * Briefing Id
+             * Format: uuid
+             */
+            briefing_id: string;
+            /** Claim Id */
+            claim_id: string | null;
+            /** Claim Text */
+            claim_text: string;
+            /** Correction Briefing Id */
+            correction_briefing_id: string | null;
+            /** Correction Line Id */
+            correction_line_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Impact */
+            impact: string;
+            /**
+             * Line Id
+             * Format: uuid
+             */
+            line_id: string;
+            /** Line Text */
+            line_text: string;
+            /** On Air */
+            on_air: boolean;
+            /** Outlet */
+            outlet: string;
+            /** Reason */
+            reason: string | null;
+            /** Retracted At */
+            retracted_at: string | null;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Url */
+            url: string;
         };
         /** EvidenceRef */
         EvidenceRef: {
@@ -428,6 +508,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BriefingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_corrections_archive_corrections_get: {
+        parameters: {
+            query?: {
+                briefing_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionRef"][];
                 };
             };
             /** @description Validation Error */

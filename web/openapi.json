@@ -6,6 +6,14 @@
           "briefing": {
             "$ref": "#/components/schemas/BriefingSummary"
           },
+          "corrections": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CorrectionRef"
+            },
+            "title": "Corrections",
+            "type": "array"
+          },
           "lines": {
             "items": {
               "$ref": "#/components/schemas/LineSummary"
@@ -31,6 +39,11 @@
       },
       "BriefingSummary": {
         "properties": {
+          "corrections": {
+            "default": 0,
+            "title": "Corrections",
+            "type": "integer"
+          },
           "cost_usd": {
             "title": "Cost Usd",
             "type": "number"
@@ -192,6 +205,138 @@
           "history"
         ],
         "title": "ClaimTrace",
+        "type": "object"
+      },
+      "CorrectionRef": {
+        "properties": {
+          "briefing_id": {
+            "format": "uuid",
+            "title": "Briefing Id",
+            "type": "string"
+          },
+          "claim_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Id"
+          },
+          "claim_text": {
+            "title": "Claim Text",
+            "type": "string"
+          },
+          "correction_briefing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Briefing Id"
+          },
+          "correction_line_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Line Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "string"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "line_text": {
+            "title": "Line Text",
+            "type": "string"
+          },
+          "on_air": {
+            "title": "On Air",
+            "type": "boolean"
+          },
+          "outlet": {
+            "title": "Outlet",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "retracted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retracted At"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "briefing_id",
+          "line_id",
+          "line_text",
+          "claim_id",
+          "claim_text",
+          "impact",
+          "on_air",
+          "source_id",
+          "outlet",
+          "url",
+          "reason",
+          "retracted_at",
+          "correction_line_id",
+          "correction_briefing_id"
+        ],
+        "title": "CorrectionRef",
         "type": "object"
       },
       "EvidenceRef": {
@@ -824,6 +969,73 @@
           }
         },
         "summary": "Get Briefing",
+        "tags": [
+          "archive"
+        ]
+      }
+    },
+    "/archive/corrections": {
+      "get": {
+        "description": "Claims affected by a retracted source, newest first (task 6.2).",
+        "operationId": "get_corrections_archive_corrections_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "briefing_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Briefing Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CorrectionRef"
+                  },
+                  "title": "Response Get Corrections Archive Corrections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Corrections",
         "tags": [
           "archive"
         ]

@@ -6,7 +6,7 @@ phase: 1
 code: app/archive/
 depends_on: [data-model]
 feeds: [web]
-decisions: [0005, 0009, 0013]
+decisions: [0005, 0009, 0013, 0023]
 ---
 
 # archive
@@ -47,6 +47,10 @@ Observability. Records every component event and builds the claim-to-source trac
 - Archive read spans put the briefing id in the payload (`briefing`), never in `briefing_id`, so reading a
   briefing never changes its own timeline.
 - LLM-level traces also go to Langfuse through the llm-gateway (task 3.2).
+- `async def list_corrections(briefing_id=None, limit=100) -> list[CorrectionRef]` (`corrections.py`, task 6.2):
+  claim, line, impact, on_air, source (outlet, url, reason, retracted_at), queued correction line and briefing.
+  `GET /archive/corrections?briefing_id=&limit=1..500`; `BriefingSummary.corrections` (count) and
+  `BriefingDetail.corrections`.
 
 ## Invariants
 
@@ -82,3 +86,4 @@ Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: pro
 - 2026-11-18: `claim_trace()`, `rejection_log()` and `/archive` routes (task 3.1).
 - 2026-11-19: briefing list/detail with per-stage latency and cost; read spans off the timeline (task 3.3).
 - 2026-11-19: `LineSummary.kind` / `question` so answer lines show in the timeline (task 5.3).
+- 2026-11-21: corrections read API (task 6.2, decision 0023).

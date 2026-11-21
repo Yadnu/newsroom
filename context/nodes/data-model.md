@@ -6,7 +6,7 @@ phase: 1
 code: app/db/
 depends_on: []
 feeds: [reporter, writer, editor, archive]
-decisions: [0001, 0007, 0011, 0020]
+decisions: [0001, 0007, 0011, 0020, 0023]
 ---
 
 # data-model
@@ -15,15 +15,19 @@ Postgres schema and migrations. Holds the trace chain from source to spoken audi
 
 ## Contract
 
-- Tables: sources, stories, story_sources, briefings, script_lines, claims, claim_evidence, claim_sources, traces.
+- Tables: sources, stories, story_sources, briefings, script_lines, claims, claim_evidence, claim_sources, corrections, traces.
 - Chain: sources -> stories -> script_lines -> claims -> claim_evidence. Writer citations: claims -> claim_sources -> sources (decision 0011).
 - Embedding model and dimension: Voyage `voyage-4-lite` (config `embedding_model`), `EMBEDDING_DIM = 1024`, cosine distance (decision 0007).
-- Public surface (`app.db`): models `Source`, `Story`, `StorySource`, `Briefing`, `ScriptLine`, `Claim`, `ClaimEvidence`, `ClaimSource`, `Trace`; enums `Verdict` (pending | approved | rewrite | rejected), `BriefingStatus` (draft | judged | cleared | aired | failed); `EMBEDDING_DIM`; `get_engine() -> AsyncEngine`; `session_scope()` async context manager (commit on success, rollback on error).
+- Public surface (`app.db`): models `Source`, `Story`, `StorySource`, `Briefing`, `ScriptLine`, `Claim`, `ClaimEvidence`, `ClaimSource`, `Correction`, `Trace`; enums `Verdict` (pending | approved | rewrite | rejected), `BriefingStatus` (draft | judged | cleared | aired | failed); `EMBEDDING_DIM`; `get_engine() -> AsyncEngine`; `session_scope()` async context manager (commit on success, rollback on error).
 - Key columns:
-  - `sources`: url (unique), outlet, title, published_at, fetched_at, content, content_hash (unique, 64 chars), trust_score 0..1, retracted, embedding vector(1024).
+  - `sources`: url (unique), outlet, title, published_at, fetched_at, content, content_hash (unique, 64 chars), trust_score 0..1, retracted, retracted_at, retraction_reason, embedding vector(1024).
   - `stories`: title, summary, created_at, centroid vector(1024). `story_sources` is the (story_id, source_id) link.
   - `briefings`: status, target_minutes. `script_lines`: briefing_id, story_id, order (unique per briefing), text, audio_start_ms, audio_end_ms,
     kind (`script` | `answer`, check constraint, default `script`), question (text, answers only; decision 0020).
+    `kind` also `correction` and `order` may be negative: correction lines air first (decision 0023).
+  - `corrections` (task 6.2, decision 0023): source_id (RESTRICT), briefing_id, script_line_id (CASCADE), claim_id
+    (SET NULL), claim_text, impact (`orphaned` | `weakened`, check), on_air, correction_line_id (script_lines,
+    SET NULL), created_at; unique (source_id, claim_id). Migration `c7d2e8f40a61`.
   - `claims`: script_line_id, text, verdict, score 0..1, reason, rewrite_round, judged_at. `claim_evidence`: claim_id, source_id, passage, score.
   - `traces`: briefing_id, parent_id, component, event, started_at, latency_ms, tokens_in, tokens_out, cost_usd, error, payload (JSONB).
 - Delete rules: briefing -> script_lines -> claims -> claim_evidence cascade; story -> story_sources cascade, script_lines.story_id set null; source with claim_evidence or claim_sources is RESTRICT (mark `retracted` instead); claim -> claim_sources cascade; traces.briefing_id set null.
@@ -52,3 +56,4 @@ Done (task 1.1). Models in `app/db/models.py`, async engine and session in `app/
 - 2026-11-16: 8 tables, first Alembic migration, HNSW indexes, session helpers (task 1.1).
 - 2026-11-17: `claim_sources` table, migration `f41cfce23b88` (task 2.1, decision 0011).
 - 2026-11-19: migration `a3c9e5d71b20` adds `script_lines.kind` and `question` for on-air answers (task 5.3).
+- 2026-11-21: `corrections` table, source retraction columns, `correction` line kind (task 6.2, decision 0023).

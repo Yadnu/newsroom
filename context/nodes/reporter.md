@@ -4,9 +4,9 @@ type: component
 status: in-progress
 phase: 1
 code: app/reporter/
-depends_on: [data-model, llm-gateway, archive]
+depends_on: [data-model, llm-gateway, archive, standards-desk]
 feeds: [producer]
-decisions: [0003, 0010, 0021]
+decisions: [0003, 0010, 0021, 0023]
 ---
 
 # reporter
@@ -44,6 +44,14 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   fetch; identical queries cached `reporter_search_cache_s` (600). Fails soft: no key or a provider error -> `[]`.
   Spans `reporter/search_live` > `reporter/fetch_page`. CLI `newsroom search "query" [--days N]`.
 - Every `Source` carries url, outlet, trust_score, published_at, content, content_hash.
+- `async def retract_source(ref: UUID | str, reason) -> RetractionReport(source_id, url, outlet, reason, already,
+  briefings: tuple[Flagged], on_air)` (`retract.py`) (task 6.2, decision 0023): by id or URL (normalised); sets `retracted`,
+  `retracted_at`, `retraction_reason` and runs `standards_desk.flag_retraction` in the same transaction.
+  Idempotent; `SourceNotFoundError`. `async def recheck_sources(hours=reporter_recheck_hours 48, *, transport,
+  sources) -> RecheckReport(checked, unreachable, retracted)`: GETs live sources behind briefings of the last
+  `hours` (max `reporter_recheck_max` 200); retracts only on HTTP 404/410 or `RETRACTION_PATTERNS` (publisher
+  notices), see `retraction_signal(status, body)`. Spans `reporter/retract_source`, `reporter/recheck_sources` >
+  `recheck_page`. CLI `newsroom retract <id|url> --reason`, `newsroom recheck [--hours]`.
 
 ## Invariants
 
@@ -85,3 +93,4 @@ blocks its DLL.
 - 2026-11-17: `StorySourceRef` gains the source `id` (needed by the Writer, task 2.1).
 - 2026-11-18: 10 more default feeds; task 1.6 acceptance met on a live run.
 - 2026-11-19: `search_live()` with Tavily + Firecrawl for on-air answers (task 5.4).
+- 2026-11-21: `retract_source()` and `recheck_sources()` (task 6.2, decision 0023).

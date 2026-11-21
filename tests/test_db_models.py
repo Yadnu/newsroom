@@ -14,6 +14,7 @@ TABLES = {
     "claims",
     "claim_evidence",
     "claim_sources",
+    "corrections",
     "traces",
 }
 
@@ -36,6 +37,8 @@ def test_trace_chain_foreign_keys() -> None:
     assert _fk("claim_evidence", "source_id").column.table.name == "sources"
     assert _fk("claim_sources", "claim_id").column.table.name == "claims"
     assert _fk("claim_sources", "source_id").column.table.name == "sources"
+    assert _fk("corrections", "source_id").column.table.name == "sources"
+    assert _fk("corrections", "script_line_id").column.table.name == "script_lines"
 
 
 def test_delete_rules_keep_the_chain_intact() -> None:

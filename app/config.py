@@ -147,11 +147,15 @@ class Settings(BaseSettings):
     reporter_search_trust: float = Field(default=0.5, ge=0.0, le=1.0)
     reporter_search_cache_s: int = Field(default=600, ge=0)
     reporter_search_timeout_s: float = Field(default=8.0, gt=0)
+    # Recheck of cited sources for retractions (task 6.2, decision 0023).
+    reporter_recheck_hours: int = Field(default=48, ge=1)
+    reporter_recheck_max: int = Field(default=200, ge=1)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)
     standards_max_transition_words: int = Field(default=10, ge=1)
     standards_max_question_words: int = Field(default=80, ge=5)  # caller screen (task 5.2)
+    standards_max_corrections: int = Field(default=3, ge=0)  # per briefing (task 6.2)
 
     # Anchor voice output (task 4.2, decisions 0004 and 0017).
     anchor_tts: Literal["cartesia", "fake"] = "cartesia"

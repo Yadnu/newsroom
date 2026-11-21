@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.archive.corrections import CorrectionRef, corrections_for
 from app.archive.span import span
 from app.db.session import get_engine
 
@@ -32,6 +33,7 @@ class BriefingSummary(BaseModel):
     tokens_in: int
     tokens_out: int
     wall_ms: float | None  # first span start to last span end
+    corrections: int = 0  # claims affected by a retracted source (task 6.2)
 
 
 class LineSummary(BaseModel):
@@ -40,7 +42,7 @@ class LineSummary(BaseModel):
     text: str
     story_title: str | None
     verdicts: dict[str, int]
-    kind: str = "script"  # "answer": a spoken reply to a listener question (task 5.3)
+    kind: str = "script"  # "answer": reply to a listener (task 5.3); "correction" (task 6.2)
     question: str | None = None  # what an answer line replies to
 
 
@@ -63,6 +65,7 @@ class BriefingDetail(BaseModel):
     briefing: BriefingSummary
     lines: list[LineSummary]
     stages: list[Stage]
+    corrections: list[CorrectionRef] = []  # claims of this briefing hit by a retraction
 
 
 # ---- pure: stages from spans ----------------------------------------------------------------
@@ -124,6 +127,7 @@ def stages_from_spans(rows: Iterable[Mapping[Any, Any]]) -> list[Stage]:
 _SUMMARY_SQL = """
 SELECT b.id, b.created_at, b.status, b.target_minutes,
   (SELECT count(*) FROM script_lines l WHERE l.briefing_id = b.id) AS lines,
+  (SELECT count(*) FROM corrections c WHERE c.briefing_id = b.id) AS corrections,
   coalesce(t.cost_usd, 0) AS cost_usd, coalesce(t.tokens_in, 0) AS tokens_in,
   coalesce(t.tokens_out, 0) AS tokens_out, t.wall_ms
 FROM briefings b
@@ -165,6 +169,7 @@ def _summary(r: Any, verdicts: dict[str, int]) -> BriefingSummary:
         tokens_in=int(r.tokens_in),
         tokens_out=int(r.tokens_out),
         wall_ms=float(r.wall_ms) if r.wall_ms is not None else None,
+        corrections=int(r.corrections),
     )
 
 
@@ -227,6 +232,7 @@ async def briefing_detail(briefing_id: UUID) -> BriefingDetail:
                 .mappings()
                 .all()
             )
+            corrections = await corrections_for(conn, briefing_id, 200)
         s.set(lines=len(lines), spans=len(spans))
     return BriefingDetail(
         briefing=_summary(row, verdicts[briefing_id]),
@@ -243,4 +249,5 @@ async def briefing_detail(briefing_id: UUID) -> BriefingDetail:
             for ln in lines
         ],
         stages=stages_from_spans(spans),
+        corrections=corrections,
     )

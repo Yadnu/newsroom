@@ -65,3 +65,4 @@ automated (no browser in the agent environment).
 - 2026-11-19: live Player with synced, clickable transcript (task 4.3).
 - 2026-11-19: push-to-talk questions in the Player (task 5.1).
 - 2026-11-19: answer card in the Player, answer lines labelled on the briefing page (task 5.3).
+- 2026-11-21: briefing page Corrections banner and `Correction` line badge; corrections badge on the list (task 6.2).

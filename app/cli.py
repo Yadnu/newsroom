@@ -23,6 +23,7 @@ from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.reporter.rank import StorySourceRef, TopStory, top_stories
 from app.shared import llm
 from app.standards_desk import Block, BriefingNotFoundError, NotClearedError, clear_for_air
+from app.standards_desk.corrections import queue_corrections
 from app.writer import DraftClaim, WriterError, draft_script
 
 app = typer.Typer(help="Newsroom: voice-first AI news anchor.", no_args_is_help=True)
@@ -156,7 +157,9 @@ def brief_report(
             )
         lines.append(
             {
-                "story": titles.get(line.story_id, ""),
+                "story": "Corrections"
+                if line.kind == "correction"
+                else titles.get(line.story_id, ""),
                 "order": line.order,
                 "text": line.text,
                 "on_air": line.id not in blocked,
@@ -234,6 +237,13 @@ def brief(
         script = await draft_script(rundown)
         err.print(f"drafted: {len(script.lines)} lines; judging")
         reviewed = await review_script(script)
+        # On-air corrections of earlier briefings air first (task 6.2, decision 0023).
+        if corrections := await queue_corrections(rundown.briefing_id):
+            err.print(f"corrections: {len(corrections)} queued at the top")
+            lines = [*corrections, *reviewed.script.lines]
+            reviewed = reviewed.model_copy(
+                update={"script": reviewed.script.model_copy(update={"lines": lines})}
+            )
         try:
             cleared = await clear_for_air(reviewed)
         except NotClearedError as e:
@@ -386,6 +396,78 @@ def search(
         when = src.published_at.strftime("%Y-%m-%d") if src.published_at else "undated"
         console.print(f"[bold]{escape(src.outlet)}[/] {when}  {escape(src.title)}")
         console.print(f"  [dim]{escape(src.url)}[/]")
+
+
+def _print_retraction(r: Any) -> None:
+    if r.already:
+        console.print(f"[yellow]already retracted[/] {escape(r.outlet)} {escape(r.url)}")
+        return
+    console.print(f"[red]retracted[/] {escape(r.outlet)} {escape(r.url)}: {escape(r.reason)}")
+    for b in r.briefings:
+        console.print(
+            f"  briefing {b.briefing_id} ({b.status}): {b.orphaned} orphaned,"
+            f" {b.weakened} weakened, {b.on_air} on-air correction(s) due"
+        )
+    if not r.briefings:
+        console.print("  no briefing used it")
+
+
+@app.command()
+def retract(
+    source: Annotated[str, typer.Argument(help="Source id or URL.")],
+    reason: Annotated[str, typer.Option(help="Why (shown in the Archive).")] = "retracted",
+) -> None:
+    """Retract a source and flag every briefing whose claims relied on it."""
+    from app.reporter.retract import SourceNotFoundError, parse_ref, retract_source
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    try:
+        report = _run(lambda: retract_source(parse_ref(source), reason))
+    except SourceNotFoundError as e:
+        err.print(f"[red]{e}[/]")
+        raise typer.Exit(code=1) from e
+    _print_retraction(report)
+
+
+@app.command()
+def recheck(
+    hours: Annotated[int, typer.Option(min=1, help="Sources behind briefings this recent.")] = 48,
+) -> None:
+    """Re-fetch recently cited sources; retract the ones that are gone or carry a retraction."""
+    from app.reporter.retract import recheck_sources
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    report = _run(lambda: recheck_sources(hours))
+    console.print(
+        f"checked {report.checked} sources, {report.unreachable} unreachable (kept),"
+        f" {len(report.retracted)} retracted"
+    )
+    for r in report.retracted:
+        _print_retraction(r)
+
+
+@app.command()
+def corrections(
+    briefing: Annotated[str | None, typer.Option(help="Only this briefing.")] = None,
+    limit: Annotated[int, typer.Option(min=1, max=500)] = 50,
+) -> None:
+    """Claims affected by retracted sources, newest first."""
+    from app.archive import list_corrections
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    rows = _run(lambda: list_corrections(UUID(briefing) if briefing else None, limit))
+    if not rows:
+        console.print("no corrections")
+    for c in rows:
+        due = (
+            ("on air: queued" if c.correction_line_id else "on air: due")
+            if c.on_air
+            else "not aired"
+        )
+        console.print(
+            f"[bold]{c.impact}[/] {escape(c.claim_text)}  [dim]({escape(c.outlet)}: "
+            f"{escape(c.reason or '')}; briefing {c.briefing_id}; {due})[/]"
+        )
 
 
 def main() -> None:

@@ -8,7 +8,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-6.2 correction pipeline: source retraction flags affected briefings
+6.3 contradiction detection in Editor
 
 ## Tasks
 
@@ -50,7 +50,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ### Phase 6: Evals and polish
 - [x] 6.1 red team set (satire, stale, prompt injection), eval run in CI
-- [ ] 6.2 correction pipeline: source retraction flags affected briefings
+- [x] 6.2 correction pipeline: source retraction flags affected briefings
 - [ ] 6.3 contradiction detection in Editor
 - [ ] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
 
@@ -73,6 +73,6 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 6.1. Red team set `evals/data/redteam_v1.json` (judge, screen, clear suites) and `evals/run_redteam.py`; the offline part gates CI (decision 0022), `--live` via the manual `Evals` workflow. Fixes it drove: `injection` line rule and stricter transitions in `clear_for_air`, screen patterns that stop blocking news look-alikes, judge and screen prompt lines. Branch `phase6/redteam` stacks on #22 to #16; none merged.
-- Open: judge false flags (over-strict `attributed`) rose to 0.138; 10 judge_v1 cases still pending (Groq 8000 TPM). Opinion rule known gap (attribution exempts a sentence). Groq free tier 8000 TPM on the judge (answers can fall back). Live search check waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Test data in the dev DB. Langfuse untested live.
-- Next: 6.2 correction pipeline: a source retraction flags the briefings whose claims cited it or used it as evidence.
+- Done: 6.2. `newsroom retract` / `recheck` (404/410 or a publisher notice only) mark a source retracted and record a `corrections` row per affected claim (orphaned/weakened, on_air); the next `newsroom brief` opens with a fixed-template correction line that the Standards Desk clears only against that row (decision 0023). Archive API and web banner. Migration `c7d2e8f40a61` applied to the dev DB; test source `b41d6295` retracted there (test briefing `42c6f7d3`). Branch `phase6/corrections` stacks on #24 (the safe-line fix, needed because #23 merged before it); none merged.
+- Open: recheck has no schedule (CLI only). Judge false flags 0.138 (over-strict `attributed`); 10 judge_v1 cases pending (Groq TPM). Opinion and "confirm" known gaps. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
+- Next: 6.3 contradiction detection in the Editor: claims whose sources disagree are flagged instead of approved.

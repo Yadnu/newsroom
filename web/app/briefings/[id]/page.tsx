@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { RejectionTable } from "@/components/RejectionTable";
 import { TracePanel } from "@/components/TracePanel";
 import { VerdictCounts, VerdictDots } from "@/components/Verdicts";
-import { api, type LineSummary } from "@/lib/api";
-import { int, ms, shortId, usd, when } from "@/lib/format";
+import { api, type CorrectionRef, type LineSummary } from "@/lib/api";
+import { int, ms, safeHref, shortId, usd, when } from "@/lib/format";
 
 export default function BriefingPage(props: PageProps<"/briefings/[id]">) {
   return (
@@ -15,29 +15,41 @@ export default function BriefingPage(props: PageProps<"/briefings/[id]">) {
   );
 }
 
-async function Briefing({ params, searchParams }: PageProps<"/briefings/[id]">) {
+async function Briefing({
+  params,
+  searchParams,
+}: PageProps<"/briefings/[id]">) {
   const { id } = await params;
   const line = (await searchParams).line;
   const selected = typeof line === "string" ? line : undefined;
-  const { briefing: b, lines, stages } = await api.briefing(id);
+  const { briefing: b, lines, stages, corrections } = await api.briefing(id);
 
   return (
     <>
       <p className="muted">
-        <Link href="/">Briefings</Link> / <span className="mono">{shortId(b.id)}</span>
+        <Link href="/">Briefings</Link> /{" "}
+        <span className="mono">{shortId(b.id)}</span>
       </p>
       <h1>Briefing of {when(b.created_at)}</h1>
       <p>
-        <Link href={`/briefings/${b.id}/listen`}>▶ Listen to this briefing</Link>
+        <Link href={`/briefings/${b.id}/listen`}>
+          ▶ Listen to this briefing
+        </Link>
       </p>
       <p className="sub">
-        {b.target_minutes} minutes · {b.status} · <VerdictCounts verdicts={b.verdicts} />
+        {b.target_minutes} minutes · {b.status} ·{" "}
+        <VerdictCounts verdicts={b.verdicts} />
       </p>
+
+      {corrections.length > 0 && <Corrections rows={corrections} />}
 
       <div className="stats">
         <Stat label="Wall time" value={ms(b.wall_ms)} />
         <Stat label="Cost" value={usd(b.cost_usd)} />
-        <Stat label="Tokens in / out" value={`${int(b.tokens_in)} / ${int(b.tokens_out)}`} />
+        <Stat
+          label="Tokens in / out"
+          value={`${int(b.tokens_in)} / ${int(b.tokens_out)}`}
+        />
         <Stat label="Lines" value={String(b.lines)} />
       </div>
 
@@ -55,11 +67,16 @@ async function Briefing({ params, searchParams }: PageProps<"/briefings/[id]">) 
         <section>
           <h2>Trace</h2>
           {selected ? (
-            <Suspense key={selected} fallback={<div className="card empty">Loading trace…</div>}>
+            <Suspense
+              key={selected}
+              fallback={<div className="card empty">Loading trace…</div>}
+            >
               <Trace lineId={selected} />
             </Suspense>
           ) : (
-            <div className="card empty">Click a sentence to see its claims, verdicts and sources.</div>
+            <div className="card empty">
+              Click a sentence to see its claims, verdicts and sources.
+            </div>
           )}
         </section>
       </div>
@@ -142,7 +159,12 @@ function Script({
             aria-current={ln.id === selected ? "true" : undefined}
           >
             {ln.kind === "answer" && (
-              <span className="badge">Answer to: {ln.question ?? "a listener"}</span>
+              <span className="badge">
+                Answer to: {ln.question ?? "a listener"}
+              </span>
+            )}
+            {ln.kind === "correction" && (
+              <span className="badge rejected">Correction</span>
             )}{" "}
             {ln.text}
             <VerdictDots verdicts={ln.verdicts} />
@@ -150,6 +172,65 @@ function Script({
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Claims of this briefing whose source was later retracted (task 6.2). */
+function Corrections({ rows }: { rows: CorrectionRef[] }) {
+  return (
+    <div className="card banner" role="status">
+      <h2>Corrections</h2>
+      <p className="muted">
+        A source behind this briefing was retracted. Orphaned claims have no
+        evidence left and no longer air; weakened claims still have another live
+        source.
+      </p>
+      <ul>
+        {rows.map((c) => {
+          const href = safeHref(c.url);
+          return (
+            <li key={c.id}>
+              <span
+                className={`badge ${c.impact === "orphaned" ? "rejected" : "rewrite"}`}
+              >
+                {c.impact}
+              </span>{" "}
+              {c.claim_text}{" "}
+              <span className="muted">
+                (
+                {href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                  >
+                    {c.outlet}
+                  </a>
+                ) : (
+                  c.outlet
+                )}
+                {c.reason ? `: ${c.reason}` : ""}
+                {c.on_air &&
+                  (c.correction_briefing_id ? (
+                    <>
+                      {"; corrected on air in "}
+                      <Link
+                        href={`/briefings/${c.correction_briefing_id}`}
+                        className="mono"
+                      >
+                        {shortId(c.correction_briefing_id)}
+                      </Link>
+                    </>
+                  ) : (
+                    "; on-air correction due in the next briefing"
+                  ))}
+                )
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
