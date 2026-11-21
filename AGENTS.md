@@ -48,7 +48,7 @@ feedparser (RSS), Langfuse (LLM traces), Next.js (web player), uv (Python packag
 - `docker compose up -d db redis` start infra
 - `uv run alembic upgrade head` migrate
 - `uv run pytest -q` tests, `uv run ruff check . && uv run ruff format --check .` lint, `uv run mypy app` types
-- `uv run python evals/run_evals.py` evals
+- `uv run python evals/run_evals.py` judge eval; `uv run python evals/run_redteam.py [--live]` red team (offline part gates CI)
 - `python scripts/context_graph.py build|check` context graph
 - `uv run newsroom speak <briefing_id> --out brief.wav` voice a stored briefing (Cartesia key + voice id, or `NEWSROOM_ANCHOR_TTS=fake`)
 - `uv run newsroom ask --briefing <id> --wav q.wav` transcribe and classify a spoken question (Deepgram key)

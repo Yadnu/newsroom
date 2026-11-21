@@ -1,0 +1,64 @@
+{
+  "judged": 120,
+  "errors": 10,
+  "catch_rate": 1.0,
+  "planted": 27,
+  "recall": 0.9516,
+  "precision": 0.8806,
+  "false_flag_rate": 0.1379,
+  "accuracy": 0.9083,
+  "by_kind": {
+    "supported": {
+      "n": 58,
+      "correct": 50,
+      "accuracy": 0.8621
+    },
+    "unattributed": {
+      "n": 8,
+      "correct": 7,
+      "accuracy": 0.875
+    },
+    "distorted": {
+      "n": 9,
+      "correct": 9,
+      "accuracy": 1.0
+    },
+    "unsupported": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1.0
+    },
+    "stale": {
+      "n": 2,
+      "correct": 2,
+      "accuracy": 1.0
+    },
+    "sensitive_single": {
+      "n": 6,
+      "correct": 4,
+      "accuracy": 0.6667
+    },
+    "planted": {
+      "n": 27,
+      "correct": 27,
+      "accuracy": 1.0
+    }
+  },
+  "missed_planted": [],
+  "false_flags": [
+    "s01-c2",
+    "s03-c3",
+    "s06-c2",
+    "s09-c1",
+    "s09-c3",
+    "s09-c4",
+    "s14-c1",
+    "s19-c2"
+  ],
+  "set": "judge_v1",
+  "prompt_version": "30f59e69",
+  "model": "openai/gpt-oss-120b",
+  "cases": 130,
+  "run_at": "2026-11-20T19:30:00+00:00",
+  "note": "partial: 10 cases still pending after 3 resumed runs (Groq free tier 8000 TPM)"
+}

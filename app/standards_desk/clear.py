@@ -1,9 +1,12 @@
 """``clear_for_air()``: the last gate before the Anchor (task 4.1, decision 0016).
 
 Rules, checked per line in this order (the first failure blocks the line):
+0. injection       instruction-hijack phrasing (the caller screen's patterns): a Writer steered by
+                   fetched text must not read the instructions on air
 1. unapproved      every claim is stored as ``approved`` with evidence from a non-retracted source
-2. unchecked_fact  a line without claims must be a short sign-post: no digits, quotes, names
-                   or reported speech, at most ``standards_max_transition_words`` words
+2. unchecked_fact  a line without claims must be a short sign-post: no numbers (digits or words),
+                   quotes, names, reported speech or news events, at most
+                   ``standards_max_transition_words`` words
 3. long_quote      quotes stay under 15 words (same rule the Writer validates)
 4. verbatim        no run of ``standards_max_copied_words`` words copied from a cited source
 5. opinion         no evaluative word in an unattributed sentence
@@ -26,6 +29,7 @@ from app.config import get_settings
 from app.db.models import BriefingStatus, Verdict
 from app.db.session import get_engine
 from app.editor import ReviewedScript
+from app.standards_desk.screen import INJECTION_PATTERNS
 from app.standards_desk.types import (
     _CLEARANCE,
     Block,
@@ -71,6 +75,121 @@ OPINION_WORDS = frozenset(
         "worst",
     }
 )
+# A line without claims must not state a quantity or an event (task 6.1 red team). "one" is left out
+# ("One more story"), as are ordinals ("First, markets").
+NUMBER_WORDS = frozenset(
+    [
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+        "hundred",
+        "hundreds",
+        "thousand",
+        "thousands",
+        "million",
+        "millions",
+        "billion",
+        "billions",
+        "trillion",
+        "dozen",
+        "dozens",
+        "percent",
+        "half",
+    ]
+)
+EVENT_WORDS = frozenset(
+    [
+        "fell",
+        "fall",
+        "falls",
+        "rose",
+        "rise",
+        "rises",
+        "jumped",
+        "surged",
+        "plunged",
+        "soared",
+        "slumped",
+        "tumbled",
+        "dropped",
+        "crashed",
+        "collapsed",
+        "resigned",
+        "quit",
+        "fired",
+        "sacked",
+        "arrested",
+        "charged",
+        "sued",
+        "fined",
+        "banned",
+        "died",
+        "killed",
+        "dead",
+        "confirm",
+        "confirms",
+        "confirmed",
+        "denied",
+        "denies",
+        "admitted",
+        "admits",
+        "revealed",
+        "acquired",
+        "bought",
+        "sold",
+        "launched",
+        "cut",
+        "cuts",
+        "raised",
+        "delayed",
+        "cancelled",
+        "canceled",
+        "recalled",
+        "grounded",
+        "bankrupt",
+        "hacked",
+        "leaked",
+    ]
+)
+CONTRACTIONS = frozenset(
+    [
+        "that's",
+        "it's",
+        "here's",
+        "there's",
+        "let's",
+        "what's",
+        "who's",
+        "where's",
+        "how's",
+        "he's",
+        "she's",
+    ]
+)
+
 ATTRIBUTION_WORDS = frozenset(
     {
         "according",
@@ -206,6 +325,22 @@ def opinion_word(line_text: str) -> str | None:
     return None
 
 
+def _looks_named(token: str, *, first: bool) -> bool:
+    """A name: capitalised inside a sentence, an acronym or CamelCase anywhere ("NASA", "OpenAI"),
+    or a possessive that is not a common contraction ("Nvidia's", but not "That's")."""
+    bare = token.strip(".,;:!?()\"'" + chr(0x201C) + chr(0x201D))
+    if not bare:
+        return False
+    if not first and bare[:1].isupper():
+        return True
+    if len(bare) > 1 and any(ch.isupper() for ch in bare[1:]):
+        return True
+    return (
+        bool(_POSSESSIVE.search(token))
+        and bare.lower().replace(chr(0x2019), "'") not in CONTRACTIONS
+    )
+
+
 def transition_problem(line_text: str, max_words: int) -> str | None:
     """A line without claims is unchecked, so it may only be a short sign-post: no numbers,
     quotes, names (a capitalised word inside a sentence, or any possessive), or reported speech."""
@@ -215,13 +350,16 @@ def transition_problem(line_text: str, max_words: int) -> str | None:
         return "a line without claims carries a quote"
     for sentence in _SENTENCE.findall(line_text):
         tokens = sentence.split()
-        named = (
-            t for i, t in enumerate(tokens) if (i > 0 and t[:1].isupper()) or _POSSESSIVE.search(t)
-        )
+        named = (t for i, t in enumerate(tokens) if _looks_named(t, first=i == 0))
         if name := next(named, None):
             return f"a line without claims names {name.strip('.,;:!?')!r}"
         if said := ATTRIBUTION_WORDS.intersection(words(sentence)):
             return f"a line without claims reports speech ({min(said)!r})"
+    w = words(line_text)
+    if number := NUMBER_WORDS.intersection(w):
+        return f"a line without claims states a number ({min(number)!r})"
+    if event := EVENT_WORDS.intersection(w):
+        return f"a line without claims states an event ({min(event)!r})"
     n = len(words(line_text))
     if n > max_words:
         return f"a line without claims has {n} words (transitions stay under {max_words + 1})"
@@ -249,6 +387,9 @@ def claim_problem(line: DraftLine, stored: dict[UUID, StoredClaim]) -> str | Non
 def check_line(
     line: DraftLine, stored: StoredLines, max_copied: int, max_transition: int
 ) -> tuple[BlockRule, str] | None:
+    for p in INJECTION_PATTERNS:
+        if m := p.search(line.text):
+            return BlockRule.injection, f"instruction-like text: {m.group(0)!r}"
     if line.claims or line.id in stored.claims:
         if problem := claim_problem(line, stored.claims.get(line.id, {})):
             return BlockRule.unapproved, problem

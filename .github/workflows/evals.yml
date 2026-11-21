@@ -1,0 +1,60 @@
+name: Evals
+
+# Live red team run (task 6.1, decision 0022): the LLM layers (full caller screen + the Editor's judge)
+# on evals/data/redteam_v1.json. Manual only: it spends Groq quota and LLM results are noisy, so it
+# reports and uploads results but does not gate. The deterministic layers run on every PR in ci.yml.
+# Needs the repo secret NEWSROOM_GROQ_API_KEY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      judge_v1:
+        description: Also re-run the judge_v1 eval (130 claims, ~20 min on the free tier)
+        type: boolean
+        default: false
+
+concurrency:
+  group: evals
+  cancel-in-progress: false
+
+jobs:
+  redteam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEWSROOM_GROQ_API_KEY: ${{ secrets.NEWSROOM_GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --locked
+      - name: Red team (live)
+        run: uv run python evals/run_redteam.py --live --quiet --concurrency 1 --out redteam.jsonl
+      - name: Judge eval
+        if: inputs.judge_v1
+        run: uv run python evals/run_evals.py --concurrency 1 --fresh --out judge_v1.jsonl
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("redteam.summary.json")
+          if p.exists():
+              r = json.loads(p.read_text())
+              print(f"## Red team `{r['set']}` prompts `{r['prompt_version']}`\n")
+              print("| Suite | Catch rate | False hit rate | Errors | Misses |")
+              print("| --- | --- | --- | --- | --- |")
+              for name, s in r["suites"].items():
+                  print(f"| {name} | {s['catch_rate']} | {s['false_hit_rate']} | {s['errors']} | {', '.join(s['misses'])} |")
+          PY
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-${{ github.run_id }}
+          path: |
+            redteam*.json*
+            judge_v1*.json*
+          if-no-files-found: ignore
