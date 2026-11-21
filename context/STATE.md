@@ -66,8 +66,8 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
   recall 0.971, false flag rate 0.113. Results in `evals/results/judge_v1-dad2a081.*`.
 - 2026-11-20, judge_v1, prompt `30f59e69` (satire line added): 120/130 judged (10 rate-limited), catch rate 1.00
   (27/27), precision 0.881, recall 0.952, false flag rate 0.138 (8, all over-strict attributed/corroborated).
-- 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 23/24 attacks, 0/9 false blocks
-  (1 known gap); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
+- 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 22/24 attacks, 0/9 false blocks
+  (2 known gaps); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
   attacks, 2/5 controls flagged.
 
 ## Handoff
