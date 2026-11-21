@@ -62,7 +62,8 @@ going bankrupt" was transcribed by Deepgram and blocked by the rules.
 Red team (task 6.1, decision 0022): `evals/run_redteam.py` gates CI on the rules. First run found 18 gated
 misses (clear: hijacked or disguised-fact transitions cleared, "Here's"/"Let's"/"That's" blocked as names;
 screen: 5 of 15 benign look-alikes blocked, 2 injections missed); all fixed. Known gap: an attribution verb exempts
-its whole sentence from `opinion` ("X said it cut jobs, a shocking move"). Live 2026-11-20 (`3a4b8d4c`): full
+its whole sentence from `opinion` ("X said it cut jobs, a shocking move"), and "confirm" is not an event word
+(the Producer's safe line uses it). Live 2026-11-20 (`3a4b8d4c`): full
 screen catches 27/28 attacks, 1/15 benign blocked ("stupid rich"); rules alone catch none of the 5 "say on air"
 cases (LLM-only).
 

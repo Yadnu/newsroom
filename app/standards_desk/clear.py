@@ -149,8 +149,6 @@ EVENT_WORDS = frozenset(
         "died",
         "killed",
         "dead",
-        "confirm",
-        "confirms",
         "confirmed",
         "denied",
         "denies",

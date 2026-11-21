@@ -10,6 +10,7 @@ import app.standards_desk.clear as clear
 from app.archive import MemorySink
 from app.db.models import BriefingStatus
 from app.editor import ReviewedScript
+from app.producer.answer import SAFE_LINE
 from app.standards_desk import (
     BlockRule,
     ClearedScript,
@@ -153,6 +154,7 @@ async def test_lines_without_claims_must_be_short_transitions(desk: Desk, text: 
         "That's all for today.",
         "One more story before we go.",
         "Now to the chip industry.",
+        SAFE_LINE,  # the Producer's fallback answer airs with no claims (task 5.3)
     ],
 )
 async def test_plain_transitions_clear(desk: Desk, text: str) -> None:
