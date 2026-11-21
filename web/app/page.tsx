@@ -9,7 +9,9 @@ export default function Home() {
   return (
     <>
       <h1>Briefings</h1>
-      <p className="sub">Open a briefing, then click any sentence to see its claims and sources.</p>
+      <p className="sub">
+        Open a briefing, then click any sentence to see its claims and sources.
+      </p>
       <Suspense fallback={<p className="muted">Loading briefings…</p>}>
         <BriefingTable />
       </Suspense>
@@ -22,7 +24,8 @@ async function BriefingTable() {
   if (!rows.length) {
     return (
       <div className="card empty">
-        No briefings yet. Run <code className="mono">newsroom brief --minutes 3</code>.
+        No briefings yet. Run{" "}
+        <code className="mono">newsroom brief --minutes 3</code>.
       </div>
     );
   }
@@ -64,6 +67,14 @@ async function BriefingTable() {
               <td className="num">{b.lines}</td>
               <td>
                 <VerdictCounts verdicts={b.verdicts} />
+                {b.corrections > 0 && (
+                  <span
+                    className="badge rejected"
+                    title="claims hit by a retracted source"
+                  >
+                    {b.corrections} correction{b.corrections === 1 ? "" : "s"}
+                  </span>
+                )}
               </td>
               <td className="num">{ms(b.wall_ms)}</td>
               <td className="num">{int(b.tokens_in + b.tokens_out)}</td>

@@ -10,6 +10,7 @@ _CLEARANCE = object()  # private token: only clear.py passes it
 
 class BlockRule(StrEnum):
     injection = "injection"
+    correction = "correction"
     unapproved = "unapproved"
     unchecked_fact = "unchecked_fact"
     long_quote = "long_quote"

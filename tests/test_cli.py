@@ -205,8 +205,25 @@ def brief_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(cli, "draft_script", fake_draft)
     monkeypatch.setattr(cli, "review_script", fake_review)
     monkeypatch.setattr(cli, "clear_for_air", fake_clear)
+
+    async def fake_queue(briefing_id: Any) -> list[DraftLine]:
+        seen["queued_for"] = briefing_id
+        return seen.get("corrections", [])
+
+    monkeypatch.setattr(cli, "queue_corrections", fake_queue)
     seen["c1"], seen["c2"] = c1, c2
     return seen
+
+
+def test_brief_puts_queued_corrections_first(brief_calls: dict[str, Any]) -> None:
+    text = "A correction: in an earlier briefing we reported that Acme shipped Nova."
+    fix = DraftLine(id=uuid4(), story_id=uuid4(), order=-1, text=text, claims=[], kind="correction")
+    brief_calls["corrections"] = [fix]
+    result = runner.invoke(cli.app, ["brief", "--minutes", "3", "--json"])
+    report = json.loads(result.stdout)
+    first = report["lines"][0]
+    assert (first["story"], first["text"], first["order"]) == ("Corrections", text, -1)
+    assert str(brief_calls["queued_for"]) == report["briefing_id"]
 
 
 def test_brief_prints_verdict_and_source_per_claim(brief_calls: dict[str, Any]) -> None:

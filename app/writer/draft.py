@@ -71,6 +71,9 @@ class DraftLine(BaseModel):
     order: int
     text: str
     claims: list[DraftClaim]
+    kind: str = (
+        "script"  # or "correction" (task 6.2): a template line checked by the Standards Desk
+    )
 
 
 class Script(BaseModel):

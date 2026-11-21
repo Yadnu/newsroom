@@ -77,6 +77,8 @@ class Source(SQLModel, table=True):
     content_hash: str = Field(sa_column=Column(String(64), nullable=False, unique=True))
     trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
     retracted: bool = False
+    retracted_at: datetime | None = _ts_opt()  # task 6.2, decision 0023
+    retraction_reason: str | None = Field(default=None, sa_type=Text)
     embedding: list[float] | None = _vector()
 
 
@@ -114,17 +116,18 @@ class ScriptLine(SQLModel, table=True):
     __tablename__ = "script_lines"
     __table_args__ = (
         UniqueConstraint("briefing_id", "order"),
-        CheckConstraint("kind IN ('script', 'answer')", name="ck_script_lines_kind"),
+        CheckConstraint("kind IN ('script', 'answer', 'correction')", name="ck_script_lines_kind"),
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     briefing_id: UUID = _fk("briefings.id", "CASCADE")
     story_id: UUID | None = _fk("stories.id", "SET NULL", nullable=True)
-    order: int = Field(ge=0)
+    order: int  # correction lines take negative orders so they air first (decision 0023)
     text: str = Field(sa_type=Text)
     audio_start_ms: int | None = None
     audio_end_ms: int | None = None
-    # "script" (the briefing) or "answer" (spoken reply to a listener question, decision 0020)
+    # "script" (the briefing), "answer" (spoken reply to a listener question, decision 0020) or
+    # "correction" (an on-air correction of an earlier briefing, decision 0023)
     kind: str = Field(
         default="script",
         sa_column=Column(String(10), nullable=False, server_default="script"),
@@ -169,6 +172,29 @@ class ClaimSource(SQLModel, table=True):
             ForeignKey("sources.id", ondelete="RESTRICT"), primary_key=True, index=True
         )
     )
+
+
+class Correction(SQLModel, table=True):
+    """A claim affected by a source retraction (task 6.2, decision 0023). ``orphaned``: no evidence
+    from a live source is left; ``weakened``: other live evidence remains. ``on_air``: the briefing
+    aired with the claim approved, so the next briefing must correct it (``correction_line_id``)."""
+
+    __tablename__ = "corrections"
+    __table_args__ = (
+        UniqueConstraint("source_id", "claim_id"),
+        CheckConstraint("impact IN ('orphaned', 'weakened')", name="ck_corrections_impact"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    source_id: UUID = _fk("sources.id", "RESTRICT")
+    briefing_id: UUID = _fk("briefings.id", "CASCADE")
+    script_line_id: UUID = _fk("script_lines.id", "CASCADE")
+    claim_id: UUID | None = _fk("claims.id", "SET NULL", nullable=True, index=False)
+    claim_text: str = Field(sa_type=Text)
+    impact: str = Field(sa_type=String(10))
+    on_air: bool = False
+    correction_line_id: UUID | None = _fk("script_lines.id", "SET NULL", nullable=True, index=False)
+    created_at: datetime = _ts()
 
 
 class Trace(SQLModel, table=True):

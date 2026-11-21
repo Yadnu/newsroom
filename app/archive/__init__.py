@@ -16,6 +16,7 @@ from app.archive.briefings import (
     briefing_detail,
     list_briefings,
 )
+from app.archive.corrections import CorrectionRef, list_corrections
 from app.archive.sink import DbSink, MemorySink, TraceSink, get_sink, set_sink
 from app.archive.span import Span, current_span, span
 from app.archive.trace import (
@@ -35,6 +36,7 @@ __all__ = [
     "BriefingNotFoundError",
     "BriefingSummary",
     "ClaimTrace",
+    "CorrectionRef",
     "DbSink",
     "EvidenceRef",
     "Judgement",
@@ -52,6 +54,7 @@ __all__ = [
     "current_span",
     "get_sink",
     "list_briefings",
+    "list_corrections",
     "rejection_log",
     "set_sink",
     "span",

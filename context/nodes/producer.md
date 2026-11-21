@@ -6,7 +6,7 @@ phase: 2
 code: app/producer/
 depends_on: [reporter, caller, standards-desk, archive]
 feeds: [writer, anchor]
-decisions: [0020, 0021]
+decisions: [0020, 0021, 0023]
 ---
 
 # producer
@@ -27,7 +27,8 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   line (blocked lines struck through with `BLOCKED <rule>: reason`) with each claim's verdict,
   score and source outlets (the judge's evidence sources, else the Writer's citations); non-approved claims show the
   judge's reason. JSON adds `cleared` and per-line `on_air` / `block`. Exit 1 on `NoStoriesError`, `WriterError`,
-  or when nothing clears (the report is still printed).
+  or when nothing clears (the report is still printed). After review, `queue_corrections` puts pending on-air
+  corrections first (story `Corrections`) (task 6.2, decision 0023).
 - `async def answer_question(question, script: ClearedScript) -> AnswerResult(cleared, fallback, total_ms)`
   (`answer.py`, task 5.3, decision 0020): sources of the question's story (else the whole briefing, best
   `producer_answer_max_sources` 6) -> `writer.draft_answer` -> `store_answer` -> `editor.judge_all` + `store_verdicts`
@@ -77,3 +78,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-19: `newsroom ask --briefing <id> --wav q.wav` transcribes and classifies a question (task 5.1).
 - 2026-11-19: answers listener questions on air with the full fact-check, then resumes (task 5.3).
 - 2026-11-19: answers fall back to live search when the briefing's sources don't cover them (task 5.4).
+- 2026-11-21: `newsroom brief` airs queued corrections first (task 6.2, decision 0023).

@@ -1,6 +1,10 @@
 """``clear_for_air()``: the last gate before the Anchor (task 4.1, decision 0016).
 
-Rules, checked per line in this order (the first failure blocks the line):
+A ``correction`` line (task 6.2) gets the injection rule, then is checked only against its
+``corrections`` row: the text must be exactly ``correction_text(claim, outlet)`` and the source
+still retracted (rule ``correction``).
+
+Rules for every other line, checked in this order (the first failure blocks the line):
 0. injection       instruction-hijack phrasing (the caller screen's patterns): a Writer steered by
                    fetched text must not read the instructions on air
 1. unapproved      every claim is stored as ``approved`` with evidence from a non-retracted source
@@ -29,6 +33,7 @@ from app.config import get_settings
 from app.db.models import BriefingStatus, Verdict
 from app.db.session import get_engine
 from app.editor import ReviewedScript
+from app.standards_desk.corrections import correction_text
 from app.standards_desk.screen import INJECTION_PATTERNS
 from app.standards_desk.types import (
     _CLEARANCE,
@@ -149,8 +154,6 @@ EVENT_WORDS = frozenset(
         "died",
         "killed",
         "dead",
-        "confirm",
-        "confirms",
         "confirmed",
         "denied",
         "denies",
@@ -243,6 +246,8 @@ class StoredClaim:
 class StoredLines:
     claims: dict[UUID, dict[UUID, StoredClaim]] = field(default_factory=dict)  # line -> claims
     sources: dict[UUID, list[str]] = field(default_factory=dict)  # line -> cited/evidence texts
+    # correction line -> (expected text, source still retracted), from its corrections rows
+    corrections: dict[UUID, list[tuple[str, bool]]] = field(default_factory=dict)
 
 
 async def load_stored(line_ids: Sequence[UUID]) -> StoredLines:
@@ -274,6 +279,17 @@ async def load_stored(line_ids: Sequence[UUID]) -> StoredLines:
             {"ids": list(line_ids)},
         ):
             out.sources.setdefault(r.script_line_id, []).append(r.content)
+        for r in await conn.execute(
+            text(
+                "SELECT c.correction_line_id, c.claim_text, s.outlet, s.retracted"
+                " FROM corrections c JOIN sources s ON s.id = c.source_id"
+                " WHERE c.correction_line_id = ANY(:ids)"
+            ),
+            {"ids": list(line_ids)},
+        ):
+            out.corrections.setdefault(r.correction_line_id, []).append(
+                (correction_text(r.claim_text, r.outlet), r.retracted)
+            )
     return out
 
 
@@ -384,12 +400,29 @@ def claim_problem(line: DraftLine, stored: dict[UUID, StoredClaim]) -> str | Non
     return None
 
 
+def correction_problem(line: DraftLine, rows: Sequence[tuple[str, bool]]) -> str | None:
+    """A correction line airs only as the exact template of a recorded, still-retracted source."""
+    if line.claims:
+        return "a correction line carries claims"
+    if not rows:
+        return "no corrections record for this line"
+    if not any(expected == line.text for expected, _ in rows):
+        return "text differs from the correction template"
+    if not any(expected == line.text and retracted for expected, retracted in rows):
+        return "the source is no longer retracted"
+    return None
+
+
 def check_line(
     line: DraftLine, stored: StoredLines, max_copied: int, max_transition: int
 ) -> tuple[BlockRule, str] | None:
     for p in INJECTION_PATTERNS:
         if m := p.search(line.text):
             return BlockRule.injection, f"instruction-like text: {m.group(0)!r}"
+    if line.kind == "correction":
+        if problem := correction_problem(line, stored.corrections.get(line.id, [])):
+            return BlockRule.correction, problem
+        return None
     if line.claims or line.id in stored.claims:
         if problem := claim_problem(line, stored.claims.get(line.id, {})):
             return BlockRule.unapproved, problem
@@ -413,7 +446,7 @@ def drop_orphaned_stories(lines: Sequence[DraftLine], blocks: dict[UUID, Block])
         factual = [ln for ln in story_lines if ln.claims]
         if factual and all(ln.id in blocks for ln in factual):
             for ln in story_lines:
-                if ln.id not in blocks:
+                if ln.id not in blocks and ln.kind != "correction":
                     blocks[ln.id] = Block(
                         ln.id,
                         ln.order,

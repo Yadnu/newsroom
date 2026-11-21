@@ -5,8 +5,8 @@ status: in-progress
 phase: 4
 code: app/standards_desk/
 depends_on: [editor, caller, archive]
-feeds: [anchor, producer, caller]
-decisions: [0016, 0019, 0022]
+feeds: [anchor, producer, caller, reporter]
+decisions: [0016, 0019, 0022, 0023]
 ---
 
 # standards-desk
@@ -39,6 +39,13 @@ Guardrails on both ends: clears approved scripts for air and screens Caller inpu
   labels `abusive` / `injection` only). An LLM error allows a rules-clean question (`checked_by="rules"`).
 - `ScreenResult(allowed, category: ok|empty|too_long|abusive|injection|off_topic, reason, checked_by:
   rules|llm|intent)`. Spans `standards-desk/screen_caller` > `standards-desk/block_caller` (reason) when blocked.
+- Corrections (`corrections.py`) (task 6.2, decision 0023): `flag_retraction(conn, source_id) -> list[Flagged(briefing_id,
+  status, orphaned, weakened, on_air)]` writes `corrections` rows (span `standards-desk/flag_briefing` per
+  briefing); `correction_text(claim, outlet)` is the fixed on-air template; `async def queue_corrections(
+  briefing_id, max_lines=standards_max_corrections 3) -> list[DraftLine]` adds `kind='correction'` lines with
+  negative orders. `clear_for_air`: a correction line gets `injection`, then clears only if its text equals the
+  template of its `corrections` row with the source still retracted, else `correction`; exempt from
+  `story_dropped`. `load_script` returns `script` and `correction` lines.
 
 ## Invariants
 
@@ -62,7 +69,8 @@ going bankrupt" was transcribed by Deepgram and blocked by the rules.
 Red team (task 6.1, decision 0022): `evals/run_redteam.py` gates CI on the rules. First run found 18 gated
 misses (clear: hijacked or disguised-fact transitions cleared, "Here's"/"Let's"/"That's" blocked as names;
 screen: 5 of 15 benign look-alikes blocked, 2 injections missed); all fixed. Known gap: an attribution verb exempts
-its whole sentence from `opinion` ("X said it cut jobs, a shocking move"). Live 2026-11-20 (`3a4b8d4c`): full
+its whole sentence from `opinion` ("X said it cut jobs, a shocking move"), and "confirm" is not an event word
+(the Producer's safe line uses it). Live 2026-11-20 (`3a4b8d4c`): full
 screen catches 27/28 attacks, 1/15 benign blocked ("stupid rich"); rules alone catch none of the 5 "say on air"
 cases (LLM-only).
 
@@ -79,3 +87,4 @@ cases (LLM-only).
 - 2026-11-19: `screen_caller()`: rules then LLM moderation, fail open (task 5.2, decision 0019).
 - 2026-11-19: `clear_for_air(mark_briefing=False)` for answers; `load_script` skips answer lines (task 5.3).
 - 2026-11-20: red team set: `injection` line rule, stricter transitions, screen patterns tuned (task 6.1, decision 0022).
+- 2026-11-21: corrections: `flag_retraction`, `queue_corrections`, `correction` rule (task 6.2, decision 0023).
