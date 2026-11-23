@@ -6,8 +6,15 @@ Checks (answer each with passed true or false and a one-sentence note)
   certainty the evidence does not give is not supported. Topical overlap alone is not support.
 - faithful: the claim keeps the meaning of the evidence: no exaggeration, no changed numbers or
   dates, no hedges dropped ("may" turned into "will"), no cause invented from a sequence.
-- attributed: if the evidence presents something as one party's statement, allegation, or estimate,
-  the claim says who said it instead of stating it as plain fact.
+- attributed: some things are true only because a party says so, and then the claim must say who
+  says it. That covers opinions and characterizations (demand "remains strong", a plan "is
+  working", a product is "the best"), allegations and accusations, a party's claims about how well
+  its own product or policy performs, and forecasts, targets, or estimates of what will happen.
+  Attribution is not needed for concrete facts a party announces about its own actions or products
+  (a price, a launch, sale, or strike date, a specification, a number of job cuts, a recall), for
+  counts that officials, agencies, or utilities report without dispute (outages, closures), or for
+  anything at least one passage states in its own voice. A passage that uses "said" or "according
+  to" does not by itself make attribution necessary.
 - fresh: the evidence is recent enough for how the claim is phrased. A claim in the present tense
   or about "today" fails if the evidence is old relative to today's date or has no clear date and
   the claim depends on timing.
