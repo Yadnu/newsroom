@@ -144,6 +144,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/press/stories/{story_id}/telecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Telecast
+         * @description Broadcast one story: written, fact-checked, cleared and voiced in the background. Returns
+         *     a recent or running telecast of the story if any. Poll ``GET /press/telecasts/{id}``.
+         */
+        post: operations["request_telecast_press_stories__story_id__telecast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/press/telecasts/{telecast_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Telecast
+         * @description Progress (``step``), and when ``ready`` the audio URL, line timings and verdict counts.
+         */
+        get: operations["get_telecast_press_telecasts__telecast_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -432,6 +473,7 @@ export interface components {
             sources: components["schemas"]["PressSource"][];
             /** Summary */
             summary: string | null;
+            telecast?: components["schemas"]["TelecastRef"] | null;
             /** Title */
             title: string;
         };
@@ -517,6 +559,79 @@ export interface components {
             tokens_in: number;
             /** Tokens Out */
             tokens_out: number;
+        };
+        /** TelecastLine */
+        TelecastLine: {
+            /** End Ms */
+            end_ms: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Start Ms */
+            start_ms: number;
+            /** Text */
+            text: string;
+        };
+        /**
+         * TelecastRef
+         * @description The story's latest telecast (task 8.3).
+         */
+        TelecastRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Step */
+            step: string;
+        };
+        /** TelecastView */
+        TelecastView: {
+            /** Audio Url */
+            audio_url?: string | null;
+            /** Briefing Id */
+            briefing_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: components["schemas"]["TelecastLine"][];
+            /** Step */
+            step: string;
+            story?: components["schemas"]["PressStory"] | null;
+            /**
+             * Story Id
+             * Format: uuid
+             */
+            story_id: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Verdicts
+             * @default {}
+             */
+            verdicts: {
+                [key: string]: number;
+            };
         };
         /** TracedClaim */
         TracedClaim: {
@@ -762,6 +877,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PressPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_telecast_press_stories__story_id__telecast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelecastView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_telecast_press_telecasts__telecast_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                telecast_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelecastView"];
                 };
             };
             /** @description Validation Error */

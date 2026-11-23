@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import type { PressStory } from "@/src/api/client";
@@ -81,16 +82,16 @@ export function StoryCard({ story, active }: { story: PressStory; active: boolea
         </ul>
 
         <div className="mt-auto flex items-center gap-3 pt-2">
-          <button
-            type="button"
-            disabled
+          <Link
+            href={`/watch/${story.id}`}
             tabIndex={active ? 0 : -1}
-            title="Broadcasts arrive in the next build phase (8.3)"
-            className="inline-flex items-center gap-2 rounded-full bg-breaking px-5 py-2.5 font-display text-sm uppercase tracking-widest text-white opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-breaking px-5 py-2.5 font-display text-sm uppercase tracking-widest text-white hover:brightness-110"
           >
             <span aria-hidden>▶</span> Watch broadcast
-          </button>
-          <span className="font-body text-xs text-white/45">Fact-checked on air · coming soon</span>
+          </Link>
+          <span className="font-body text-xs text-white/55">
+            {story.telecast?.step === "ready" ? "Fact-checked broadcast ready" : "Fact-checked before it airs"}
+          </span>
         </div>
       </div>
     </article>

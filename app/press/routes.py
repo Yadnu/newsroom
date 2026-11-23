@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.press import telecast as tc
 from app.press.feed import PressCursor, PressStory, press_stories
 
 router = APIRouter(prefix="/press", tags=["press"])
@@ -37,3 +38,22 @@ async def list_stories(
         stories=stories,
         next=PressCursor(latest_at=last.latest_at, id=last.id) if last else None,
     )
+
+
+@router.post("/stories/{story_id}/telecast", status_code=202)
+async def request_telecast(story_id: UUID) -> tc.TelecastView:
+    """Broadcast one story: written, fact-checked, cleared and voiced in the background. Returns
+    a recent or running telecast of the story if any. Poll ``GET /press/telecasts/{id}``."""
+    try:
+        return await tc.start_telecast(story_id)
+    except tc.StoryNotFoundError as e:
+        raise HTTPException(404, "unknown story, or fewer than 2 live sources") from e
+
+
+@router.get("/telecasts/{telecast_id}")
+async def get_telecast(telecast_id: UUID) -> tc.TelecastView:
+    """Progress (``step``), and when ``ready`` the audio URL, line timings and verdict counts."""
+    try:
+        return await tc.telecast_view(telecast_id)
+    except tc.TelecastNotFoundError as e:
+        raise HTTPException(404, "unknown telecast") from e

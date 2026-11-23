@@ -3,8 +3,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.metadata import version
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.anchor.routes import router as anchor_router
@@ -37,6 +39,10 @@ app = FastAPI(title="Newsroom", lifespan=lifespan)
 app.include_router(archive_router)
 app.include_router(anchor_router)
 app.include_router(press_router)
+# Telecast audio (task 8.3): WAV files under media_dir, with HTTP Range for seeking.
+app.mount(
+    "/media", StaticFiles(directory=Path(get_settings().media_dir), check_dir=False), name="media"
+)
 
 
 @app.get("/health")

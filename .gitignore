@@ -5,3 +5,6 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# Telecast audio (task 8.3)
+var/

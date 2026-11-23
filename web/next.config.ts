@@ -8,7 +8,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${API_URL}/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${API_URL}/:path*` },
+      // Telecast audio (task 8.3): same origin, so the Web Audio analyser may read it.
+      { source: "/media/:path*", destination: `${API_URL}/media/:path*` },
+    ];
   },
 };
 

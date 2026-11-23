@@ -6,6 +6,8 @@ export type PressStory = S["PressStory"];
 export type PressSource = S["PressSource"];
 export type PressPage = S["PressPage"];
 export type PressCursor = S["PressCursor"];
+export type TelecastView = S["TelecastView"];
+export type TelecastLine = S["TelecastLine"];
 
 export class ApiError extends Error {
   constructor(
@@ -29,10 +31,11 @@ export async function apiGet<T>(
   path: string,
   query: Query = {},
   fetcher: typeof fetch = fetch,
+  method: "GET" | "POST" = "GET",
 ): Promise<T> {
   let res: Response;
   try {
-    res = await fetcher(apiUrl(path, query), { headers: { accept: "application/json" } });
+    res = await fetcher(apiUrl(path, query), { method, headers: { accept: "application/json" } });
   } catch {
     throw new ApiError(0, path);
   }
@@ -53,4 +56,19 @@ export function pressPage(after: PressCursor | null, fetcher?: typeof fetch): Pr
     },
     fetcher,
   );
+}
+
+/** Ask for a telecast of a story (reuses a recent or running one). */
+export function startTelecast(storyId: string, fetcher?: typeof fetch): Promise<TelecastView> {
+  return apiGet<TelecastView>(`/press/stories/${storyId}/telecast`, {}, fetcher, "POST");
+}
+
+export function getTelecast(id: string, fetcher?: typeof fetch): Promise<TelecastView> {
+  return apiGet<TelecastView>(`/press/telecasts/${id}`, {}, fetcher);
+}
+
+export const TELECAST_STEPS = ["queued", "writing", "checking", "clearing", "voicing"] as const;
+
+export function isRunning(step: string): boolean {
+  return (TELECAST_STEPS as readonly string[]).includes(step);
 }

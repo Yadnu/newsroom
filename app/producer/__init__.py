@@ -3,6 +3,12 @@
 Node: context/nodes/producer.md
 """
 
-from app.producer.rundown import NoStoriesError, Rundown, RundownItem, build_rundown
+from app.producer.rundown import (
+    NoStoriesError,
+    Rundown,
+    RundownItem,
+    build_rundown,
+    rundown_for_story,
+)
 
-__all__ = ["NoStoriesError", "Rundown", "RundownItem", "build_rundown"]
+__all__ = ["NoStoriesError", "Rundown", "RundownItem", "build_rundown", "rundown_for_story"]

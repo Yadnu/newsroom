@@ -721,6 +721,16 @@
             ],
             "title": "Summary"
           },
+          "telecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelecastRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -958,6 +968,165 @@
           "errors"
         ],
         "title": "Stage",
+        "type": "object"
+      },
+      "TelecastLine": {
+        "properties": {
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "start_ms",
+          "end_ms"
+        ],
+        "title": "TelecastLine",
+        "type": "object"
+      },
+      "TelecastRef": {
+        "description": "The story's latest telecast (task 8.3).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "step"
+        ],
+        "title": "TelecastRef",
+        "type": "object"
+      },
+      "TelecastView": {
+        "properties": {
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "briefing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Briefing Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TelecastLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PressStory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "story_id": {
+            "format": "uuid",
+            "title": "Story Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verdicts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Verdicts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "story_id",
+          "briefing_id",
+          "step",
+          "error",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TelecastView",
         "type": "object"
       },
       "TracedClaim": {
@@ -1466,6 +1635,94 @@
           }
         },
         "summary": "List Stories",
+        "tags": [
+          "press"
+        ]
+      }
+    },
+    "/press/stories/{story_id}/telecast": {
+      "post": {
+        "description": "Broadcast one story: written, fact-checked, cleared and voiced in the background. Returns\na recent or running telecast of the story if any. Poll ``GET /press/telecasts/{id}``.",
+        "operationId": "request_telecast_press_stories__story_id__telecast_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelecastView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Telecast",
+        "tags": [
+          "press"
+        ]
+      }
+    },
+    "/press/telecasts/{telecast_id}": {
+      "get": {
+        "description": "Progress (``step``), and when ``ready`` the audio URL, line timings and verdict counts.",
+        "operationId": "get_telecast_press_telecasts__telecast_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "telecast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Telecast Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelecastView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Telecast",
         "tags": [
           "press"
         ]

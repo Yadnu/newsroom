@@ -5,8 +5,8 @@ status: in-progress
 phase: 2
 code: app/producer/
 depends_on: [reporter, caller, standards-desk, archive]
-feeds: [writer, anchor]
-decisions: [0020, 0021, 0023]
+feeds: [writer, anchor, press]
+decisions: [0020, 0021, 0023, 0027]
 ---
 
 # producer
@@ -48,6 +48,10 @@ Orchestrates the show: picks stories, orders the rundown, budgets time, and rout
   `NEWSROOM_DATABASE_URL`, `NEWSROOM_GROQ_API_KEY`, `NEWSROOM_VOYAGE_API_KEY`; uploads `brief.json` + logs, writes a job summary.
 - `async def handle_call(question: CallerQuestion) -> CallerAnswerPlan`: pause, run a fast Reporter -> Writer -> Editor loop, resume.
 
+- `async def rundown_for_story(story_id, seconds=producer_seconds_per_story) -> Rundown` (task 8.3): a one-story
+  rundown with its own briefing (`target_minutes` = seconds / 60) and the story's live sources, newest first; not
+  limited to fresh stories. `NoStoriesError` if unknown or below `producer_min_sources`. Used by telecasts.
+
 ## Invariants
 
 - Only stories inside the freshness window enter a rundown.
@@ -80,3 +84,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-19: answers fall back to live search when the briefing's sources don't cover them (task 5.4).
 - 2026-11-21: `newsroom brief` airs queued corrections first (task 6.2, decision 0023).
 - 2026-11-23: `newsroom` switches cp1252 stdout/stderr to UTF-8 (`utf8_streams`), so `brief` no longer crashes printing to a Windows pipe.
+- 2026-11-23: `rundown_for_story()` for Press telecasts (task 8.3, decision 0027).
