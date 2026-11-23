@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-9.3 telecasts as ARQ worker jobs, in-process fallback
+9.4 MP3 telecast audio
 
 ## Tasks
 
@@ -70,7 +70,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ### Phase 9: Press follow-ups (plan approved 2026-11-23)
 - [x] 9.1 telecast audio retention (cleanup job, `expired` telecasts)
 - [x] 9.2 refresh summaries when a story gains sources
-- [ ] 9.3 telecasts as ARQ worker jobs, in-process fallback
+- [x] 9.3 telecasts as ARQ worker jobs, in-process fallback
 - [ ] 9.4 MP3 telecast audio
 - [ ] 9.5 categories (feed tags, filter, category bar)
 - [ ] 9.6 spoken and typed questions during a telecast
@@ -101,6 +101,6 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 9.2. Summaries are rewritten when a story gains `press_summary_refresh_growth` (2) live sources (`stories.summary_sources`, migration `b3d5f7a9c124` applied to the dev DB); new stories first; a failed refresh records the count. Live: 3 of 15 stories due for refresh; the 7-source one refreshed and dropped off the list. Branch `phase9/summary-refresh` on `phase9/retention` (#39). Earlier: 9.1 audio retention.
+- Done: 9.3. Telecasts run as ARQ `telecast_job` when Redis answers and a worker health key is fresh, else in-process (`press_telecast_runner`); per-story advisory lock on start; web start deduplicated. Live: `.env` points at a cloud Redis; with no worker the API fell back in-process (`press.no_worker`); with `arq app.worker.WorkerSettings` running, the worker picked jobs up within 1 s; 3 concurrent POSTs gave one telecast. Also fixed: OpenRouter 402 (no `max_tokens`; gateway now caps per task). Live jobs then failed on Groq's daily cap (gpt-oss-120b TPD 200k used): draft's fallback is the same Groq model. Branch `phase9/worker-telecasts` on `phase9/summary-refresh` (#40).
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 9.2 to 9.6 per the Phase 9 plan (summary refresh, worker jobs, MP3, categories, questions during telecasts).
+- Next: 9.4 to 9.6 per the Phase 9 plan (MP3, categories, questions during telecasts). Groq's daily cap is spent until it resets; draft/classify/answer fallbacks could also go to OpenRouter (not changed).

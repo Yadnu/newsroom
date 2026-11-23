@@ -47,6 +47,10 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
 - Retention (task 9.1, `media.py`): `cleanup_media(days=press_telecast_retention_days (7; 0 = keep), dry_run)` ->
   `MediaCleanup{expired, orphans, bytes_freed}`; older audio deleted, telecast `step='expired'`, `audio_path` NULL;
   unreferenced files over 1 h old deleted. Worker `cleanup_job` daily 03:15; CLI `newsroom cleanup-media`.
+- Runner (task 9.3, `queue.py`): `dispatch()` per `press_telecast_runner` (auto|worker|inprocess); auto queues
+  `telecast_job` (worker, timeout 900 s, one try) only if Redis answers and the worker health key is fresh
+  (`WORKER_HEALTH_S` 15), else `schedule()` in-process. `start_telecast` holds `pg_advisory_xact_lock` per story
+  around reuse-or-create.
 
 ## Invariants
 
@@ -78,3 +82,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 - 2026-11-23: `TelecastLine.words` from `script_lines.audio_words` (task 8.4).
 - 2026-11-23: telecast audio retention: `cleanup_media`, daily worker job, `newsroom cleanup-media`, `expired` step (task 9.1, decision 0029).
 - 2026-11-23: summaries refreshed when a story gains 2+ live sources (task 9.2).
+- 2026-11-23: telecasts run on the ARQ worker when one is alive, else in-process; per-story start lock (task 9.3).

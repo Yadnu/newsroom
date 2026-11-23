@@ -14,6 +14,7 @@ from app.archive import start_archive, stop_archive
 from app.archive.routes import router as archive_router
 from app.config import get_settings
 from app.log import configure_logging, get_logger
+from app.press.queue import close_pool
 from app.press.routes import router as press_router
 
 
@@ -32,6 +33,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await close_pool()
         await stop_archive()
 
 

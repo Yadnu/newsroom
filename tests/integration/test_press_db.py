@@ -297,3 +297,24 @@ async def test_summaries_are_refreshed_once_a_story_grows(db: AsyncEngine) -> No
         assert (
             await conn.execute(text("SELECT summary FROM stories WHERE id = :i"), {"i": grown})
         ).scalar_one() == "old"
+
+
+async def test_concurrent_starts_for_one_story_make_one_telecast(
+    db: AsyncEngine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import asyncio
+
+    monkeypatch.setattr(tc, "media_dir", lambda: tmp_path)
+    sid = await _story(db, "double click", [("A", 1), ("B", 2)])
+    started: list[UUID] = []
+    views = await asyncio.gather(
+        *(tc.start_telecast(sid, runner=lambda t, s: started.append(t)) for _ in range(3))
+    )
+    assert len({v.id for v in views}) == 1 and len(started) == 1
+    async with db.connect() as conn:
+        n = (
+            await conn.execute(
+                text("SELECT count(*) FROM telecasts WHERE story_id = :s"), {"s": sid}
+            )
+        ).scalar_one()
+    assert n == 1
