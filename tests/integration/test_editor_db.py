@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def _judgement(passed: bool) -> str:
     checks = {
         n: {"passed": passed or n != "supported", "note": "n"}
-        for n in ("supported", "faithful", "attributed", "fresh", "corroborated")
+        for n in ("supported", "faithful", "attributed", "fresh", "corroborated", "consistent")
     }
     return json.dumps(
         {**checks, "sensitive": False, "evidence": ["E1"], "confidence": 0.8, "reason": "ok"}

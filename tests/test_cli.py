@@ -123,7 +123,9 @@ def test_top_must_be_positive(calls: dict[str, Any]) -> None:
 
 # ---- brief ----------------------------------------------------------------------------------
 
-CHECKS_OK = dict.fromkeys(("supported", "faithful", "attributed", "fresh", "corroborated"), True)
+CHECKS_OK = dict.fromkeys(
+    ("supported", "faithful", "attributed", "fresh", "corroborated", "consistent"), True
+)
 
 
 def _verdict(claim: DraftClaim, verdict: Verdict, evidence: list[EvidencePassage]) -> ClaimVerdict:
