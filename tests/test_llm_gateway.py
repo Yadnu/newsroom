@@ -497,3 +497,14 @@ def test_provider_of(model: str, expected: tuple[str, str]) -> None:
 def test_fallback_model_must_be_priced() -> None:
     with pytest.raises(LLMConfigError, match="no price"):
         _gw(Recorder(), llm_fallbacks={"draft": "unpriced-model"})
+
+
+async def test_every_request_caps_its_output_tokens() -> None:
+    """OpenRouter reserves the whole context without a cap and answers 402 (task 9.3)."""
+    ok = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(_chat(ok), _chat(ok), _chat(ok))
+    gw = _gw(rec, llm_max_tokens={"judge": 3000, "draft": 1500})
+    await gw.complete("judge", MSGS, Verdict)
+    await gw.complete("draft", MSGS, Verdict)
+    await gw.complete("classify", MSGS, Verdict)  # not configured: the default
+    assert [rec.body(i)["max_tokens"] for i in range(3)] == [3000, 1500, 4096]

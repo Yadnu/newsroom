@@ -33,6 +33,9 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
   `langfuse_public_key` and `langfuse_secret_key` are both set. Settings `langfuse_host`,
   `langfuse_capture_content` (default true; false = usage only), `langfuse_flush_interval_s` (5),
   `langfuse_batch_size` (50). Langfuse trace id = the gateway's archive span id; `sessionId` = briefing id.
+- Output cap `Settings.llm_max_tokens` (task -> tokens, reasoning included; draft/judge 4096, answer 2048, classify
+  1024; default 4096) sent as `max_tokens` on every chat request. Without it OpenRouter reserves the whole context
+  against the account credit and answers 402 (found live 2026-11-23, task 9.3).
 - Routing table `Settings.llm_routes` (task -> model) and prices `Settings.llm_prices`
   (model -> USD per 1M in/out). Both can be overridden from env as JSON.
 - Fallbacks `Settings.llm_fallbacks` (task -> model; default draft/classify/answer -> `gpt-oss-120b`, judge ->
@@ -84,3 +87,4 @@ allows 8000 TPM on `gpt-oss-120b` and a judge call is about 4K tokens, so at `ed
 - 2026-11-19: Langfuse export of chat and embed calls over the ingestion API (task 3.2, decision 0005).
 - 2026-11-19: embed pacing is a sliding 60 s window, so bursts within the limits go out at once (task 5.3).
 - 2026-11-23: OpenRouter as a second chat host; judge fallback to the same model there; 429 fails over at once (task 7.1, decision 0025).
+- 2026-11-23: `max_tokens` cap per task; fixes OpenRouter 402 on full judge prompts (task 9.3).
