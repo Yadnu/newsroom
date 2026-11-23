@@ -73,13 +73,14 @@ None: 7.2 is done. Open items are in the handoff below.
 - 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 22/24 attacks, 0/9 false blocks
   (2 known gaps); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
   attacks, 2/5 controls flagged.
-- 2026-11-21, contradictions_v1 (28 claims), judge prompt `ca7ed1b1`: 24/28 judged (4 rate-limited), contradiction
-  catch 1.00 (11/11), attributed disagreements 6/6 approved, precision 0.786, false flag rate 0.231 (3/13, all
-  over-strict `attributed`). judge_v1 re-run on `ca7ed1b1` incomplete (6/130 judged before it was stopped).
+- 2026-11-23, judge_v1 (130/130), prompt `ca7ed1b1` (6 checks): catch rate 1.00 (30/30), precision 0.904, recall
+  0.971, false flag rate 0.113; 107 cases answered by OpenRouter after a Groq 429 (decision 0025).
+- 2026-11-23, contradictions_v1 (28/28), prompt `ca7ed1b1`: contradiction catch 1.00 (12/12), attributed
+  disagreements 6/6 approved, precision 0.706, false flag rate 0.313 (5/16, all over-strict `attributed`).
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 7.2. The ARQ worker runs `recheck_job` (retraction recheck) every `reporter_recheck_every_hours` (6) at minute 30; 0 turns it off. Branch `phase7/recheck-schedule` on `phase7/judge-fallback` (#30). Before it, 7.1: OpenRouter as the judge's fallback host (decision 0025); the live probe through OpenRouter passed (3/3 cases, strict JSON, 3-5 s).
-- Open: judge_v1 re-run on prompt `ca7ed1b1` was in progress when this was written (82/130 judged, 65 of them by OpenRouter after a Groq 429); its numbers go on the 7.1 branch. contradictions_v1 is complete (28/28). Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: record the judge_v1 results; the remaining items need keys (Langfuse, Tavily/Firecrawl) or repo secrets.
+- Done: 7.2. The ARQ worker runs `recheck_job` (retraction recheck) every `reporter_recheck_every_hours` (6) at minute 30; 0 turns it off. Branch `phase7/recheck-schedule` on `phase7/judge-fallback` (#30). Before it, 7.1: OpenRouter as the judge's fallback host (decision 0025), checked live: a direct probe judged 3/3 cases in strict JSON (3-5 s), and judge_v1 (130/130, 107 via OpenRouter) and contradictions_v1 (28/28) completed with no pending cases.
+- Open: over-strict `attributed` is the main judge false flag. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
+- Next: nothing left that needs no keys; candidates are the `attributed` false flags (judge prompt) or Langfuse once keys are in `.env`.
