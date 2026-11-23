@@ -448,6 +448,25 @@ def recheck(
         _print_retraction(r)
 
 
+@app.command("cleanup-media")
+def cleanup_media_cmd(
+    days: Annotated[
+        float | None, typer.Option(min=0, help="Retention in days (default: the setting).")
+    ] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Count only; delete nothing.")] = False,
+) -> None:
+    """Delete telecast audio older than the retention, and orphan audio files (task 9.1)."""
+    from app.press.media import cleanup_media
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    r = _run(lambda: cleanup_media(days, dry_run=dry_run))
+    verb = "would remove" if dry_run else "removed"
+    console.print(
+        f"{verb} audio of {r.expired} telecasts and {r.orphans} orphan files"
+        f" ({r.bytes_freed / 1_000_000:.1f} MB)"
+    )
+
+
 @app.command()
 def summarize(
     limit: Annotated[int, typer.Option(min=1, max=100, help="Stories to summarize.")] = 10,

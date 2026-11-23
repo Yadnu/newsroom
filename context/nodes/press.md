@@ -6,7 +6,7 @@ phase: 8
 code: app/press/
 depends_on: [reporter, writer, editor, standards-desk, producer, anchor, data-model, archive]
 feeds: [web]
-decisions: [0026, 0027, 0028]
+decisions: [0026, 0027, 0028, 0029]
 ---
 
 # press
@@ -41,6 +41,9 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
   `press_telecast_stale_minutes` (20) reads `failed` ("interrupted"). 404 unknown.
 - `/media` (app/main.py): `StaticFiles(media_dir)` with HTTP Range. Settings `media_dir` (`var/media`),
   `press_telecast_seconds` (45).
+- Retention (task 9.1, `media.py`): `cleanup_media(days=press_telecast_retention_days (7; 0 = keep), dry_run)` ->
+  `MediaCleanup{expired, orphans, bytes_freed}`; older audio deleted, telecast `step='expired'`, `audio_path` NULL;
+  unreferenced files over 1 h old deleted. Worker `cleanup_job` daily 03:15; CLI `newsroom cleanup-media`.
 
 ## Invariants
 
@@ -71,3 +74,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 - 2026-11-23: node created; Press feed API, RSS thumbnails, crawler summaries (task 8.2, decision 0026).
 - 2026-11-23: telecasts: `POST /press/stories/{id}/telecast`, `GET /press/telecasts/{id}`, `/media` (task 8.3, decision 0027).
 - 2026-11-23: `TelecastLine.words` from `script_lines.audio_words` (task 8.4).
+- 2026-11-23: telecast audio retention: `cleanup_media`, daily worker job, `newsroom cleanup-media`, `expired` step (task 9.1, decision 0029).

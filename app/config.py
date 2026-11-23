@@ -171,6 +171,8 @@ class Settings(BaseSettings):
     press_telecast_concurrency: int = Field(default=2, ge=1, le=8)
     press_telecast_reuse_hours: float = Field(default=6.0, ge=0)
     press_telecast_stale_minutes: int = Field(default=20, ge=1)
+    # Audio retention (task 9.1): telecast audio older than this is deleted daily. 0 = keep forever.
+    press_telecast_retention_days: float = Field(default=7.0, ge=0)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)

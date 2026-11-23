@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-None: Phase 8 (frontend) is done. Open items are in the handoff below.
+9.2 refresh summaries when a story gains sources
 
 ## Tasks
 
@@ -67,6 +67,14 @@ None: Phase 8 (frontend) is done. Open items are in the handoff below.
 - [x] 8.5 bumper, lower thirds, ticker, B-roll, outro
 - [x] 8.6 responsive, reduced motion, error states, tests, README
 
+### Phase 9: Press follow-ups (plan approved 2026-11-23)
+- [x] 9.1 telecast audio retention (cleanup job, `expired` telecasts)
+- [ ] 9.2 refresh summaries when a story gains sources
+- [ ] 9.3 telecasts as ARQ worker jobs, in-process fallback
+- [ ] 9.4 MP3 telecast audio
+- [ ] 9.5 categories (feed tags, filter, category bar)
+- [ ] 9.6 spoken and typed questions during a telecast
+
 ## Open questions (defaults in use until answered)
 
 - Topic scope for v1. Default: AI and tech news.
@@ -93,6 +101,6 @@ None: Phase 8 (frontend) is done. Open items are in the handoff below.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 8.6, closing Phase 8. Player phone layout (picture + `PortraitPanel`, compact controls), image and API error states, captions-only fallback verified with blocked audio, hook tests (Vitest 57), README section on the web app and running it with the backend, new demo GIF (feed + telecast). Branch `phase8/hardening` on `phase8/graphics` (#37). Phase 8 PRs: #33 plan, #34 feed, #35 telecasts, #36 anchor, #37 graphics, this one.
+- Done: 9.1. Telecast audio retention (decision 0029): `cleanup_media()` deletes audio older than `press_telecast_retention_days` (7) and orphan files, marks telecasts `expired` (migration `a7c1e4f9d203`, applied to the dev DB); worker job daily 03:15; `newsroom cleanup-media [--days] [--dry-run]` (dry run on the dev DB: 0 at 7 days, 8 telecasts / 8.3 MB at ~0). Branch `phase9/retention` on `phase8/hardening` (#38).
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: no task left in STATE. Candidates: telecast audio cleanup (var/media grows), refresh summaries when a story gains sources, MP3 audio, categories once the topic scope widens, push-to-talk questions during telecasts.
+- Next: 9.2 to 9.6 per the Phase 9 plan (summary refresh, worker jobs, MP3, categories, questions during telecasts).

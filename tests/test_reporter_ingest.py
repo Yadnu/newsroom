@@ -268,12 +268,13 @@ async def test_sends_user_agent() -> None:
 def test_worker_schedules_ingest_and_recheck() -> None:
     from app.worker import WorkerSettings, ingest_job, ingest_minutes, recheck_job
 
-    ingest, recheck = WorkerSettings.cron_jobs
+    ingest, recheck, cleanup = WorkerSettings.cron_jobs
     assert ingest.coroutine is ingest_job
     assert ingest.run_at_startup and ingest.unique
     assert recheck.coroutine is recheck_job and recheck.unique and not recheck.run_at_startup
     assert recheck.hour == {0, 6, 12, 18} and recheck.minute == 30
     assert recheck_job in WorkerSettings.functions
+    assert cleanup.hour == {3} and cleanup.minute == 15 and cleanup.unique
     assert ingest_minutes(15) == {0, 15, 30, 45}
     assert ingest_minutes(20) == {0, 20, 40}
 
@@ -284,7 +285,11 @@ def test_recheck_schedule_can_be_turned_off(monkeypatch: pytest.MonkeyPatch) -> 
     assert worker.recheck_hours(8) == {0, 8, 16}
     assert worker.recheck_hours(0) == set()
     monkeypatch.setattr(
-        worker, "get_settings", lambda: Settings(_env_file=None, reporter_recheck_every_hours=0)
+        worker,
+        "get_settings",
+        lambda: Settings(
+            _env_file=None, reporter_recheck_every_hours=0, press_telecast_retention_days=0
+        ),
     )
     assert [j.coroutine for j in worker.cron_jobs()] == [worker.ingest_job]
 

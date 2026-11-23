@@ -256,3 +256,20 @@ async def test_start_reuses_running_and_replaces_stale_or_failed(
         await tc.start_telecast(uuid4(), runner=runner)
     with pytest.raises(tc.TelecastNotFoundError):
         await tc.telecast_view(uuid4())
+
+
+async def test_expired_rows_and_mark_expired(db: AsyncEngine) -> None:
+    from app.press import media
+
+    sid = await _story(db, "old telecast", [("A", 1), ("B", 2)])
+    old = await _telecast(
+        db, sid, "ready", minutes_ago=60 * 24 * 10, audio_path="telecasts/old.wav"
+    )
+    await _telecast(db, sid, "ready", minutes_ago=5, audio_path="telecasts/new.wav")
+    rows = await media.expired_rows(utcnow() - timedelta(days=7))
+    assert rows == [(old, "telecasts/old.wav")]
+    assert await media.referenced_paths() == {"telecasts/old.wav", "telecasts/new.wav"}
+    await media.mark_expired([old])
+    view = await tc.telecast_view(old)
+    assert view.step == "expired" and view.audio_url is None
+    assert await media.referenced_paths() == {"telecasts/new.wav"}
