@@ -72,13 +72,14 @@ None: 7.1 is done. Open items are in the handoff below.
 - 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 22/24 attacks, 0/9 false blocks
   (2 known gaps); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
   attacks, 2/5 controls flagged.
-- 2026-11-21, contradictions_v1 (28 claims), judge prompt `ca7ed1b1`: 24/28 judged (4 rate-limited), contradiction
-  catch 1.00 (11/11), attributed disagreements 6/6 approved, precision 0.786, false flag rate 0.231 (3/13, all
-  over-strict `attributed`). judge_v1 re-run on `ca7ed1b1` incomplete (6/130 judged before it was stopped).
+- 2026-11-23, judge_v1 (130/130), prompt `ca7ed1b1` (6 checks): catch rate 1.00 (30/30), precision 0.904, recall
+  0.971, false flag rate 0.113; 107 cases answered by OpenRouter after a Groq 429 (decision 0025).
+- 2026-11-23, contradictions_v1 (28/28), prompt `ca7ed1b1`: contradiction catch 1.00 (12/12), attributed
+  disagreements 6/6 approved, precision 0.706, false flag rate 0.313 (5/16, all over-strict `attributed`).
 
 ## Handoff
 
 - Who worked last: Claude Code
 - Done: 7.1. The gateway knows a second chat host: `openrouter:<model id>` goes to OpenRouter. The judge falls back to the same `gpt-oss-120b` there when Groq fails, and with a usable fallback a 429 fails over at once instead of ~75 s of retries (decision 0025). The judge eval records the answering model per case. Branch `phase7/judge-fallback` stacks on #29, #28, #27, #25, #24; none merged.
-- Open: no `NEWSROOM_OPENROUTER_API_KEY` in `.env` yet, so the OpenRouter path is unit tested only; with the key, probe it and re-run judge_v1 on prompt `ca7ed1b1` (6/130 judged) and the 4 pending contradictions_v1 cases. Latency samples are small. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (add the OpenRouter key there too). Langfuse untested live.
-- Next: add the OpenRouter key, then the live check and eval re-runs above.
+- Open: OpenRouter key set and checked live: a direct probe judged 3/3 eval cases in strict JSON (3-5 s), and the full judge_v1 and contradictions_v1 runs completed with no pending cases. Over-strict `attributed` is the main false flag. Latency samples are small. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
+- Next: schedule the retraction recheck (7.2).

@@ -64,10 +64,9 @@ the judge prompt now says satire, parody and humor are not evidence (`30f59e69`)
 stale, injected passages and claims), 2 of 5 controls got rewrite (over-strict `attributed`).
 Contradictions (task 6.3, decision 0024): sixth check `consistent` in the same judge call; `editor/judge_claim`
 spans carry `conflicts` (outlets, note). Eval set `evals/data/contradictions_v1.json` (28 claims, 8 stories),
-prompt `ca7ed1b1`: 24/28 judged (4 rate-limited), contradiction catch 1.00 (11/11), attributed versions 6/6
-approved; 3 of 7 agreed facts got rewrite, all over-strict `attributed`, none from `consistent`. judge_v1 re-run
-on `ca7ed1b1` was cut short (6/130 judged: Groq TPM, then the run was stopped), so judge_v1 numbers are still
-from `30f59e69`.
+prompt `ca7ed1b1` (2026-11-23, 28/28): contradiction catch 1.00 (12/12), attributed versions 6/6 approved;
+5 of 10 agreed facts got rewrite, all over-strict `attributed`, none from `consistent`. judge_v1 on `ca7ed1b1`
+complete (130/130; 107 answered by OpenRouter after a Groq 429, decision 0025), back to the `dad2a081` numbers.
 
 ## Open questions
 
@@ -79,7 +78,8 @@ from `30f59e69`.
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | `dad2a081` (gpt-oss-120b), judge_v1 | 1.00 (30/30) | 0.904 | 0.971 |
 | 2026-11-20 | `30f59e69` (gpt-oss-120b), judge_v1, 120/130 judged (10 rate-limited) | 1.00 (27/27) | 0.881 | 0.952 |
-| 2026-11-21 | `ca7ed1b1` (gpt-oss-120b), contradictions_v1, 24/28 judged; contradiction catch 1.00 (11/11) | - | 0.786 | 1.00 |
+| 2026-11-23 | `ca7ed1b1` (gpt-oss-120b, Groq + OpenRouter), judge_v1, 130/130 | 1.00 (30/30) | 0.904 | 0.971 |
+| 2026-11-23 | `ca7ed1b1`, contradictions_v1, 28/28; contradiction catch 1.00 (12/12) | - | 0.706 | 1.00 |
 
 ## Changelog
 
