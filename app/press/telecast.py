@@ -49,11 +49,31 @@ class TelecastNotFoundError(LookupError):
     pass
 
 
+class TelecastWord(BaseModel):
+    text: str
+    start_ms: int
+    end_ms: int
+
+
 class TelecastLine(BaseModel):
     id: UUID
     text: str
     start_ms: int
     end_ms: int
+    words: list[TelecastWord] = []  # from the TTS (task 8.4); empty if it gave none
+
+
+def words_of(raw: object) -> list[TelecastWord]:
+    """``script_lines.audio_words`` ([[word, start, end], ...]) -> words; tolerant of bad rows."""
+    out: list[TelecastWord] = []
+    if isinstance(raw, list):
+        for w in raw:
+            if isinstance(w, list) and len(w) == 3 and isinstance(w[0], str):
+                try:
+                    out.append(TelecastWord(text=w[0], start_ms=int(w[1]), end_ms=int(w[2])))
+                except (TypeError, ValueError):
+                    continue
+    return out
 
 
 class TelecastView(BaseModel):
@@ -235,7 +255,13 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
             view.audio_url = f"/media/{row.audio_path}"
             view.duration_ms = row.duration_ms
             lines = await conn.execute(
-                select(_lines.c.id, _lines.c.text, _lines.c.audio_start_ms, _lines.c.audio_end_ms)
+                select(
+                    _lines.c.id,
+                    _lines.c.text,
+                    _lines.c.audio_start_ms,
+                    _lines.c.audio_end_ms,
+                    _lines.c.audio_words,
+                )
                 .where(
                     _lines.c.briefing_id == view.briefing_id,
                     _lines.c.audio_start_ms.is_not(None),
@@ -244,7 +270,13 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
                 .order_by(_lines.c.audio_start_ms)
             )
             view.lines = [
-                TelecastLine(id=r.id, text=r.text, start_ms=r.audio_start_ms, end_ms=r.audio_end_ms)
+                TelecastLine(
+                    id=r.id,
+                    text=r.text,
+                    start_ms=r.audio_start_ms,
+                    end_ms=r.audio_end_ms,
+                    words=words_of(r.audio_words),
+                )
                 for r in lines.all()
             ]
     view.story = await press_story(view.story_id)

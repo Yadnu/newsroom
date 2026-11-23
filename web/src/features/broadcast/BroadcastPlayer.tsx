@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { TelecastView } from "@/src/api/client";
 import { usePressFeed } from "@/src/api/press";
 import { useTelecast } from "@/src/api/telecast";
+import { useAmplitude } from "@/src/audio/useAmplitude";
 import { useShowClock } from "@/src/audio/useShowClock";
 import { buildBroadcastScript } from "@/src/broadcast/script";
 import { usePlayer } from "@/src/store/player";
@@ -67,6 +68,7 @@ function Show({
   const script = useMemo(() => buildBroadcastScript(telecast), [telecast]);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const show = useShowClock(script, script.audioUrl ? audio : null);
+  const amplitude = useAmplitude(audio, script.wordsEstimated && !show.audioFailed, show.playing);
   const { captions, muted, rate, toggleCaptions, toggleMuted } = usePlayer();
   const { setRate, toggle, seek, replay, time } = show;
 
@@ -108,7 +110,7 @@ function Show({
           aria-label={`Broadcast: ${script.title}`}
           className="relative aspect-video max-h-full w-full max-w-[calc((100vh-5.5rem)*16/9)]"
         >
-          <Stage script={script} time={show.time} captions={captions} />
+          <Stage script={script} time={show.time} captions={captions} amplitude={amplitude} />
           {show.blocked && (
             <button
               type="button"

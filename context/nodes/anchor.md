@@ -6,7 +6,7 @@ phase: 4
 code: app/anchor/
 depends_on: [standards-desk, producer, caller, archive]
 feeds: [web]
-decisions: [0004, 0016, 0017, 0020]
+decisions: [0004, 0016, 0017, 0020, 0028]
 ---
 
 # anchor
@@ -36,6 +36,11 @@ Voice output. Streams the cleared script as speech and records audio timestamps 
   `cartesia_model`) or `fake` (`FakeTTSService`: silent PCM, 60 ms per word). `AnchorConfigError` if misconfigured.
 - Settings: `anchor_sample_rate` 24000, `anchor_line_gap_ms` 300, `anchor_send_ahead_ms` 250, `anchor_line_timeout_s` 30.
 
+- Word timings (task 8.4, decision 0028): `LineTiming.words` = `(word, start_ms, end_ms)` on the audio clock, from
+  the TTS's word timestamps (`tts.take_words(tts, context_id)`; Cartesia via a recording subclass of Pipecat's
+  service, the fake TTS evenly every `FAKE_MS_PER_WORD`); `word_spans()` clamps them inside the line and in
+  order. `store_timings()` writes them to `script_lines.audio_words`.
+
 ## Invariants
 
 - Speaks only a `ClearedScript`; the type is the gate (decision 0016).
@@ -63,3 +68,4 @@ replaying line 0. Not yet: Cartesia cost accounting, word-level timestamps, the 
 - 2026-11-19: Pipecat pipeline, Cartesia + fake adapters, audio-clock timestamps, live WebSocket (task 4.2, decision 0017).
 - 2026-11-19: WebSocket carries Caller mic audio; pipeline shutdown is cancellation-safe (task 5.1).
 - 2026-11-19: answers spoken as interjections between briefing lines (task 5.3).
+- 2026-11-23: per-word audio timings from the TTS, stored in `script_lines.audio_words` (task 8.4, decision 0028).

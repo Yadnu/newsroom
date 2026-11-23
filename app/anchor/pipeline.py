@@ -10,6 +10,7 @@ interruption); ``resume()`` replays that line from its start.
 
 import asyncio
 import contextlib
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -31,7 +32,7 @@ from pipecat.workers.runner import WorkerRunner
 from sqlalchemy import text
 
 from app.anchor.session import VoiceSession
-from app.anchor.tts import make_tts
+from app.anchor.tts import WordTimes, make_tts, take_words
 from app.archive import span
 from app.config import Settings, get_settings
 from app.db.models import BriefingStatus
@@ -54,6 +55,19 @@ class LineTiming:
     order: int
     start_ms: int
     end_ms: int
+    words: tuple[tuple[str, int, int], ...] = ()  # (word, start_ms, end_ms) on the audio clock
+
+
+def word_spans(words: WordTimes, start_ms: int, end_ms: int) -> tuple[tuple[str, int, int], ...]:
+    """Word starts (seconds from the line's first audio) -> absolute (word, start, end) spans inside
+    the line; each word ends where the next begins, the last at the end of the line."""
+    if not words:
+        return ()
+    starts = [min(end_ms, max(start_ms, start_ms + round(s * 1000))) for _, s in words]
+    for i in range(1, len(starts)):
+        starts[i] = max(starts[i], starts[i - 1])  # keep them in order
+    ends = [*starts[1:], end_ms]
+    return tuple((w, s, e) for (w, _), s, e in zip(words, starts, ends, strict=True))
 
 
 @dataclass(slots=True)
@@ -79,6 +93,7 @@ class _Airing(FrameProcessor):
         self._line: ClearedLine | None = None
         self._ctx: str | None = None
         self._done: asyncio.Future[bool] | None = None
+        self.finished_ctx: str | None = None  # TTS context of the line that last played out
         self.line_start_ms: int | None = None
         self._extra: dict[str, Any] = {"kind": "script"}
         self.last_audio_at: float | None = None  # perf_counter of the last chunk sent
@@ -135,6 +150,7 @@ class _Airing(FrameProcessor):
             await self.play(frame.audio)
         elif isinstance(frame, TTSStoppedFrame):
             if self._ctx is not None and frame.context_id == self._ctx:
+                self.finished_ctx = self._ctx
                 self._finish(True)
         else:
             await self.push_frame(frame, direction)
@@ -228,15 +244,21 @@ async def speak(
                     if not ok:
                         ls.set(interrupted=True)
                         return None
-                    start = airing.line_start_ms
-                    timing = LineTiming(
-                        line.id,
-                        line.order,
-                        start if start is not None else airing.clock_ms,
-                        airing.clock_ms,
+                    start = (
+                        airing.line_start_ms
+                        if airing.line_start_ms is not None
+                        else airing.clock_ms
                     )
+                    end = airing.clock_ms
+                    words = word_spans(take_words(tts, airing.finished_ctx), start, end)
+                    timing = LineTiming(line.id, line.order, start, end, words)
                     report.lines.append(timing)
-                    ls.set(start_ms=timing.start_ms, end_ms=timing.end_ms, chars=len(line.text))
+                    ls.set(
+                        start_ms=timing.start_ms,
+                        end_ms=timing.end_ms,
+                        chars=len(line.text),
+                        words=len(words),
+                    )
                 await session.send_event(
                     {"type": "line_end", "line_id": str(line.id), "end_ms": timing.end_ms, **extra}
                 )
@@ -315,9 +337,15 @@ async def store_timings(briefing_id: UUID, timings: list[LineTiming], aired: boo
         for t in timings:
             await conn.execute(
                 text(
-                    "UPDATE script_lines SET audio_start_ms = :s, audio_end_ms = :e WHERE id = :i"
+                    "UPDATE script_lines SET audio_start_ms = :s, audio_end_ms = :e,"
+                    " audio_words = CAST(:w AS JSONB) WHERE id = :i"
                 ),
-                {"s": t.start_ms, "e": t.end_ms, "i": t.line_id},
+                {
+                    "s": t.start_ms,
+                    "e": t.end_ms,
+                    "w": json.dumps([list(w) for w in t.words]) if t.words else None,
+                    "i": t.line_id,
+                },
             )
         if aired:
             await conn.execute(

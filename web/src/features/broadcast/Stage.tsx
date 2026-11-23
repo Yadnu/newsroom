@@ -1,22 +1,35 @@
 "use client";
 
+import { useReducedMotion } from "framer-motion";
+
 import { safeHref } from "@/lib/format";
+import { mouthAt, withAmplitude, wordAt } from "@/src/broadcast/lipsync";
+import { poseAt } from "@/src/broadcast/pose";
 import { type BroadcastScript, activeCaption, inSpan, segmentsAt } from "@/src/broadcast/script";
 import { gradientFor } from "@/src/features/feed/look";
 
+import { StudioScene } from "./StudioScene";
+
 /**
- * The plain stage of the player skeleton (task 8.3): everything is positioned from the script and the
- * show time only. The studio, animated anchor, bumper and graphics replace these blocks in 8.4 and 8.5.
+ * The broadcast stage: everything is positioned from the script and the show time only. Studio,
+ * anchor and lip sync since task 8.4; bumper, lower thirds and outro graphics are polished in 8.5.
  */
 export function Stage({
   script,
   time,
   captions,
+  amplitude,
 }: {
   script: BroadcastScript;
   time: number;
   captions: boolean;
+  amplitude?: () => number | null;
 }) {
+  const reduced = Boolean(useReducedMotion());
+  const pose = poseAt(script, time, reduced);
+  const level = script.wordsEstimated && amplitude ? amplitude() : null;
+  const mouth = withAmplitude(mouthAt(script.words, time), level);
+  const word = wordAt(script.words, time);
   const at = segmentsAt(script, time);
   const caption = activeCaption(script, time);
   const image = script.imageUrl ? safeHref(script.imageUrl) : undefined;
@@ -24,9 +37,10 @@ export function Stage({
   const factcheck = script.lowerThirds.find((l) => l.kind === "factcheck");
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-b from-set-2 to-set">
+    <div className="relative h-full w-full overflow-hidden bg-set">
+      <StudioScene time={time} pose={pose} mouth={mouth} reducedMotion={reduced} />
       {at.includes("bumper") && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-set/85">
           <span className="font-display text-5xl uppercase tracking-[0.3em] text-white sm:text-7xl">
             Newsroom
           </span>
@@ -42,9 +56,6 @@ export function Stage({
 
       {(at.includes("body") || at.includes("outro")) && (
         <>
-          {/* Anchor placeholder: the animated anchor arrives in 8.4. */}
-          <div aria-hidden className="absolute bottom-0 left-[12%] h-[62%] w-[26%] rounded-t-full bg-white/10" />
-          <div aria-hidden className="absolute bottom-0 left-0 h-[18%] w-full bg-black/40" />
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element -- publisher thumbnail, any host
             <img
@@ -91,7 +102,14 @@ export function Stage({
           aria-live="off"
           className="absolute bottom-[4%] left-1/2 w-[86%] -translate-x-1/2 rounded bg-black/75 px-3 py-1.5 text-center font-body text-sm leading-snug text-white sm:text-lg"
         >
-          {caption.text}
+          {caption.words.length
+            ? caption.words.map((w, i) => (
+                <span key={i} className={w === word ? "text-gold" : undefined}>
+                  {i ? " " : ""}
+                  {w.text}
+                </span>
+              ))
+            : caption.text}
         </p>
       )}
     </div>

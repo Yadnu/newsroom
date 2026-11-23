@@ -8,6 +8,7 @@ export type PressPage = S["PressPage"];
 export type PressCursor = S["PressCursor"];
 export type TelecastView = S["TelecastView"];
 export type TelecastLine = S["TelecastLine"];
+export type TelecastWord = S["TelecastWord"];
 
 export class ApiError extends Error {
   constructor(

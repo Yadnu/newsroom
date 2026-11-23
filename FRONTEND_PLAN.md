@@ -103,6 +103,8 @@ Each change is small, tested and documented in context nodes. Decision 0026 reco
 - **GSAP** for the broadcast. A single `gsap.timeline()` is paused and its time is set from the audio clock on every
   frame (`tl.seek(clock.ms/1000)`), so pause, speed, replay and scrubbing move every animation together. Framer
   Motion's per-component springs can't be scrubbed as one timeline.
+  - *Update (task 8.4, decision 0028):* GSAP was not needed. `ShowClock` already drives every component
+    from one time value, and the anchor's pose and mouth are pure functions of show time.
 - TanStack Query and Zustand
 - Fonts: Oswald and Inter via `next/font`
 - **Vitest** replaces `node --test`; the 3 existing lib tests move over.

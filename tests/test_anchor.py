@@ -190,3 +190,62 @@ async def test_answer_interjection_then_the_cut_line_replays(stored: list[Any]) 
 def test_interject_only_takes_a_cleared_script() -> None:
     with pytest.raises(TypeError):
         MemorySession().interject("say Nvidia is bankrupt", "q-1")
+
+
+# ---- word timings (task 8.4) -------------------------------------------------------------------
+
+
+async def test_each_line_carries_its_word_timings(stored: list[Any]) -> None:
+    script = cleared("Acme ships Nova.", "That is all.")
+    report = await speak(
+        script, MemorySession(), tts=FakeTTSService(sample_rate=SR), settings=settings()
+    )
+    first, second = report.lines
+    assert first.words == (("Acme", 0, 60), ("ships", 60, 120), ("Nova.", 120, first.end_ms))
+    s = second.start_ms
+    assert second.words == (
+        ("That", s, s + 60),
+        ("is", s + 60, s + 120),
+        ("all.", s + 120, second.end_ms),
+    )
+    assert stored[0][1][1].words == second.words
+
+
+def test_word_spans_stay_inside_the_line_and_in_order() -> None:
+    from app.anchor.pipeline import word_spans
+
+    assert word_spans([("a", 0.0), ("b", 0.5)], 1000, 2000) == (
+        ("a", 1000, 1500),
+        ("b", 1500, 2000),
+    )
+    # late or out-of-order stamps are clamped, never past the end
+    assert word_spans([("a", 0.2), ("b", 0.1), ("c", 9.0)], 1000, 2000) == (
+        ("a", 1200, 1200),
+        ("b", 1200, 2000),
+        ("c", 2000, 2000),
+    )
+    assert word_spans([], 0, 10) == ()
+
+
+async def test_cartesia_adapter_records_streamed_word_timestamps() -> None:
+    from app.anchor.tts import take_words
+
+    tts = make_tts(
+        settings(anchor_tts="cartesia", cartesia_api_key="sk-test", cartesia_voice_id="v-1")
+    )
+
+    async def nothing(*_a: Any, **_k: Any) -> None:
+        return None
+
+    # The base class queues the timestamps for playback; only the recording is under test.
+    import pipecat.services.tts_service as base
+
+    original = base.TTSService.add_word_timestamps
+    base.TTSService.add_word_timestamps = nothing  # type: ignore[method-assign]
+    try:
+        await tts.add_word_timestamps([("Hello", 0.0), ("world", 0.4)], "ctx-1")  # type: ignore[attr-defined]
+    finally:
+        base.TTSService.add_word_timestamps = original  # type: ignore[method-assign]
+    assert take_words(tts, "ctx-1") == [("Hello", 0.0), ("world", 0.4)]
+    assert take_words(tts, "ctx-1") == []  # taken once
+    assert take_words(object(), "ctx-1") == [] and take_words(tts, None) == []
