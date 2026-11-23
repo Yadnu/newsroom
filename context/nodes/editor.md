@@ -67,6 +67,10 @@ spans carry `conflicts` (outlets, note). Eval set `evals/data/contradictions_v1.
 prompt `ca7ed1b1` (2026-11-23, 28/28): contradiction catch 1.00 (12/12), attributed versions 6/6 approved;
 5 of 10 agreed facts got rewrite, all over-strict `attributed`, none from `consistent`. judge_v1 on `ca7ed1b1`
 complete (130/130; 107 answered by OpenRouter after a Groq 429, decision 0025), back to the `dad2a081` numbers.
+`attributed` narrowed (task 7.3, prompt `f780696a`): attribution is required for opinions, allegations, performance
+claims and forecasts, not for concrete announced facts or official counts. judge_v1 false flags 7 -> 3, but
+`unattributed` 7/8 (s10-c5 missed) and `sensitive_single` 3/6. Red team judge 14/15 (j-stale3 approved once; 5/5
+caught on rerun), 1/5 controls flagged.
 
 ## Open questions
 
@@ -80,6 +84,8 @@ complete (130/130; 107 answered by OpenRouter after a Groq 429, decision 0025), 
 | 2026-11-20 | `30f59e69` (gpt-oss-120b), judge_v1, 120/130 judged (10 rate-limited) | 1.00 (27/27) | 0.881 | 0.952 |
 | 2026-11-23 | `ca7ed1b1` (gpt-oss-120b, Groq + OpenRouter), judge_v1, 130/130 | 1.00 (30/30) | 0.904 | 0.971 |
 | 2026-11-23 | `ca7ed1b1`, contradictions_v1, 28/28; contradiction catch 1.00 (12/12) | - | 0.706 | 1.00 |
+| 2026-11-23 | `f780696a` (narrower `attributed`), judge_v1, 130/130; false flag rate 0.048 | 1.00 (30/30) | 0.955 | 0.941 |
+| 2026-11-23 | `f780696a`, contradictions_v1, 28/28; contradiction catch 1.00 (12/12) | - | 0.923 | 1.00 |
 
 ## Changelog
 
@@ -93,3 +99,4 @@ complete (130/130; 107 answered by OpenRouter after a Groq 429, decision 0025), 
 - 2026-11-20: judge prompt: satire/parody is not evidence (task 6.1 red team); judge_v1 re-run.
 - 2026-11-21: sixth judge check `consistent` + `ClaimVerdict.conflicts`; contradictions_v1 eval (task 6.3, decision 0024).
 - 2026-11-23: judge falls back to gpt-oss-120b on OpenRouter; eval rows record the answering model (task 7.1, decision 0025).
+- 2026-11-23: `attributed` check narrowed to opinions, allegations, performance claims and forecasts (task 7.3).

@@ -69,13 +69,13 @@ Judge model `openai/gpt-oss-120b` on Groq. A claim is *flagged* when the judge d
 | Eval | Prompt | Result |
 | --- | --- | --- |
 | `judge_v1`: 100 labelled claims + 30 planted falsehoods | `dad2a081` | catch rate 1.00 (30/30), precision 0.904, recall 0.971, false flag rate 0.113 |
-| `judge_v1` with the satire rule and the `consistent` check | `ca7ed1b1` | catch rate 1.00 (30/30), precision 0.904, recall 0.971, false flag rate 0.113 |
-| `contradictions_v1`: 28 claims where outlets disagree | `ca7ed1b1` | contradicted claims caught 12/12, attributed disagreements approved 6/6, precision 0.706 |
+| `judge_v1` with the `consistent` check and the narrower `attributed` rule | `f780696a` | catch rate 1.00 (30/30), precision 0.955, recall 0.941, false flag rate 0.048 |
+| `contradictions_v1`: 28 claims where outlets disagree | `f780696a` | contradicted claims caught 12/12, attributed disagreements approved 5/6, precision 0.923 |
 | `redteam_v1`: Standards Desk rules (offline, gates CI) | - | 22/24 attacks blocked, 0/9 false blocks (2 known gaps) |
 | `redteam_v1`: full caller screen (rules + LLM) | - | 27/28 attacks blocked, 1/15 harmless questions blocked |
-| `redteam_v1`: judge on satire, stale and injected passages | `30f59e69` | 15/15 attacks caught, 2/5 controls flagged |
+| `redteam_v1`: judge on satire, stale and injected passages | `f780696a` | 14/15 attacks caught (the stale miss did not repeat in 5 reruns), 1/5 controls flagged |
 
-Most false flags are the judge asking for attribution on facts the outlets state plainly.
+Remaining misses: one claim stated as fact that only a company said, and sensitive claims cited by a single outlet.
 Results, per case, are in [`evals/results/`](evals/results/).
 
 ```bash

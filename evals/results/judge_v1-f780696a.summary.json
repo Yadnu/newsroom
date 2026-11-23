@@ -1,0 +1,63 @@
+{
+  "judged": 130,
+  "errors": 0,
+  "catch_rate": 1.0,
+  "planted": 30,
+  "contradiction_catch": null,
+  "recall": 0.9412,
+  "precision": 0.9552,
+  "false_flag_rate": 0.0484,
+  "accuracy": 0.9462,
+  "by_kind": {
+    "supported": {
+      "n": 62,
+      "correct": 59,
+      "accuracy": 0.9516
+    },
+    "unattributed": {
+      "n": 8,
+      "correct": 7,
+      "accuracy": 0.875
+    },
+    "distorted": {
+      "n": 9,
+      "correct": 9,
+      "accuracy": 1.0
+    },
+    "unsupported": {
+      "n": 11,
+      "correct": 11,
+      "accuracy": 1.0
+    },
+    "stale": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0
+    },
+    "sensitive_single": {
+      "n": 6,
+      "correct": 3,
+      "accuracy": 0.5
+    },
+    "planted": {
+      "n": 30,
+      "correct": 30,
+      "accuracy": 1.0
+    }
+  },
+  "missed_planted": [],
+  "false_flags": [
+    "s05-c3",
+    "s09-c4",
+    "s11-c4"
+  ],
+  "set": "judge_v1",
+  "prompt_version": "f780696a",
+  "model": "openai/gpt-oss-120b",
+  "models": {
+    "openai/gpt-oss-120b": 17,
+    "openrouter:openai/gpt-oss-120b": 113
+  },
+  "cases": 130,
+  "run_at": "2026-11-23T02:25:40+00:00"
+}

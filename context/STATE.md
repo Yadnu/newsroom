@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-None: 7.2 is done. Open items are in the handoff below.
+None: 7.3 is done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -57,6 +57,7 @@ None: 7.2 is done. Open items are in the handoff below.
 ### Phase 7: hardening
 - [x] 7.1 second judge provider: OpenRouter fallback for gpt-oss-120b, 429 fails over at once
 - [x] 7.2 schedule the retraction recheck in the ARQ worker
+- [x] 7.3 narrow the judge's `attributed` check (false flags 0.113 -> 0.048 on judge_v1)
 
 ## Open questions (defaults in use until answered)
 
@@ -77,10 +78,13 @@ None: 7.2 is done. Open items are in the handoff below.
   0.971, false flag rate 0.113; 107 cases answered by OpenRouter after a Groq 429 (decision 0025).
 - 2026-11-23, contradictions_v1 (28/28), prompt `ca7ed1b1`: contradiction catch 1.00 (12/12), attributed
   disagreements 6/6 approved, precision 0.706, false flag rate 0.313 (5/16, all over-strict `attributed`).
+- 2026-11-23, prompt `f780696a` (narrower `attributed`, task 7.3): judge_v1 catch 1.00 (30/30), precision 0.955, recall
+  0.941, false flag rate 0.048; contradictions_v1 catch 12/12, precision 0.923, false flag rate 0.063; red team
+  (`redteam_v1-04f8a1e8`) judge 14/15 attacks (j-stale3, caught 5/5 on rerun), 1/5 controls flagged.
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 7.2. The ARQ worker runs `recheck_job` (retraction recheck) every `reporter_recheck_every_hours` (6) at minute 30; 0 turns it off. Branch `phase7/recheck-schedule` on `phase7/judge-fallback` (#30). Before it, 7.1: OpenRouter as the judge's fallback host (decision 0025), checked live: a direct probe judged 3/3 cases in strict JSON (3-5 s), and judge_v1 (130/130, 107 via OpenRouter) and contradictions_v1 (28/28) completed with no pending cases.
-- Open: over-strict `attributed` is the main judge false flag. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: nothing left that needs no keys; candidates are the `attributed` false flags (judge prompt) or Langfuse once keys are in `.env`.
+- Done: 7.3. The judge's `attributed` check now covers only opinions, allegations, performance claims and forecasts; concrete announced facts and official counts pass. judge_v1 false flags 7 -> 3 (precision 0.904 -> 0.955), at the cost of one `unattributed` miss (s10-c5). Branch `phase7/attributed` on `phase7/recheck-schedule` (#31). Before: 7.2 recheck schedule, 7.1 OpenRouter judge fallback.
+- Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
+- Next: frontend Phase 1, `FRONTEND_PLAN.md` (Press feed + on-demand telecast), then Phase 2 after review.
