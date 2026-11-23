@@ -988,6 +988,14 @@
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "words": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TelecastWord"
+            },
+            "title": "Words",
+            "type": "array"
           }
         },
         "required": [
@@ -1127,6 +1135,29 @@
           "updated_at"
         ],
         "title": "TelecastView",
+        "type": "object"
+      },
+      "TelecastWord": {
+        "properties": {
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "start_ms",
+          "end_ms"
+        ],
+        "title": "TelecastWord",
         "type": "object"
       },
       "TracedClaim": {

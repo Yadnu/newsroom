@@ -3,6 +3,8 @@
 
 import type { TelecastView } from "@/src/api/client";
 
+import { type TimedWord, estimateWords } from "./lipsync";
+
 export const BUMPER_MS = 2500; // intro bumper before the anchor speaks
 export const INTRO_MS = 1500; // the anchor looks up from the papers as speech starts
 export const OUTRO_MS = 5000; // sign-off and the "next story" countdown
@@ -23,6 +25,8 @@ export interface Segment extends Span {
 export interface Caption extends Span {
   lineId: string;
   text: string;
+  words: TimedWord[]; // show time; from the TTS, or estimated from the line's length
+  estimated: boolean;
 }
 
 export interface LowerThird extends Span {
@@ -45,6 +49,8 @@ export interface BroadcastScript {
   duration: number;
   segments: Segment[]; // bumper, intro, body, outro in order; broll (if any) overlaps body
   captions: Caption[];
+  words: TimedWord[]; // every caption's words in order (lip sync)
+  wordsEstimated: boolean; // true if any line had no TTS word timings
   lowerThirds: LowerThird[];
   nodAt: number; // the anchor nods as the last line ends
 }
@@ -85,12 +91,23 @@ export function buildBroadcastScript(t: TelecastView, now: Date = new Date()): B
     segments.push({ kind: "broll", ...clampSpan(start, start + length, body) });
   }
 
-  const captions: Caption[] = lines.map((l) => ({
-    lineId: l.id,
-    text: l.text,
-    start: body.start + l.start_ms,
-    end: body.start + l.end_ms,
-  }));
+  const captions: Caption[] = lines.map((l) => {
+    const start = body.start + l.start_ms;
+    const end = body.start + l.end_ms;
+    const real = (l.words ?? []).map((w) => ({
+      text: w.text,
+      start: body.start + w.start_ms,
+      end: body.start + w.end_ms,
+    }));
+    return {
+      lineId: l.id,
+      text: l.text,
+      start,
+      end,
+      words: real.length ? real : estimateWords(l.text, start, end),
+      estimated: real.length === 0,
+    };
+  });
   const mid = body.start + audioDuration * 0.55;
   const candidates: LowerThird[] = [
     { kind: "headline", ...clampSpan(body.start + 800, body.start + 7800, body) },
@@ -117,6 +134,8 @@ export function buildBroadcastScript(t: TelecastView, now: Date = new Date()): B
     duration,
     segments,
     captions,
+    words: captions.flatMap((c) => c.words),
+    wordsEstimated: captions.some((c) => c.estimated),
     lowerThirds,
     nodAt: body.end,
   };

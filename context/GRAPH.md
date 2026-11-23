@@ -20,11 +20,11 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [editor](nodes/editor.md) | component | in-progress | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002, 0012, 0013, 0014, 0022, 0024, 0025 |
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor, press | 0020, 0021, 0023, 0027 |
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor, press | 0002, 0011, 0013, 0014, 0020, 0023, 0026 |
-| [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017, 0020 |
+| [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017, 0020, 0028 |
 | [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller, reporter, press | 0016, 0019, 0022, 0023 |
-| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026, 0027 |
+| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026, 0027, 0028 |
 | [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018, 0019 |
-| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, data-model, archive | web | 0026, 0027 |
+| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, data-model, archive | web | 0026, 0027, 0028 |
 
 ## Edges
 

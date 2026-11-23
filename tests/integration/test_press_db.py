@@ -185,8 +185,8 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
             await conn.execute(
                 text(
                     'INSERT INTO script_lines (id, briefing_id, story_id, "order", text, kind,'
-                    " audio_start_ms, audio_end_ms)"
-                    " VALUES (:id, :b, :s, :o, :t, 'script', :st, :en)"
+                    " audio_start_ms, audio_end_ms, audio_words)"
+                    " VALUES (:id, :b, :s, :o, :t, 'script', :st, :en, CAST(:w AS JSONB))"
                 ),
                 {
                     "id": lid,
@@ -196,6 +196,7 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
                     "t": f"line {order}",
                     "st": start,
                     "en": end,
+                    "w": '[["line", 0, 2000], ["0", 2000, 4000]]' if order == 0 else None,
                 },
             )
         for lid, verdict in ((l1, "approved"), (l2, "approved"), (l3, "rejected")):
@@ -222,6 +223,7 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
         ("line 0", 0, 4000),
         ("line 1", 4300, 9000),
     ]
+    assert [w.text for w in view.lines[0].words] == ["line", "0"] and view.lines[1].words == []
     assert view.verdicts == {"approved": 2, "rejected": 1}
     assert (
         view.story is not None and view.story.telecast is not None and view.story.telecast.id == tid

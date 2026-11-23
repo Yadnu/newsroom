@@ -6,7 +6,7 @@ phase: 4
 code: web/
 depends_on: [anchor, archive, press]
 feeds: []
-decisions: [0026, 0027]
+decisions: [0026, 0027, 0028]
 ---
 
 # web
@@ -39,7 +39,11 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
   near 40%, outro 5 s; captions, lower thirds, BREAKING if newest source < 3 h and 3+ outlets);
   `src/broadcast/clock.ts` `ShowClock` is the only clock (audio element is master during speech, wall clock
   otherwise and for captions-only). Controls: play/pause, replay, seek bar, prev/next story, mute, captions (on by
-  default), speed 0.75-1.5, exit; keys space/k, m, c, r, arrows, n/p, Esc. Plain stage only (studio in 8.4).
+  default), speed 0.75-1.5, exit; keys space/k, m, c, r, arrows, n/p, Esc.
+  Studio (task 8.4, decision 0028): `StudioScene` (skyline, light sweep, desk) and `Anchor` (original layered SVG).
+  `poseAt()` (blinks, breathing, tilts, papers, nod, brows) and `mouthAt()` (letter visemes from word timings;
+  `useAmplitude` scales them only for estimated words) are pure functions of show time; captions highlight the
+  current word. Reduced motion: still pose, mouth and captions only. No GSAP.
   Failed telecast: reason, retry, link to the briefing in the Archive.
 - Archive dashboard (task 3.3): `/archive` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
@@ -86,3 +90,4 @@ automated (no browser in the agent environment).
 - 2026-11-21: trace panel shows "Sources disagree" conflicts under a judgement (task 6.3).
 - 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).
 - 2026-11-23: telecast player skeleton at `/watch/[storyId]`: timeline, ShowClock, controls, captions (task 8.3).
+- 2026-11-23: studio scene, animated anchor, word-timed lip sync and captions (task 8.4).

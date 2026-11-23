@@ -3,6 +3,10 @@
 - ``cartesia``: Pipecat's Cartesia websocket service (streaming PCM).
 - ``fake``: silent PCM, ``FAKE_MS_PER_WORD`` per word, in the same frame types. For tests, CI, and
   running the pipeline without a key.
+
+Both record word start times per TTS context (task 8.4): ``take_words(tts, context_id)`` returns
+``(word, seconds from the context's first audio)``. Cartesia sends them with the audio; the fake
+spaces words evenly. A service that records nothing gives ``[]``.
 """
 
 import asyncio
@@ -34,7 +38,35 @@ class AnchorConfigError(RuntimeError):
     """The configured TTS adapter is missing a key or setting."""
 
 
-class FakeTTSService(TTSService):
+WordTimes = list[tuple[str, float]]
+
+
+class _RecordsWords:
+    """Keeps word timestamps per TTS context until the Anchor takes them at the end of a line."""
+
+    def _words_store(self) -> dict[str, WordTimes]:
+        store: dict[str, WordTimes] | None = getattr(self, "_word_times", None)
+        if store is None:
+            store = {}
+            self._word_times = store
+        return store
+
+    def record_words(self, context_id: str, words: WordTimes) -> None:
+        self._words_store().setdefault(context_id, []).extend(words)
+
+    def take_words(self, context_id: str) -> WordTimes:
+        return self._words_store().pop(context_id, [])
+
+
+def take_words(tts: object, context_id: str | None) -> WordTimes:
+    """Word start times recorded for one context, or ``[]`` (unknown context, or a service that
+    does not record them)."""
+    if context_id is None or not isinstance(tts, _RecordsWords):
+        return []
+    return tts.take_words(context_id)
+
+
+class FakeTTSService(_RecordsWords, TTSService):
     """Deterministic silent speech: ``FAKE_MS_PER_WORD`` ms of PCM16 per word."""
 
     def __init__(self, *, ms_per_word: int = FAKE_MS_PER_WORD, **kwargs: Any) -> None:
@@ -48,6 +80,8 @@ class FakeTTSService(TTSService):
 
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame | None, None]:
         self.spoken.append(text)
+        step = self.ms_per_word / 1000
+        self.record_words(context_id, [(w, i * step) for i, w in enumerate(text.split())])
         total = fake_audio_bytes(text, self.sample_rate, self.ms_per_word)
         chunk = self.sample_rate * _FAKE_CHUNK_MS // 1000 * 2
 
@@ -77,10 +111,26 @@ def make_tts(settings: Settings) -> TTSService:
         raise AnchorConfigError("NEWSROOM_CARTESIA_VOICE_ID is not set")
     from pipecat.services.cartesia.tts import CartesiaTTSService
 
+    class TimedCartesiaTTSService(_RecordsWords, CartesiaTTSService):
+        """Cartesia that also keeps the word timestamps it streams (``add_timestamps`` is on)."""
+
+        async def add_word_timestamps(
+            self,
+            word_times: list[tuple[str, float]],
+            context_id: str | None = None,
+            includes_inter_frame_spaces: bool | None = None,
+            pre_merge_tokens: bool = False,
+        ) -> None:
+            if context_id is not None:
+                self.record_words(context_id, list(word_times))
+            await super().add_word_timestamps(
+                word_times, context_id, includes_inter_frame_spaces, pre_merge_tokens
+            )
+
     tts_settings = CartesiaTTSService.Settings(voice=settings.cartesia_voice_id)
     if settings.cartesia_model:
         tts_settings.model = settings.cartesia_model
-    return CartesiaTTSService(
+    return TimedCartesiaTTSService(
         api_key=key.get_secret_value(),
         sample_rate=settings.anchor_sample_rate,
         settings=tts_settings,

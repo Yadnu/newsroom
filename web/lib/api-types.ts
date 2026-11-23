@@ -573,6 +573,11 @@ export interface components {
             start_ms: number;
             /** Text */
             text: string;
+            /**
+             * Words
+             * @default []
+             */
+            words: components["schemas"]["TelecastWord"][];
         };
         /**
          * TelecastRef
@@ -632,6 +637,15 @@ export interface components {
             verdicts: {
                 [key: string]: number;
             };
+        };
+        /** TelecastWord */
+        TelecastWord: {
+            /** End Ms */
+            end_ms: number;
+            /** Start Ms */
+            start_ms: number;
+            /** Text */
+            text: string;
         };
         /** TracedClaim */
         TracedClaim: {

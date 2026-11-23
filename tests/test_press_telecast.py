@@ -155,3 +155,12 @@ async def test_media_serves_ranges(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     part = await _call("GET", "/media/telecasts/a.wav", headers={"Range": "bytes=10-19"})
     assert part.status_code == 206 and part.content == bytes(range(10, 20))
     assert (await _call("GET", "/media/telecasts/../../etc/passwd")).status_code == 404
+
+
+def test_words_of_reads_stored_word_timings_tolerantly() -> None:
+    words = tc.words_of([["Hello", 0, 400], ["world", "400", 900], ["bad"], [1, 2, 3], "x"])
+    assert [(w.text, w.start_ms, w.end_ms) for w in words] == [
+        ("Hello", 0, 400),
+        ("world", 400, 900),
+    ]
+    assert tc.words_of(None) == []

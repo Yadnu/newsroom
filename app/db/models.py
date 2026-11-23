@@ -127,6 +127,10 @@ class ScriptLine(SQLModel, table=True):
     text: str = Field(sa_type=Text)
     audio_start_ms: int | None = None
     audio_end_ms: int | None = None
+    # [[word, start_ms, end_ms], ...] on the same audio clock, from the TTS (task 8.4)
+    audio_words: list[list[Any]] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
     # "script" (the briefing), "answer" (spoken reply to a listener question, decision 0020) or
     # "correction" (an on-air correction of an earlier briefing, decision 0023)
     kind: str = Field(

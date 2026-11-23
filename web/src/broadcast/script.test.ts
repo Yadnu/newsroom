@@ -25,9 +25,18 @@ function telecast(over: Partial<TelecastView> = {}, imageUrl: string | null = "h
     audio_url: "/media/telecasts/t1.wav",
     duration_ms: 20_000,
     lines: [
-      { id: "l2", text: "Second.", start_ms: 6000, end_ms: 12_000 },
-      { id: "l1", text: "First.", start_ms: 0, end_ms: 5700 },
-      { id: "l3", text: "Third.", start_ms: 12_300, end_ms: 20_000 },
+      { id: "l2", text: "Second.", start_ms: 6000, end_ms: 12_000, words: [] },
+      {
+        id: "l1",
+        text: "First one.",
+        start_ms: 0,
+        end_ms: 5700,
+        words: [
+          { text: "First", start_ms: 100, end_ms: 2500 },
+          { text: "one.", start_ms: 2500, end_ms: 5700 },
+        ],
+      },
+      { id: "l3", text: "Third.", start_ms: 12_300, end_ms: 20_000, words: [] },
     ],
     verdicts: { approved: 4, rejected: 1 },
     story: {
@@ -83,7 +92,7 @@ describe("buildBroadcastScript", () => {
 
   test("no image or a short story: no b-roll", () => {
     expect(buildBroadcastScript(telecast({}, null), NOW).segments.some((x) => x.kind === "broll")).toBe(false);
-    const short = telecast({ duration_ms: 9000, lines: [{ id: "l", text: "x", start_ms: 0, end_ms: 9000 }] });
+    const short = telecast({ duration_ms: 9000, lines: [{ id: "l", text: "x", start_ms: 0, end_ms: 9000, words: [] }] });
     expect(buildBroadcastScript(short, NOW).segments.some((x) => x.kind === "broll")).toBe(false);
   });
 
@@ -94,6 +103,20 @@ describe("buildBroadcastScript", () => {
       expect(l.end).toBeLessThanOrEqual(BUMPER_MS + 20_000);
     }
     expect(s.lowerThirds.map((l) => l.kind)).toEqual(["headline", "factcheck"]);
+  });
+
+  test("captions carry TTS words on show time, or estimates", () => {
+    const s = buildBroadcastScript(telecast(), NOW);
+    const [first, second] = s.captions;
+    expect(first.estimated).toBe(false);
+    expect(first.words).toEqual([
+      { text: "First", start: BUMPER_MS + 100, end: BUMPER_MS + 2500 },
+      { text: "one.", start: BUMPER_MS + 2500, end: BUMPER_MS + 5700 },
+    ]);
+    expect(second.estimated).toBe(true);
+    expect(second.words).toEqual([{ text: "Second.", start: BUMPER_MS + 6000, end: BUMPER_MS + 12_000 }]);
+    expect(s.wordsEstimated).toBe(true);
+    expect(s.words.map((w) => w.text)).toEqual(["First", "one.", "Second.", "Third."]);
   });
 
   test("a telecast without lines still has a timeline", () => {

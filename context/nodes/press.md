@@ -6,7 +6,7 @@ phase: 8
 code: app/press/
 depends_on: [reporter, writer, editor, standards-desk, producer, anchor, data-model, archive]
 feeds: [web]
-decisions: [0026, 0027]
+decisions: [0026, 0027, 0028]
 ---
 
 # press
@@ -36,7 +36,8 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
   `media_dir/telecasts/<id>.wav`, in the API process, `press_telecast_concurrency` (2) at a time.
 - `GET /press/telecasts/{id}` -> `TelecastView{id, story_id, briefing_id, step (queued|writing|checking|clearing|
   voicing|ready|failed), error, created_at, updated_at, audio_url (/media/...), duration_ms, lines[id, text,
-  start_ms, end_ms] (voiced lines), verdicts {verdict: n}, story: PressStory}`. A running step not updated for
+  start_ms, end_ms, words[text, start_ms, end_ms]] (voiced lines; words empty if the TTS gave none), verdicts
+  {verdict: n}, story: PressStory}`. A running step not updated for
   `press_telecast_stale_minutes` (20) reads `failed` ("interrupted"). 404 unknown.
 - `/media` (app/main.py): `StaticFiles(media_dir)` with HTTP Range. Settings `media_dir` (`var/media`),
   `press_telecast_seconds` (45).
@@ -69,3 +70,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 
 - 2026-11-23: node created; Press feed API, RSS thumbnails, crawler summaries (task 8.2, decision 0026).
 - 2026-11-23: telecasts: `POST /press/stories/{id}/telecast`, `GET /press/telecasts/{id}`, `/media` (task 8.3, decision 0027).
+- 2026-11-23: `TelecastLine.words` from `script_lines.audio_words` (task 8.4).
