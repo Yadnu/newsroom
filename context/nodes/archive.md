@@ -75,6 +75,9 @@ the dev DB (briefing `3873a08c`): a sentence traced to its TechCrunch URL; 7 rej
 Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: producer 1.2 s, writer 33 s
 (7 LLM calls), editor 175 s (25 calls, 6 errors), $0.011 total. Covered in the same integration test file.
 
+Latency report (task 6.4): `evals/run_latency.py` reads successful span latencies from `traces` and prints
+p50/p95 per pipeline stage (`evals/latency.py`, stages listed in `STAGES`); the README table comes from it.
+
 ## Open questions
 
 - (none)
@@ -89,3 +92,4 @@ Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: pro
 - 2026-11-19: `LineSummary.kind` / `question` so answer lines show in the timeline (task 5.3).
 - 2026-11-21: corrections read API (task 6.2, decision 0023).
 - 2026-11-21: `Judgement.conflicts` read from judge spans (task 6.3, decision 0024).
+- 2026-11-22: `evals/run_latency.py` p50/p95 per stage from spans, for the README (task 6.4).

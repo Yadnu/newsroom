@@ -1,0 +1,70 @@
+{
+  "run_at": "2026-11-23T01:42:46+00:00",
+  "since": "1970-01-01T00:00:00+00:00",
+  "stages": [
+    {
+      "path": "briefing",
+      "span": "reporter/ingest_feeds",
+      "label": "Fetch and dedupe RSS feeds",
+      "n": 5,
+      "p50_ms": 1981,
+      "p95_ms": 2349
+    },
+    {
+      "path": "briefing",
+      "span": "writer/draft_script",
+      "label": "Write the script",
+      "n": 2,
+      "p50_ms": 15383,
+      "p95_ms": 19242
+    },
+    {
+      "path": "briefing",
+      "span": "editor/judge_claim",
+      "label": "Judge one claim",
+      "n": 50,
+      "p50_ms": 22302,
+      "p95_ms": 45306
+    },
+    {
+      "path": "briefing",
+      "span": "editor/review_script",
+      "label": "Judge every claim + rewrite loop",
+      "n": 2,
+      "p50_ms": 172719,
+      "p95_ms": 174820
+    },
+    {
+      "path": "briefing",
+      "span": "standards-desk/clear_for_air",
+      "label": "Clear for air",
+      "n": 24,
+      "p50_ms": 634,
+      "p95_ms": 802
+    },
+    {
+      "path": "briefing",
+      "span": "anchor/line",
+      "label": "Voice one line (TTS)",
+      "n": 60,
+      "p50_ms": 4115,
+      "p95_ms": 6826
+    },
+    {
+      "path": "answer",
+      "span": "caller/question",
+      "label": "Classify + screen a question (after STT)",
+      "n": 17,
+      "p50_ms": 1135,
+      "p95_ms": 1454
+    },
+    {
+      "path": "answer",
+      "span": "producer/answer",
+      "label": "Question to cleared answer",
+      "n": 2,
+      "p50_ms": 9757,
+      "p95_ms": 12563
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-22 by: Claude Code
+Last updated: 2026-11-23 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
+None: Phase 6 tasks are done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -52,7 +52,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 - [x] 6.1 red team set (satire, stale, prompt injection), eval run in CI
 - [x] 6.2 correction pipeline: source retraction flags affected briefings
 - [x] 6.3 contradiction detection in Editor
-- [ ] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
+- [x] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
 
 ## Open questions (defaults in use until answered)
 
@@ -76,6 +76,6 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 6.3. The judge has a sixth check, `consistent`, in the same call: passages from 2+ sources that disagree on what a claim states give `rewrite` with both outlets named in the reason, and the Writer's rewrite loop can attribute both versions (decision 0024). Conflicts are on the judge span, `archive.Judgement.conflicts` and the web trace panel. New eval set `contradictions_v1`. Branch `phase6/contradictions` stacks on #25 and #24; none merged.
-- Open: judge_v1 needs a full re-run on prompt `ca7ed1b1` (only 6/130 judged; Groq TPM and the run was stopped for low memory); 4 contradictions_v1 cases pending. Over-strict `attributed` is still the main false flag. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
-- Next: 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95.
+- Done: 6.4. README rewritten: architecture diagram (Mermaid), demo GIF (`docs/demo.gif`, headless-Chrome frames of the Archive and Player on briefing `e4f4a284`, built 2026-11-23 from live feeds), eval table, latency p50/p95 per stage from `evals/run_latency.py` (new; reads span latencies from `traces`). Branch `phase6/readme` stacks on #27, #25, #24; none merged.
+- Open: judge_v1 full re-run on prompt `ca7ed1b1`; Groq free-tier limits leave most judge calls rate-limited (17 of 23 claims pending in `e4f4a284`), and eval runs retry for ~75 s per rate-limited case. `newsroom brief` crashes printing non-ASCII text to a cp1252 Windows console after storing the briefing. Latency samples are small (2 answers, 2 full reviews). Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
+- Next: no task left in STATE; pick from the open items (a paid or second judge provider would unblock the evals and latency numbers).
