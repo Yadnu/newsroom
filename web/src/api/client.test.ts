@@ -1,0 +1,31 @@
+import { expect, test } from "vitest";
+
+import { ApiError, apiUrl, pressPage } from "./client";
+
+test("apiUrl goes through the same-origin rewrite and drops empty params", () => {
+  expect(apiUrl("/press/stories", { limit: 10, after_id: undefined })).toBe(
+    "/api/press/stories?limit=10",
+  );
+  expect(apiUrl("/health")).toBe("/api/health");
+});
+
+test("pressPage sends the keyset cursor", async () => {
+  const seen: string[] = [];
+  const fetcher = (async (url: string) => {
+    seen.push(url);
+    return new Response(JSON.stringify({ stories: [], next: null }), { status: 200 });
+  }) as unknown as typeof fetch;
+  await pressPage({ latest_at: "2026-11-23T09:00:00Z", id: "abc" }, fetcher);
+  expect(seen[0]).toBe(
+    "/api/press/stories?limit=10&after_latest_at=2026-11-23T09%3A00%3A00Z&after_id=abc",
+  );
+});
+
+test("a down backend becomes an ApiError", async () => {
+  const down = (async () => {
+    throw new TypeError("fetch failed");
+  }) as unknown as typeof fetch;
+  await expect(pressPage(null, down)).rejects.toMatchObject({ status: 0 });
+  const bad = (async () => new Response("", { status: 502 })) as unknown as typeof fetch;
+  await expect(pressPage(null, bad)).rejects.toBeInstanceOf(ApiError);
+});

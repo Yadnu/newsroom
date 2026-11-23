@@ -449,6 +449,18 @@ def recheck(
 
 
 @app.command()
+def summarize(
+    limit: Annotated[int, typer.Option(min=1, max=100, help="Stories to summarize.")] = 10,
+) -> None:
+    """Write Press feed summaries for the newest stories that have none (task 8.2)."""
+    from app.press import fill_summaries
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    written = _run(lambda: fill_summaries(limit))
+    console.print(f"wrote {written} summaries")
+
+
+@app.command()
 def corrections(
     briefing: Annotated[str | None, typer.Option(help="Only this briefing.")] = None,
     limit: Annotated[int, typer.Option(min=1, max=500)] = 50,

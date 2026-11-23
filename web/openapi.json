@@ -568,6 +568,178 @@
         "title": "LineSummary",
         "type": "object"
       },
+      "PressCursor": {
+        "description": "Keyset cursor: the last story of the previous page (feeds often share timestamps).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_at": {
+            "format": "date-time",
+            "title": "Latest At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "latest_at",
+          "id"
+        ],
+        "title": "PressCursor",
+        "type": "object"
+      },
+      "PressPage": {
+        "properties": {
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PressCursor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/PressStory"
+            },
+            "title": "Stories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stories",
+          "next"
+        ],
+        "title": "PressPage",
+        "type": "object"
+      },
+      "PressSource": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outlet": {
+            "title": "Outlet",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "outlet",
+          "title",
+          "url",
+          "published_at"
+        ],
+        "title": "PressSource",
+        "type": "object"
+      },
+      "PressStory": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_outlet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Outlet"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "latest_at": {
+            "format": "date-time",
+            "title": "Latest At",
+            "type": "string"
+          },
+          "n_sources": {
+            "title": "N Sources",
+            "type": "integer"
+          },
+          "outlets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Outlets",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/PressSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "image_url",
+          "image_outlet",
+          "outlets",
+          "n_sources",
+          "latest_at",
+          "sources"
+        ],
+        "title": "PressStory",
+        "type": "object"
+      },
       "Rejection": {
         "properties": {
           "at": {
@@ -1217,6 +1389,86 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/press/stories": {
+      "get": {
+        "description": "Newest stories first. Summaries come from the crawler desk and are not fact-checked.",
+        "operationId": "list_stories_press_stories_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_latest_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Latest At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Stories",
+        "tags": [
+          "press"
+        ]
       }
     }
   }

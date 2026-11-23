@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-8.2 backend B1 + Feed mode (see `FRONTEND_PLAN.md`)
+8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton (see `FRONTEND_PLAN.md`)
 
 ## Tasks
 
@@ -61,7 +61,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ### Phase 8: frontend (plan in `FRONTEND_PLAN.md`)
 - [x] 8.1 plan: Press feed + on-demand animated telecast
-- [ ] 8.2 backend B1 (RSS images, story summaries, `GET /press/stories`) + Feed mode
+- [x] 8.2 backend B1 (RSS images, story summaries, `GET /press/stories`) + Feed mode
 - [ ] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
 - [ ] 8.4 studio scene, animated anchor, lip sync
 - [ ] 8.5 bumper, lower thirds, ticker, B-roll, outro
@@ -93,6 +93,6 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 7.3. The judge's `attributed` check now covers only opinions, allegations, performance claims and forecasts; concrete announced facts and official counts pass. judge_v1 false flags 7 -> 3 (precision 0.904 -> 0.955), at the cost of one `unattributed` miss (s10-c5). Branch `phase7/attributed` on `phase7/recheck-schedule` (#31). Before: 7.2 recheck schedule, 7.1 OpenRouter judge fallback.
+- Done: 8.2. Press feed: `GET /press/stories` (new `app/press/`, decision 0026), RSS thumbnails in `sources.image_url` (migration `d4e1a7b93c02`, applied to the dev DB), crawler summaries (`writer.summarize_story`, copied-words check, worker hook, `newsroom summarize`). Web: full-screen pager at `/` (Tailwind, Framer Motion, TanStack Query, Vitest), Archive moved to `/archive`, `/api` rewrite. Branch `phase8/press-feed` on `phase8/frontend-plan` (#33).
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 8.2 per `FRONTEND_PLAN.md` (approved 2026-11-23; Next.js in `web/`, pre-rendered telecast audio, crawler summaries labelled not fact-checked, category bar hidden). Plan saved on branch `phase8/frontend-plan`.
+- Next: 8.3 per `FRONTEND_PLAN.md`: telecast job (one-story briefing, judge, clear, render audio file), `/press/telecasts`, `/media`, then the broadcast player skeleton (timeline, audio clock, controls, captions).

@@ -26,7 +26,7 @@ async function Listen({ params, searchParams }: PageProps<"/briefings/[id]/liste
   return (
     <>
       <p className="muted">
-        <Link href="/">Briefings</Link> /{" "}
+        <Link href="/archive">Briefings</Link> /{" "}
         <Link href={`/briefings/${b.id}`} className="mono">
           {shortId(b.id)}
         </Link>{" "}

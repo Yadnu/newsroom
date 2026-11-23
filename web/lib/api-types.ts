@@ -124,6 +124,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/press/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Stories
+         * @description Newest stories first. Summaries come from the crawler desk and are not fact-checked.
+         */
+        get: operations["list_stories_press_stories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -349,6 +369,71 @@ export interface components {
             verdicts: {
                 [key: string]: number;
             };
+        };
+        /**
+         * PressCursor
+         * @description Keyset cursor: the last story of the previous page (feeds often share timestamps).
+         */
+        PressCursor: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Latest At
+             * Format: date-time
+             */
+            latest_at: string;
+        };
+        /** PressPage */
+        PressPage: {
+            next: components["schemas"]["PressCursor"] | null;
+            /** Stories */
+            stories: components["schemas"]["PressStory"][];
+        };
+        /** PressSource */
+        PressSource: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Outlet */
+            outlet: string;
+            /** Published At */
+            published_at: string | null;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
+        /** PressStory */
+        PressStory: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Outlet */
+            image_outlet: string | null;
+            /** Image Url */
+            image_url: string | null;
+            /**
+             * Latest At
+             * Format: date-time
+             */
+            latest_at: string;
+            /** N Sources */
+            n_sources: number;
+            /** Outlets */
+            outlets: string[];
+            /** Sources */
+            sources: components["schemas"]["PressSource"][];
+            /** Summary */
+            summary: string | null;
+            /** Title */
+            title: string;
         };
         /** Rejection */
         Rejection: {
@@ -653,6 +738,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    list_stories_press_stories_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after_latest_at?: string | null;
+                after_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

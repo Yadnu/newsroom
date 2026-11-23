@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import httpx
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.archive import span
@@ -38,6 +39,7 @@ class NewSource:
     content_hash: str
     trust_score: float
     published_at: datetime | None = None
+    image_url: str | None = None
 
 
 StoreFn = Callable[[Sequence[NewSource]], Awaitable[int]]
@@ -84,11 +86,19 @@ async def insert_new_sources(rows: Sequence[NewSource]) -> int:
                     "published_at": r.published_at,
                     "fetched_at": utcnow(),
                     "retracted": False,
+                    "image_url": r.image_url,
                 }
                 for r in rows[i : i + INSERT_CHUNK]
             ]
             stmt = pg_insert(table).values(values).on_conflict_do_nothing().returning(table.c.id)
             inserted += len((await conn.execute(stmt)).all())
+        # Sources stored before task 8.2 (or before the feed carried one) get their thumbnail now.
+        images = [{"u": r.url, "img": r.image_url} for r in rows if r.image_url]
+        if images:
+            await conn.execute(
+                text("UPDATE sources SET image_url = :img WHERE url = :u AND image_url IS NULL"),
+                images,
+            )
     return inserted
 
 
@@ -186,6 +196,7 @@ def _dedupe(results: Sequence[_FeedResult], report: IngestReport) -> list[NewSou
                     content_hash=h,
                     trust_score=r.feed.trust_score,
                     published_at=e.published_at,
+                    image_url=e.image_url,
                 )
             )
     return rows

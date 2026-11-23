@@ -5,7 +5,7 @@ status: in-progress
 phase: 4
 code: app/standards_desk/
 depends_on: [editor, caller, archive]
-feeds: [anchor, producer, caller, reporter]
+feeds: [anchor, producer, caller, reporter, press]
 decisions: [0016, 0019, 0022, 0023]
 ---
 

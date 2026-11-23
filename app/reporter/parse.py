@@ -29,6 +29,7 @@ class FeedEntry:
     title: str
     content: str
     published_at: datetime | None
+    image_url: str | None = None  # publisher thumbnail from the feed (task 8.2)
 
 
 class FeedParseError(Exception):
@@ -57,9 +58,12 @@ class _TextExtractor(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
+        self.first_img: str | None = None
         self._skip = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "img" and self.first_img is None:
+            self.first_img = dict(attrs).get("src")
         if tag in _SKIP_TAGS:
             self._skip += 1
         elif tag in _BLOCK_TAGS:
@@ -81,6 +85,44 @@ def html_to_text(html: str) -> str:
     parser.feed(html)
     parser.close()
     return _WS.sub(" ", "".join(parser.parts)).strip()
+
+
+def first_image_in_html(html: str) -> str | None:
+    parser = _TextExtractor()
+    parser.feed(html)
+    parser.close()
+    return parser.first_img
+
+
+MAX_IMAGE_URL = 2000
+
+
+def _image_url(url: object) -> str | None:
+    """An absolute http(s) URL of sane length, or None. Never fetched here: it is only stored."""
+    if not isinstance(url, str):
+        return None
+    url = url.strip()
+    if not url.startswith(("http://", "https://")) or len(url) > MAX_IMAGE_URL:
+        return None
+    return url
+
+
+def entry_image(entry: Any) -> str | None:
+    """The entry's thumbnail: media:thumbnail, then image media:content or enclosures, then the
+    first <img> in the body."""
+    for thumb in entry.get("media_thumbnail", []) or []:
+        if url := _image_url(thumb.get("url")):
+            return url
+    for media in entry.get("media_content", []) or []:
+        kind = str(media.get("medium") or media.get("type") or "image")
+        if kind.startswith("image") and (url := _image_url(media.get("url"))):
+            return url
+    for link in [*(entry.get("enclosures", []) or []), *(entry.get("links", []) or [])]:
+        if str(link.get("type", "")).startswith("image/") and (
+            url := _image_url(link.get("href") or link.get("url"))
+        ):
+            return url
+    return _image_url(first_image_in_html(_best_body(entry)))
 
 
 def content_hash(title: str, content: str) -> str:
@@ -108,6 +150,7 @@ def parse_feed(raw: bytes) -> list[FeedEntry]:
                 title=title or content[:120],
                 content=content or title,
                 published_at=_published(e),
+                image_url=entry_image(e),
             )
         )
     return entries

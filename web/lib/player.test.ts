@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 
 import { AudioClock, activeLine, applyEvent, pcm16ToFloat32, wsBase } from "./player.ts";
 import type { TimedLine } from "./player.ts";

@@ -5,8 +5,8 @@ status: in-progress
 phase: 2
 code: app/writer/
 depends_on: [producer, editor, llm-gateway, data-model, archive]
-feeds: [editor]
-decisions: [0002, 0011, 0013, 0014, 0020, 0023]
+feeds: [editor, press]
+decisions: [0002, 0011, 0013, 0014, 0020, 0023, 0026]
 ---
 
 # writer
@@ -35,6 +35,10 @@ Drafts the broadcast script in spoken style and tags every factual sentence with
   `$sources`). Sources go in `<source id="S<n>" outlet published>` blocks with `<`, `>` and `&` escaped, in the user turn only.
 - Length: `target_seconds * writer_words_per_second` (2.5) words. Source text is capped at `writer_source_max_chars` (6000).
 - `DraftLine.kind`: `script` (default) or `correction` (a Standards Desk template line, task 6.2).
+
+- `async def summarize_story(story_id, title, sources: Sequence[SourceText], feedback=()) -> str` (`summary.py`,
+  task 8.2): a ~60-word card summary for the Press feed (task "draft", prompts `writer/summary_system|user`);
+  20 to 90 words, quotes under 15 words, resampled once with the problems, else `WriterError`. Not fact-checked.
 
 ## Invariants
 
@@ -66,3 +70,4 @@ instruction. It states company-reported facts without attribution, which the Edi
 - 2026-11-18: a failed story is skipped instead of failing the briefing (decision 0014).
 - 2026-11-19: `draft_answer()` / `store_answer()` for on-air answers (task 5.3).
 - 2026-11-21: `DraftLine.kind` for correction lines (task 6.2, decision 0023).
+- 2026-11-23: `summarize_story()` for Press feed cards (task 8.2, decision 0026).

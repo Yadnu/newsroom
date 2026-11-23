@@ -5,7 +5,7 @@ status: done
 phase: 1
 code: app/db/
 depends_on: []
-feeds: [reporter, writer, editor, archive]
+feeds: [reporter, writer, editor, archive, press]
 decisions: [0001, 0007, 0011, 0020, 0023]
 ---
 
@@ -57,3 +57,4 @@ Done (task 1.1). Models in `app/db/models.py`, async engine and session in `app/
 - 2026-11-17: `claim_sources` table, migration `f41cfce23b88` (task 2.1, decision 0011).
 - 2026-11-19: migration `a3c9e5d71b20` adds `script_lines.kind` and `question` for on-air answers (task 5.3).
 - 2026-11-21: `corrections` table, source retraction columns, `correction` line kind (task 6.2, decision 0023).
+- 2026-11-23: migration `d4e1a7b93c02`: `sources.image_url` (text, nullable) for feed thumbnails (task 8.2).

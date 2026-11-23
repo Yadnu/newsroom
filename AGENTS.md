@@ -53,7 +53,8 @@ feedparser (RSS), Langfuse (LLM traces), Next.js (web player), uv (Python packag
 - `uv run newsroom speak <briefing_id> --out brief.wav` voice a stored briefing (Cartesia key + voice id, or `NEWSROOM_ANCHOR_TTS=fake`)
 - `uv run newsroom ask --briefing <id> --wav q.wav` transcribe and classify a spoken question (Deepgram key)
 - `uv run newsroom retract <source id|url> --reason "..."`, `newsroom recheck [--hours 48]`, `newsroom corrections` (task 6.2)
-- `cd web && npm ci && npm run dev` Archive dashboard and Player on :3000 (needs the API on :8000, or `NEWSROOM_API_URL`; the browser uses `NEWSROOM_PUBLIC_API_URL` for the live stream)
+- `uv run newsroom summarize [--limit 10]` Press feed summaries (task 8.2)
+- `cd web && npm ci && npm run dev` Press feed on :3000 (`/`), Archive at `/archive`, Player (needs the API on :8000, or `NEWSROOM_API_URL`; the browser reaches it through the `/api` rewrite, and uses `NEWSROOM_PUBLIC_API_URL` for the live stream)
 - `uv run python scripts/export_openapi.py && (cd web && npm run gen:api)` after any API model change
 
 ## Non-negotiables
