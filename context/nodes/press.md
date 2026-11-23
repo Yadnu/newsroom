@@ -27,6 +27,9 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
   without one. Each comes from `writer.summarize_story()` and must pass `standards_desk.clear.copied_run()`
   (`standards_max_copied_words`, 12) against the story's sources; a copying summary is retried once with that
   feedback, then skipped. `WriterError` and `LLMError` skip the story; `LLMConfigError` is raised.
+  Refresh (task 9.2): `stories.summary_sources` records the live sources a summary was written from; stories that
+  gained `press_summary_refresh_growth` (2) more are rewritten after the new ones (`SummaryTodo.refresh`); a failed
+  refresh keeps the old text and records the count so it waits for more growth. Pre-9.2 summaries count as 2.
 - Runs from the worker's `ingest_job` after clustering (a missing chat key is logged and skipped) and from
   `newsroom summarize [--limit 10]`. Setting `press_summaries_per_run` (default 8, 0 = off).
 - `PressStory.telecast: TelecastRef{id, step} | null`: the story's latest telecast (task 8.3).
@@ -60,7 +63,6 @@ Task 8.2 (decision 0026). Live 2026-11-23 on the dev DB: ingest backfilled thumb
 `newsroom summarize --limit 12` wrote 12 summaries (gpt-oss-20b, falling back to 120b on Groq 429s);
 `/press/stories` returns them newest first with images and a working cursor. Integration tests
 (`tests/integration/test_press_db.py`) cover order, paging, retracted sources, images, summaries and the backfill.
-A summary is written once; it is not refreshed when a story gains sources.
 Telecast live 2026-11-23 (Cartesia voice, OpenRouter judge fallback): "Gemini 4 Neon" went writing -> checking
 (76 s) -> voicing (10 s) -> ready in 90 s: 10 lines, 45.3 s of audio, 10/10 claims approved; `/media` served it
 with Range through the web proxy. Job unit tests fake the pipeline; DB tests cover reuse, stale rows and the view.
@@ -75,3 +77,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 - 2026-11-23: telecasts: `POST /press/stories/{id}/telecast`, `GET /press/telecasts/{id}`, `/media` (task 8.3, decision 0027).
 - 2026-11-23: `TelecastLine.words` from `script_lines.audio_words` (task 8.4).
 - 2026-11-23: telecast audio retention: `cleanup_media`, daily worker job, `newsroom cleanup-media`, `expired` step (task 9.1, decision 0029).
+- 2026-11-23: summaries refreshed when a story gains 2+ live sources (task 9.2).

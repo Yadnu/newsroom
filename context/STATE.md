@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-9.2 refresh summaries when a story gains sources
+9.3 telecasts as ARQ worker jobs, in-process fallback
 
 ## Tasks
 
@@ -69,7 +69,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ### Phase 9: Press follow-ups (plan approved 2026-11-23)
 - [x] 9.1 telecast audio retention (cleanup job, `expired` telecasts)
-- [ ] 9.2 refresh summaries when a story gains sources
+- [x] 9.2 refresh summaries when a story gains sources
 - [ ] 9.3 telecasts as ARQ worker jobs, in-process fallback
 - [ ] 9.4 MP3 telecast audio
 - [ ] 9.5 categories (feed tags, filter, category bar)
@@ -101,6 +101,6 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 9.1. Telecast audio retention (decision 0029): `cleanup_media()` deletes audio older than `press_telecast_retention_days` (7) and orphan files, marks telecasts `expired` (migration `a7c1e4f9d203`, applied to the dev DB); worker job daily 03:15; `newsroom cleanup-media [--days] [--dry-run]` (dry run on the dev DB: 0 at 7 days, 8 telecasts / 8.3 MB at ~0). Branch `phase9/retention` on `phase8/hardening` (#38).
+- Done: 9.2. Summaries are rewritten when a story gains `press_summary_refresh_growth` (2) live sources (`stories.summary_sources`, migration `b3d5f7a9c124` applied to the dev DB); new stories first; a failed refresh records the count. Live: 3 of 15 stories due for refresh; the 7-source one refreshed and dropped off the list. Branch `phase9/summary-refresh` on `phase9/retention` (#39). Earlier: 9.1 audio retention.
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
 - Next: 9.2 to 9.6 per the Phase 9 plan (summary refresh, worker jobs, MP3, categories, questions during telecasts).

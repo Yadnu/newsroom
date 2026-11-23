@@ -164,6 +164,8 @@ class Settings(BaseSettings):
 
     # Press feed (task 8.2): crawler summaries per worker run, newest stories first. 0 = off.
     press_summaries_per_run: int = Field(default=8, ge=0, le=100)
+    # A summary is rewritten once its story has this many more live sources (task 9.2).
+    press_summary_refresh_growth: int = Field(default=2, ge=1)
     # Telecasts (task 8.3, decision 0027): one-story broadcasts rendered to WAV under media_dir and
     # served at /media. Jobs run in the API process.
     media_dir: str = "var/media"
