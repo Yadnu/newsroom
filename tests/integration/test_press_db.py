@@ -19,6 +19,7 @@ from alembic import command
 from app.config import get_settings
 from app.db.models import utcnow
 from app.db.session import get_engine
+from app.press import telecast as tc
 from app.press.feed import PressCursor, press_stories
 from app.press.summaries import store_summary, stories_needing_summary
 from app.reporter.ingest import NewSource, insert_new_sources
@@ -46,7 +47,7 @@ async def db(migrated: None, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[A
     get_engine.cache_clear()
     eng = create_async_engine(URL)
     async with eng.begin() as conn:
-        await conn.execute(text("TRUNCATE sources, stories CASCADE"))
+        await conn.execute(text("TRUNCATE sources, stories, briefings CASCADE"))
     yield eng
     await eng.dispose()
     await get_engine().dispose()
@@ -138,3 +139,118 @@ async def test_ingest_backfills_a_missing_thumbnail(db: AsyncEngine) -> None:
     async with db.connect() as conn:
         img = (await conn.execute(text("SELECT image_url FROM sources"))).scalar_one()
     assert img == "https://img.a.test/1.jpg"
+
+
+async def _telecast(
+    db: AsyncEngine, story: UUID, step: str, *, minutes_ago: float = 0, **kw: object
+) -> UUID:
+    tid = uuid4()
+    at = utcnow() - timedelta(minutes=minutes_ago)
+    async with db.begin() as conn:
+        await conn.execute(
+            text(
+                "INSERT INTO telecasts (id, story_id, briefing_id, step, error, audio_path,"
+                " duration_ms, created_at, updated_at)"
+                " VALUES (:id, :s, :b, :step, :err, :path, :dur, :at, :at)"
+            ),
+            {
+                "id": tid,
+                "s": story,
+                "b": kw.get("briefing_id"),
+                "step": step,
+                "err": kw.get("error"),
+                "path": kw.get("audio_path"),
+                "dur": kw.get("duration_ms"),
+                "at": at,
+            },
+        )
+    return tid
+
+
+async def test_ready_telecast_view_has_audio_lines_and_verdicts(
+    db: AsyncEngine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(tc, "media_dir", lambda: tmp_path)
+    sid = await _story(db, "aired story", [("A", 1), ("B", 2)])
+    bid, l1, l2, l3 = uuid4(), uuid4(), uuid4(), uuid4()
+    async with db.begin() as conn:
+        await conn.execute(
+            text(
+                "INSERT INTO briefings (id, created_at, status, target_minutes)"
+                " VALUES (:b, now(), 'aired', 0.75)"
+            ),
+            {"b": bid},
+        )
+        for lid, order, start, end in ((l1, 0, 0, 4000), (l2, 1, 4300, 9000), (l3, 2, None, None)):
+            await conn.execute(
+                text(
+                    'INSERT INTO script_lines (id, briefing_id, story_id, "order", text, kind,'
+                    " audio_start_ms, audio_end_ms)"
+                    " VALUES (:id, :b, :s, :o, :t, 'script', :st, :en)"
+                ),
+                {
+                    "id": lid,
+                    "b": bid,
+                    "s": sid,
+                    "o": order,
+                    "t": f"line {order}",
+                    "st": start,
+                    "en": end,
+                },
+            )
+        for lid, verdict in ((l1, "approved"), (l2, "approved"), (l3, "rejected")):
+            await conn.execute(
+                text(
+                    "INSERT INTO claims (id, script_line_id, text, verdict, rewrite_round)"
+                    " VALUES (:i, :l, 'c', :v, 0)"
+                ),
+                {"i": uuid4(), "l": lid, "v": verdict},
+            )
+    (tmp_path / "telecasts").mkdir()
+    tid = await _telecast(
+        db, sid, "ready", briefing_id=bid, audio_path="telecasts/x.wav", duration_ms=9000
+    )
+    (tmp_path / "telecasts" / "x.wav").write_bytes(b"RIFF")
+
+    view = await tc.telecast_view(tid)
+    assert (
+        view.step == "ready"
+        and view.audio_url == "/media/telecasts/x.wav"
+        and view.duration_ms == 9000
+    )
+    assert [(ln.text, ln.start_ms, ln.end_ms) for ln in view.lines] == [
+        ("line 0", 0, 4000),
+        ("line 1", 4300, 9000),
+    ]
+    assert view.verdicts == {"approved": 2, "rejected": 1}
+    assert (
+        view.story is not None and view.story.telecast is not None and view.story.telecast.id == tid
+    )
+
+    started: list[UUID] = []
+    again = await tc.start_telecast(sid, runner=lambda t, s: started.append(t))
+    assert again.id == tid and started == []  # a recent ready telecast is reused
+
+
+async def test_start_reuses_running_and_replaces_stale_or_failed(
+    db: AsyncEngine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(tc, "media_dir", lambda: tmp_path)
+    sid = await _story(db, "story", [("A", 1), ("B", 2)])
+    started: list[UUID] = []
+
+    def runner(t: UUID, s: UUID) -> None:
+        started.append(t)
+
+    stale = await _telecast(db, sid, "checking", minutes_ago=60)
+    assert (await tc.telecast_view(stale)).step == "failed"  # interrupted
+    await _telecast(db, sid, "failed", minutes_ago=1, error="clearing: nothing")
+    first = await tc.start_telecast(sid, runner=runner)
+    assert first.step == "queued" and started == [first.id]
+    second = await tc.start_telecast(sid, runner=runner)
+    assert second.id == first.id and len(started) == 1  # still running: reused
+
+    with pytest.raises(tc.StoryNotFoundError):
+        await tc.start_telecast(uuid4(), runner=runner)
+    with pytest.raises(tc.TelecastNotFoundError):
+        await tc.telecast_view(uuid4())

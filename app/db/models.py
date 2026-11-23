@@ -198,6 +198,32 @@ class Correction(SQLModel, table=True):
     created_at: datetime = _ts()
 
 
+TELECAST_STEPS = ("queued", "writing", "checking", "clearing", "voicing", "ready", "failed")
+
+
+class Telecast(SQLModel, table=True):
+    """A one-story broadcast a reader asked for from the Press feed (task 8.3, decision 0027): the
+    story's own briefing, written, judged, cleared and voiced once to ``audio_path``."""
+
+    __tablename__ = "telecasts"
+    __table_args__ = (
+        CheckConstraint(
+            "step IN ('queued', 'writing', 'checking', 'clearing', 'voicing', 'ready', 'failed')",
+            name="ck_telecasts_step",
+        ),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    story_id: UUID = _fk("stories.id", "CASCADE")
+    briefing_id: UUID | None = _fk("briefings.id", "SET NULL", nullable=True)
+    step: str = Field(default="queued", sa_type=String(10))
+    error: str | None = Field(default=None, sa_type=Text)
+    audio_path: str | None = Field(default=None, sa_type=Text)  # relative to media_dir
+    duration_ms: int | None = None
+    created_at: datetime = _ts()
+    updated_at: datetime = _ts()
+
+
 class Trace(SQLModel, table=True):
     __tablename__ = "traces"
     __table_args__ = (Index("ix_traces_component_started_at", "component", "started_at"),)

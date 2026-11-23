@@ -164,6 +164,13 @@ class Settings(BaseSettings):
 
     # Press feed (task 8.2): crawler summaries per worker run, newest stories first. 0 = off.
     press_summaries_per_run: int = Field(default=8, ge=0, le=100)
+    # Telecasts (task 8.3, decision 0027): one-story broadcasts rendered to WAV under media_dir and
+    # served at /media. Jobs run in the API process.
+    media_dir: str = "var/media"
+    press_telecast_seconds: int = Field(default=45, ge=15, le=180)
+    press_telecast_concurrency: int = Field(default=2, ge=1, le=8)
+    press_telecast_reuse_hours: float = Field(default=6.0, ge=0)
+    press_telecast_stale_minutes: int = Field(default=20, ge=1)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)

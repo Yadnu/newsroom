@@ -15,6 +15,7 @@ from app.db.models import (
     Source,
     Story,
     StorySource,
+    Telecast,
     Trace,
     Verdict,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "Source",
     "Story",
     "StorySource",
+    "Telecast",
     "Trace",
     "Verdict",
     "get_engine",

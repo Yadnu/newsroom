@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton (see `FRONTEND_PLAN.md`)
+8.4 studio scene, animated anchor, lip sync (see `FRONTEND_PLAN.md`)
 
 ## Tasks
 
@@ -62,7 +62,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 ### Phase 8: frontend (plan in `FRONTEND_PLAN.md`)
 - [x] 8.1 plan: Press feed + on-demand animated telecast
 - [x] 8.2 backend B1 (RSS images, story summaries, `GET /press/stories`) + Feed mode
-- [ ] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
+- [x] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
 - [ ] 8.4 studio scene, animated anchor, lip sync
 - [ ] 8.5 bumper, lower thirds, ticker, B-roll, outro
 - [ ] 8.6 responsive, reduced motion, error states, tests, README
@@ -93,6 +93,6 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 8.2. Press feed: `GET /press/stories` (new `app/press/`, decision 0026), RSS thumbnails in `sources.image_url` (migration `d4e1a7b93c02`, applied to the dev DB), crawler summaries (`writer.summarize_story`, copied-words check, worker hook, `newsroom summarize`). Web: full-screen pager at `/` (Tailwind, Framer Motion, TanStack Query, Vitest), Archive moved to `/archive`, `/api` rewrite. Branch `phase8/press-feed` on `phase8/frontend-plan` (#33).
+- Done: 8.3. Telecasts (decision 0027): `POST /press/stories/{id}/telecast` runs rundown_for_story -> draft -> review -> clear -> speak to `var/media/telecasts/<id>.wav` in the API process; `GET /press/telecasts/{id}`; `/media` with Range (migration `e8b3c5d2f610`, applied to the dev DB). Live: Gemini 4 Neon ready in 90 s, 45 s audio, 10/10 approved. Web: `/watch/[storyId]` with Preparing steps, `buildBroadcastScript`, `ShowClock` (audio master), controls, captions; audio/caption sync checked headless over CDP. Branch `phase8/telecast` on `phase8/press-feed` (#34).
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 8.3 per `FRONTEND_PLAN.md`: telecast job (one-story briefing, judge, clear, render audio file), `/press/telecasts`, `/media`, then the broadcast player skeleton (timeline, audio clock, controls, captions).
+- Next: 8.4 per `FRONTEND_PLAN.md`: Cartesia word-timestamp spike, then the layered SVG anchor, idle life, lip sync. Phone layout of the player (lower third over captions, controls wrap) is 8.6.

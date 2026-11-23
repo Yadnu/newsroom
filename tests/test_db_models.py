@@ -7,6 +7,7 @@ import app.db as db
 
 TABLES = {
     "sources",
+    "telecasts",
     "stories",
     "story_sources",
     "briefings",

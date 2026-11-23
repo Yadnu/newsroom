@@ -6,7 +6,7 @@ phase: 4
 code: web/
 depends_on: [anchor, archive, press]
 feeds: []
-decisions: [0026]
+decisions: [0026, 0027]
 ---
 
 # web
@@ -30,9 +30,17 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
 - Press feed (task 8.2): `/` full-screen vertical pager of `/press/stories` (wheel, arrow/PageUp/PageDown/j/k/space
   keys, touch swipe, prev/next buttons; next page prefetched 3 cards before the end). Card: feed thumbnail credited
   to its outlet or a stable gradient, outlets + time ago, headline, crawler summary labelled "not yet fact-checked",
-  up to 3 source links, "Watch broadcast" (disabled until 8.3). Loading skeleton, offline state with retry, empty
+  up to 3 source links, "Watch broadcast" (links to the telecast; "Fact-checked broadcast ready" when one is). Loading skeleton, offline state with retry, empty
   state. Code in `src/` (`api/client.ts` typed fetch via `/api`, `api/press.ts` TanStack infinite query,
   `features/feed/`). Route groups: `app/(press)` (no header, `data-press` reset) and `app/(archive)`.
+- Telecast player (task 8.3): `/watch/[storyId]` starts or reuses the story's telecast (`useTelecast`: POST, then
+  polls every 2 s), shows the real steps ("Going to air"), then plays it. `src/broadcast/script.ts`
+  `buildBroadcastScript()` is the single timeline (bumper 2.5 s, intro, body = audio, b-roll on a caption boundary
+  near 40%, outro 5 s; captions, lower thirds, BREAKING if newest source < 3 h and 3+ outlets);
+  `src/broadcast/clock.ts` `ShowClock` is the only clock (audio element is master during speech, wall clock
+  otherwise and for captions-only). Controls: play/pause, replay, seek bar, prev/next story, mute, captions (on by
+  default), speed 0.75-1.5, exit; keys space/k, m, c, r, arrows, n/p, Esc. Plain stage only (studio in 8.4).
+  Failed telecast: reason, retry, link to the briefing in the Archive.
 - Archive dashboard (task 3.3): `/archive` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
   cited source links, evidence passages, earlier verdicts), stage table, and the briefing's rejections;
@@ -42,7 +50,7 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
 ## Invariants
 
 - Talks only to the FastAPI backend: Archive pages read through server components (`lib/api.ts` is `server-only`);
-  the browser calls the API only through the same-origin `/api/*` rewrite (`next.config.ts`, to
+  the browser calls the API only through the same-origin `/api/*` and `/media/*` rewrites (`next.config.ts`, to
   `NEWSROOM_API_URL`) and opens the Anchor WebSocket.
 - API types generated from OpenAPI: `scripts/export_openapi.py` writes `web/openapi.json`, `npm run gen:api`
   writes `lib/api-types.ts`. CI fails if either is stale.
@@ -77,3 +85,4 @@ automated (no browser in the agent environment).
 - 2026-11-21: briefing page Corrections banner and `Correction` line badge; corrections badge on the list (task 6.2).
 - 2026-11-21: trace panel shows "Sources disagree" conflicts under a judgement (task 6.3).
 - 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).
+- 2026-11-23: telecast player skeleton at `/watch/[storyId]`: timeline, ShowClock, controls, captions (task 8.3).
