@@ -594,6 +594,11 @@ export interface components {
         };
         /** TelecastView */
         TelecastView: {
+            /**
+             * Audio Lead Ms
+             * @default 0
+             */
+            audio_lead_ms: number;
             /** Audio Url */
             audio_url?: string | null;
             /** Briefing Id */

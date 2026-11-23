@@ -467,6 +467,19 @@ def cleanup_media_cmd(
     )
 
 
+@app.command("transcode-media")
+def transcode_media_cmd(
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Count only.")] = False,
+) -> None:
+    """Convert ready telecasts stored as WAV to MP3 (task 9.4)."""
+    from app.press.telecast import transcode_existing
+
+    configure_logging(get_settings(), stream=sys.stderr)
+    n, saved = _run(lambda: transcode_existing(dry_run))
+    verb = "would convert" if dry_run else "converted"
+    console.print(f"{verb} {n} telecasts to MP3 ({saved / 1_000_000:.1f} MB smaller)")
+
+
 @app.command()
 def summarize(
     limit: Annotated[int, typer.Option(min=1, max=100, help="Stories to summarize.")] = 10,

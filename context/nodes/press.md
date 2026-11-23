@@ -36,7 +36,7 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
 - `POST /press/stories/{id}/telecast` -> 202 `TelecastView` (404 unknown story or < 2 live sources): reuses a ready
   telecast younger than `press_telecast_reuse_hours` (6) or a running one, else starts a job (`telecast.py`,
   decision 0027): `rundown_for_story` -> `draft_script` -> `review_script` -> `clear_for_air` -> `speak` to
-  `media_dir/telecasts/<id>.wav`, in the API process, `press_telecast_concurrency` (2) at a time.
+  `media_dir/telecasts/<id>.wav` (then MP3, task 9.4), in the API process, `press_telecast_concurrency` (2) at a time.
 - `GET /press/telecasts/{id}` -> `TelecastView{id, story_id, briefing_id, step (queued|writing|checking|clearing|
   voicing|ready|failed), error, created_at, updated_at, audio_url (/media/...), duration_ms, lines[id, text,
   start_ms, end_ms, words[text, start_ms, end_ms]] (voiced lines; words empty if the TTS gave none), verdicts
@@ -51,6 +51,9 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
   `telecast_job` (worker, timeout 900 s, one try) only if Redis answers and the worker health key is fresh
   (`WORKER_HEALTH_S` 15), else `schedule()` in-process. `start_telecast` holds `pg_advisory_xact_lock` per story
   around reuse-or-create.
+- MP3 (task 9.4, `audio.py`): telecast audio is encoded to 64 kbps MP3 after voicing (WAV kept if encoding fails);
+  `TelecastView.audio_lead_ms` = MP3 encoder+decoder delay (46 ms at 24 kHz, 0 for WAV). `newsroom
+  transcode-media [--dry-run]` converts ready WAV telecasts.
 
 ## Invariants
 
@@ -83,3 +86,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 - 2026-11-23: telecast audio retention: `cleanup_media`, daily worker job, `newsroom cleanup-media`, `expired` step (task 9.1, decision 0029).
 - 2026-11-23: summaries refreshed when a story gains 2+ live sources (task 9.2).
 - 2026-11-23: telecasts run on the ARQ worker when one is alive, else in-process; per-story start lock (task 9.3).
+- 2026-11-23: MP3 telecast audio, `audio_lead_ms`, `newsroom transcode-media` (task 9.4).

@@ -164,3 +164,22 @@ def test_words_of_reads_stored_word_timings_tolerantly() -> None:
         ("world", 400, 900),
     ]
     assert tc.words_of(None) == []
+
+
+async def test_a_ready_telecast_is_stored_as_mp3(
+    job: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from tests.test_press_audio import tone_wav
+
+    class Report:
+        audio_ms, lines = 1000, [object()]
+
+    async def speak(script: Any, session: Any) -> Report:
+        tone_wav(session[1], seconds=0.5)  # the fake session is ("wav", path, rate)
+        return Report()
+
+    monkeypatch.setattr(tc, "speak", speak)
+    await tc.run_telecast(TID, SID)
+    assert job["sets"][-1]["audio_path"] == f"telecasts/{TID}.mp3"
+    assert (tmp_path / "telecasts" / f"{TID}.mp3").is_file()
+    assert not (tmp_path / "telecasts" / f"{TID}.wav").exists()

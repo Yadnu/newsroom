@@ -101,3 +101,15 @@ describe("ShowClock", () => {
     expect(clock.tick()).toBe(5000);
   });
 });
+
+test("an MP3 lead shifts the media clock, not the show", () => {
+  now = 0;
+  const media = new FakeMedia();
+  const clock = new ShowClock({ ...TIMING, audioLead: 46 }, media, clockNow);
+  clock.seek(2500); // speech starts here
+  clock.play();
+  expect(media.currentTime).toBeCloseTo(0.046);
+  now = 1000;
+  media.currentTime = 0.046 + 1.0;
+  expect(clock.tick()).toBeCloseTo(3500);
+});

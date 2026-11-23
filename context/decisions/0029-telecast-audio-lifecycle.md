@@ -22,6 +22,10 @@ Phase 9 follow-ups to decision 0027: telecast audio files accumulated under `var
   runs in the API process as before. `worker` always queues (fails the telecast if Redis is down); `inprocess`
   never queues. Redis is tried with a 1 s timeout and no retries, and a failure is remembered for a minute.
   Starting a telecast takes a per-story advisory lock, so concurrent requests share one telecast.
+- MP3 (task 9.4): after `speak()` writes the WAV, `encode_mp3` (lameenc, 64 kbps mono CBR) replaces it; on an
+  encode failure the WAV is kept and the telecast still airs. lameenc writes no Xing/Info header, so the file
+  starts with the LAME encoder delay plus the decoder's (1105 samples, 46 ms at 24 kHz): `TelecastView.audio_lead_ms`
+  reports it and the player's `ShowClock` maps media time with it. `newsroom transcode-media` converts old WAVs.
 - Output cap (found live in task 9.3): every chat request sends `max_tokens` per task; without it OpenRouter
   reserved the whole context against the account credit and answered 402 on every full judge prompt.
 

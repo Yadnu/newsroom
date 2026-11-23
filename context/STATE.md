@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-9.4 MP3 telecast audio
+9.5 categories (feed tags, filter, category bar)
 
 ## Tasks
 
@@ -71,7 +71,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 - [x] 9.1 telecast audio retention (cleanup job, `expired` telecasts)
 - [x] 9.2 refresh summaries when a story gains sources
 - [x] 9.3 telecasts as ARQ worker jobs, in-process fallback
-- [ ] 9.4 MP3 telecast audio
+- [x] 9.4 MP3 telecast audio
 - [ ] 9.5 categories (feed tags, filter, category bar)
 - [ ] 9.6 spoken and typed questions during a telecast
 
@@ -101,6 +101,6 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 9.3. Telecasts run as ARQ `telecast_job` when Redis answers and a worker health key is fresh, else in-process (`press_telecast_runner`); per-story advisory lock on start; web start deduplicated. Live: `.env` points at a cloud Redis; with no worker the API fell back in-process (`press.no_worker`); with `arq app.worker.WorkerSettings` running, the worker picked jobs up within 1 s; 3 concurrent POSTs gave one telecast. Also fixed: OpenRouter 402 (no `max_tokens`; gateway now caps per task). Live jobs then failed on Groq's daily cap (gpt-oss-120b TPD 200k used): draft's fallback is the same Groq model. Branch `phase9/worker-telecasts` on `phase9/summary-refresh` (#40).
+- Done: 9.4. Telecast audio is MP3 (lameenc 64 kbps, WAV kept if encoding fails) with `audio_lead_ms` (46 ms encoder delay) applied by the player clock; `newsroom transcode-media` converted the 11 existing telecasts on the dev DB (8.8 MB -> 1.5 MB); played in headless Chrome as audio/mpeg with captions in sync. Branch `phase9/mp3` on `phase9/worker-telecasts` (#41). Earlier: 9.3 worker jobs + OpenRouter max_tokens fix.
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 9.4 to 9.6 per the Phase 9 plan (MP3, categories, questions during telecasts). Groq's daily cap is spent until it resets; draft/classify/answer fallbacks could also go to OpenRouter (not changed).
+- Next: 9.5 categories, 9.6 questions during telecasts. Groq's daily cap for gpt-oss-120b was spent on 2026-11-23 (rolling 24 h).

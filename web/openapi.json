@@ -1029,6 +1029,11 @@
       },
       "TelecastView": {
         "properties": {
+          "audio_lead_ms": {
+            "default": 0,
+            "title": "Audio Lead Ms",
+            "type": "integer"
+          },
           "audio_url": {
             "anyOf": [
               {

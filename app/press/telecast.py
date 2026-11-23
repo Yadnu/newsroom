@@ -31,6 +31,7 @@ from app.db.session import get_engine
 from app.editor import review_script
 from app.log import get_logger
 from app.press import queue
+from app.press.audio import AudioEncodeError, encode_mp3, lead_ms
 from app.press.feed import PressStory, press_story
 from app.producer import NoStoriesError, rundown_for_story
 from app.shared import llm
@@ -90,6 +91,7 @@ class TelecastView(BaseModel):
     updated_at: datetime
     audio_url: str | None = None  # same-origin path, e.g. /media/telecasts/<id>.wav
     duration_ms: int | None = None
+    audio_lead_ms: int = 0  # silence at the start of the file (MP3 encoder delay, task 9.4)
     lines: list[TelecastLine] = []  # voiced lines with audio timings (ready only)
     verdicts: dict[str, int] = {}  # the briefing's claims by verdict
     story: PressStory | None = None
@@ -107,7 +109,7 @@ def media_dir() -> Path:
 
 
 def audio_file(telecast_id: UUID) -> tuple[Path, str]:
-    """(absolute path, path relative to media_dir) of a telecast's WAV file."""
+    """(absolute path, path relative to media_dir) of the WAV the Anchor writes (then MP3)."""
     rel = f"telecasts/{telecast_id}.wav"
     return media_dir() / rel, rel
 
@@ -124,6 +126,19 @@ async def dispatch(telecast_id: UUID, story_id: UUID) -> None:
         await _set(telecast_id, step="failed", error="queued: the worker queue is unavailable")
         return
     schedule(telecast_id, story_id)
+
+
+def to_mp3(wav: Path, rel: str) -> str:
+    """Encode the telecast's WAV to MP3 and remove the WAV (task 9.4). On failure keep the WAV: the
+    telecast still airs. Returns the audio path relative to media_dir."""
+    mp3 = wav.with_suffix(".mp3")
+    try:
+        encode_mp3(wav, mp3)
+    except AudioEncodeError as e:
+        log.warning("press.mp3_failed", error=str(e)[:200])
+        return rel
+    wav.unlink(missing_ok=True)
+    return rel.removesuffix(".wav") + ".mp3"
 
 
 def schedule(telecast_id: UUID, story_id: UUID) -> None:
@@ -173,6 +188,7 @@ async def run_telecast(telecast_id: UUID, story_id: UUID) -> None:
             path, rel = audio_file(telecast_id)
             path.parent.mkdir(parents=True, exist_ok=True)
             report = await speak(cleared, WavFileSession(path, settings.anchor_sample_rate))
+            rel = await asyncio.to_thread(to_mp3, path, rel)
             await _set(telecast_id, step="ready", audio_path=rel, duration_ms=report.audio_ms)
             s.set(step="ready", lines=len(report.lines), audio_ms=report.audio_ms)
         except Exception as e:
@@ -289,6 +305,7 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
             view.verdicts = {str(v): int(n) for v, n in counts.all()}
         if view.step == "ready" and row.audio_path and view.briefing_id is not None:
             view.audio_url = f"/media/{row.audio_path}"
+            view.audio_lead_ms = lead_ms(row.audio_path, get_settings().anchor_sample_rate)
             view.duration_ms = row.duration_ms
             lines = await conn.execute(
                 select(
@@ -327,3 +344,31 @@ async def wait_for_jobs() -> None:
     """For tests and shutdown: wait for running telecast jobs."""
     if _tasks:
         await asyncio.gather(*list(_tasks), return_exceptions=True)
+
+
+async def transcode_existing(dry_run: bool = False) -> tuple[int, int]:
+    """Convert ready telecasts stored as WAV to MP3 (task 9.4). Returns (converted, bytes saved)."""
+    query = select(_telecasts.c.id, _telecasts.c.audio_path).where(
+        _telecasts.c.step == "ready", _telecasts.c.audio_path.like("%.wav")
+    )
+    async with get_engine().connect() as conn:
+        rows = (await conn.execute(query)).all()
+    converted = saved = 0
+    for r in rows:
+        wav = media_dir() / str(r.audio_path)
+        if not wav.is_file():
+            continue
+        before = wav.stat().st_size
+        if dry_run:
+            converted += 1
+            saved += before * 5 // 6  # about six times smaller
+            continue
+        rel = await asyncio.to_thread(to_mp3, wav, str(r.audio_path))
+        if rel.endswith(".mp3"):
+            converted += 1
+            saved += before - (media_dir() / rel).stat().st_size
+            async with get_engine().begin() as conn:
+                await conn.execute(
+                    update(_telecasts).where(_telecasts.c.id == r.id).values(audio_path=rel)
+                )
+    return converted, saved
