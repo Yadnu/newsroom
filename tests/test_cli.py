@@ -291,3 +291,41 @@ def test_brief_writer_failure_exits_nonzero(brief_calls: dict[str, Any]) -> None
     result = runner.invoke(cli.app, ["brief"])
     assert result.exit_code == 1
     assert "Writer failed" in result.stderr
+
+
+# ---- output encoding ------------------------------------------------------------------------
+
+NB_HYPHEN = chr(0x2011)  # what crashed `newsroom brief` on a cp1252 pipe
+
+
+def test_utf8_streams_switches_a_cp1252_stream_and_leaves_utf8_alone() -> None:
+    import io
+
+    legacy = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    modern = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    cli.utf8_streams(legacy, modern, object())
+    legacy.write(f"multi{NB_HYPHEN}day")
+    legacy.flush()
+    assert legacy.buffer.getvalue() == f"multi{NB_HYPHEN}day".encode()  # type: ignore[attr-defined]
+    assert modern.encoding == "utf-8" and modern.errors == "strict"
+
+
+@pytest.mark.parametrize("fixed", [False, True])
+def test_printing_unicode_to_a_cp1252_pipe(fixed: bool) -> None:
+    """The ``newsroom brief`` crash on Windows: rich printed U+2011 to a cp1252 stdout."""
+    import os
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; import app.cli as c; "
+        + ("c.utf8_streams(sys.stdout, sys.stderr); " if fixed else "")
+        + "c.console.print('a multi\u2011day outage')"
+    )
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, env=env, timeout=120)
+    if fixed:
+        assert out.returncode == 0, out.stderr.decode(errors="replace")
+        assert f"multi{NB_HYPHEN}day".encode() in out.stdout
+    else:
+        assert out.returncode != 0 and b"UnicodeEncodeError" in out.stderr
