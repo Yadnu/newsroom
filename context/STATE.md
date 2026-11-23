@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-None: 7.3 is done. Open items are in the handoff below.
+8.2 backend B1 + Feed mode (see `FRONTEND_PLAN.md`)
 
 ## Tasks
 
@@ -59,6 +59,14 @@ None: 7.3 is done. Open items are in the handoff below.
 - [x] 7.2 schedule the retraction recheck in the ARQ worker
 - [x] 7.3 narrow the judge's `attributed` check (false flags 0.113 -> 0.048 on judge_v1)
 
+### Phase 8: frontend (plan in `FRONTEND_PLAN.md`)
+- [x] 8.1 plan: Press feed + on-demand animated telecast
+- [ ] 8.2 backend B1 (RSS images, story summaries, `GET /press/stories`) + Feed mode
+- [ ] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
+- [ ] 8.4 studio scene, animated anchor, lip sync
+- [ ] 8.5 bumper, lower thirds, ticker, B-roll, outro
+- [ ] 8.6 responsive, reduced motion, error states, tests, README
+
 ## Open questions (defaults in use until answered)
 
 - Topic scope for v1. Default: AI and tech news.
@@ -87,4 +95,4 @@ None: 7.3 is done. Open items are in the handoff below.
 - Who worked last: Claude Code
 - Done: 7.3. The judge's `attributed` check now covers only opinions, allegations, performance claims and forecasts; concrete announced facts and official counts pass. judge_v1 false flags 7 -> 3 (precision 0.904 -> 0.955), at the cost of one `unattributed` miss (s10-c5). Branch `phase7/attributed` on `phase7/recheck-schedule` (#31). Before: 7.2 recheck schedule, 7.1 OpenRouter judge fallback.
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: frontend Phase 1, `FRONTEND_PLAN.md` (Press feed + on-demand telecast), then Phase 2 after review.
+- Next: 8.2 per `FRONTEND_PLAN.md` (approved 2026-11-23; Next.js in `web/`, pre-rendered telecast audio, crawler summaries labelled not fact-checked, category bar hidden). Plan saved on branch `phase8/frontend-plan`.
