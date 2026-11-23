@@ -48,7 +48,7 @@ export function StoryCard({ story, active }: { story: PressStory; active: boolea
           {story.title}
         </h2>
         {story.summary ? (
-          <p className="line-clamp-6 font-body text-[15px] leading-relaxed text-white/85 sm:text-lg">{story.summary}</p>
+          <p className="line-clamp-6 font-body text-[15px] leading-relaxed text-white/85 sm:text-lg [@media(max-height:820px)]:line-clamp-3">{story.summary}</p>
         ) : (
           <p className="font-body text-base italic text-white/55">
             The press desk hasn&apos;t summarized this story yet. The sources are below.

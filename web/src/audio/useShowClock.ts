@@ -36,7 +36,9 @@ function mediaFor(
       return audio.paused;
     },
     play() {
-      return audio.play().catch((e: unknown) => {
+      // Older engines return undefined instead of a promise.
+      const started: Promise<void> | undefined = audio.play();
+      return started?.catch((e: unknown) => {
         if (e instanceof DOMException && e.name === "NotAllowedError") onBlocked();
         else if (!(e instanceof DOMException && e.name === "AbortError")) onFailed();
       });

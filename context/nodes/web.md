@@ -44,12 +44,22 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
   `poseAt()` (blinks, breathing, tilts, papers, nod, brows) and `mouthAt()` (letter visemes from word timings;
   `useAmplitude` scales them only for estimated words) are pure functions of show time; captions highlight the
   current word. Reduced motion: still pose, mouth and captions only. No GSAP.
+  Graphics (task 8.5, `Graphics.tsx`, `src/broadcast/graphics.ts`, all functions of show time, sized in `cqw` of the
+  `@container` stage): bumper (swooshes, logo, TOP STORY / BREAKING banner wipe), lower thirds sliding in and out
+  (headline at most 45% of the body, then the fact-check bar "x of y claims approved", never overlapping),
+  over-the-shoulder box, B-roll Ken Burns with image credit, LIVE bug with pulsing dot and clock, ticker of the other
+  feed headlines (frozen on pause), outro "Next story in N" with Play now / Cancel and auto-advance; next story's
+  audio and image preloaded when its telecast is ready. Reduced motion: fades, still ticker.
+  Hardening (task 8.6): portrait phones get the stage picture plus `PortraitPanel` (banner, headline, fact-check
+  line, large captions, outro card, ticker; Tailwind `portrait:`/`landscape:`); compact one-row controls; story
+  images fall back to the gradient on load errors; API failures read as sentences (`describeError`); audio that
+  fails mid-show switches to captions-only on the wall clock; a refused autoplay shows a Play button.
   Failed telecast: reason, retry, link to the briefing in the Archive.
 - Archive dashboard (task 3.3): `/archive` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
   cited source links, evidence passages, earlier verdicts), stage table, and the briefing's rejections;
   `/rejections[?only=rejected]` global rejection log linking to each sentence.
-- Config: `NEWSROOM_API_URL` (default `http://localhost:8000`), read server-side only.
+- Config: `NEWSROOM_API_URL` (default `http://localhost:8000`), read server-side only; see `web/.env.example`.
 
 ## Invariants
 
@@ -91,3 +101,5 @@ automated (no browser in the agent environment).
 - 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).
 - 2026-11-23: telecast player skeleton at `/watch/[storyId]`: timeline, ShowClock, controls, captions (task 8.3).
 - 2026-11-23: studio scene, animated anchor, word-timed lip sync and captions (task 8.4).
+- 2026-11-23: broadcast graphics: bumper, lower thirds, B-roll Ken Burns, LIVE bug, ticker, outro with auto-advance (task 8.5).
+- 2026-11-23: phone portrait layout, error states, reduced-motion pass, hook tests, README run guide (task 8.6).

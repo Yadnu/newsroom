@@ -119,6 +119,21 @@ describe("buildBroadcastScript", () => {
     expect(s.words.map((w) => w.text)).toEqual(["First", "one.", "Second.", "Third."]);
   });
 
+  test("lower thirds never overlap, even on a short story", () => {
+    for (const dur of [6000, 9000, 20_000, 60_000]) {
+      const lines = [{ id: "l", text: "x", start_ms: 0, end_ms: dur, words: [] }];
+      const s = buildBroadcastScript(telecast({ duration_ms: dur, lines }), NOW);
+      const [a, b] = s.lowerThirds;
+      if (b) expect(b.start).toBeGreaterThanOrEqual(a.end);
+      for (const l of s.lowerThirds) expect(l.end - l.start).toBeGreaterThanOrEqual(1500);
+    }
+    const short = buildBroadcastScript(
+      telecast({ duration_ms: 4000, lines: [{ id: "l", text: "x", start_ms: 0, end_ms: 4000, words: [] }] }),
+      NOW,
+    );
+    expect(short.lowerThirds.map((l) => l.kind)).toEqual(["headline"]);
+  });
+
   test("a telecast without lines still has a timeline", () => {
     const s = buildBroadcastScript(telecast({ lines: [], duration_ms: null, story: null }), NOW);
     expect(s.audioDuration).toBe(0);
