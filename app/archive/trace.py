@@ -54,6 +54,13 @@ class TracedClaim(BaseModel):
     evidence: list[EvidenceRef]
 
 
+class ConflictRef(BaseModel):
+    """Sources the judge found disagreeing about the claim (task 6.3)."""
+
+    outlets: list[str]
+    note: str
+
+
 class Judgement(BaseModel):
     """One ``editor/judge_claim`` span. ``current``: the claim is still in ``claims``."""
 
@@ -66,6 +73,7 @@ class Judgement(BaseModel):
     reason: str
     checks: dict[str, bool]
     current: bool
+    conflicts: list[ConflictRef] = []
 
 
 class ClaimTrace(BaseModel):
@@ -119,7 +127,20 @@ def judgement_from_trace(row: Mapping[Any, Any], current_ids: set[UUID]) -> Judg
         reason=str(p.get("reason") or ""),
         checks={str(k): bool(v) for k, v in checks.items()} if isinstance(checks, Mapping) else {},
         current=claim_id in current_ids,
+        conflicts=_conflicts(p.get("conflicts")),
     )
+
+
+def _conflicts(raw: Any) -> list[ConflictRef]:
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for c in raw:
+        if isinstance(c, Mapping) and isinstance(c.get("outlets"), list):
+            out.append(
+                ConflictRef(outlets=[str(o) for o in c["outlets"]], note=str(c.get("note") or ""))
+            )
+    return out
 
 
 def line_id_of(row: Mapping[Any, Any]) -> UUID | None:

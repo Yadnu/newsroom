@@ -79,3 +79,4 @@ briefing `3873a08c`, 16 lines printed with verdict and sources per claim; approv
 - 2026-11-19: answers listener questions on air with the full fact-check, then resumes (task 5.3).
 - 2026-11-19: answers fall back to live search when the briefing's sources don't cover them (task 5.4).
 - 2026-11-21: `newsroom brief` airs queued corrections first (task 6.2, decision 0023).
+- 2026-11-23: `newsroom` switches cp1252 stdout/stderr to UTF-8 (`utf8_streams`), so `brief` no longer crashes printing to a Windows pipe.

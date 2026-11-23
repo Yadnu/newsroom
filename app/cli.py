@@ -1,6 +1,8 @@
 """``newsroom`` command line. Installed as a script: ``uv run newsroom --help``."""
 
 import asyncio
+import codecs
+import io
 import json
 import sys
 from collections.abc import Awaitable, Callable, Sequence
@@ -470,5 +472,17 @@ def corrections(
         )
 
 
+def utf8_streams(*streams: object) -> None:
+    """Switch text streams that cannot encode Unicode (cp1252 on a Windows pipe or redirect) to
+    UTF-8, replacing anything still unencodable. Headlines carry characters like U+2011, and a
+    print crash would lose the report after the briefing was already stored."""
+    for stream in streams:
+        if not isinstance(stream, io.TextIOWrapper):
+            continue
+        if codecs.lookup(stream.encoding).name != "utf-8":
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> None:
+    utf8_streams(sys.stdout, sys.stderr)
     app()

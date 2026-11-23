@@ -1,12 +1,15 @@
 """``judge_claim()`` / ``judge_script()``: an LLM judge checks each claim against evidence.
 
 The judge sees only the claim text and the retrieved evidence passages: never the Writer's line,
-prompt, or other claims (decision 0002). The model answers the 5-check rubric; the verdict is
-computed here from those answers (decision 0012):
+prompt, or other claims (decision 0002). The model answers the 6-check rubric; the verdict is
+computed here from those answers (decisions 0012, 0024):
 
 - no evidence passages, ``supported`` failed, or no passage cited -> ``rejected``
 - sensitive claim with cited passages from fewer than 2 outlets -> ``corroborated`` fails
-- any of ``faithful``, ``attributed``, ``fresh``, ``corroborated`` failed -> ``rewrite``
+- any of ``faithful``, ``attributed``, ``fresh``, ``corroborated``, ``consistent`` failed
+  -> ``rewrite``
+- ``consistent`` fails when the passages disagree on a fact the claim states (task 6.3); conflicts
+  that name passages from 2+ sources are kept on the verdict so the reason names both outlets
 - otherwise ``approved``, and the cited passages are stored as ``claim_evidence``
 """
 
@@ -27,7 +30,7 @@ from app.shared import llm
 from app.writer import DraftClaim, Script
 from app.writer.prompts import escape_attr, escape_text, load_prompt, render
 
-CHECKS = ("supported", "faithful", "attributed", "fresh", "corroborated")
+CHECKS = ("supported", "faithful", "attributed", "fresh", "corroborated", "consistent")
 MIN_OUTLETS_SENSITIVE = 2
 
 _claims = Claim.__table__  # type: ignore[attr-defined]
@@ -47,12 +50,19 @@ class Check(BaseModel):
     note: str
 
 
+class ConflictOut(BaseModel):
+    evidence: list[str]  # passage ids that disagree, e.g. ["E1", "E3"]
+    note: str
+
+
 class JudgeOut(BaseModel):
     supported: Check
     faithful: Check
     attributed: Check
     fresh: Check
     corroborated: Check
+    consistent: Check
+    conflicts: list[ConflictOut] = []
     sensitive: bool
     evidence: list[str]
     confidence: float
@@ -69,6 +79,14 @@ class EvidencePassage(BaseModel):
     score: float
 
 
+class Conflict(BaseModel):
+    """Evidence passages from different sources that disagree on what the claim states."""
+
+    source_ids: list[UUID]
+    outlets: list[str]
+    note: str
+
+
 class ClaimVerdict(BaseModel):
     claim_id: UUID
     verdict: Verdict
@@ -77,6 +95,7 @@ class ClaimVerdict(BaseModel):
     checks: dict[str, bool]
     sensitive: bool
     evidence: list[EvidencePassage]
+    conflicts: list[Conflict] = []
 
 
 class JudgedScript(BaseModel):
@@ -123,10 +142,31 @@ def judge_messages(
 # ---- verdict (pure) ---------------------------------------------------------------------------
 
 
+def conflicts_of(out: JudgeOut, refs: dict[str, Passage]) -> list[Conflict]:
+    """The model's conflicts that name known passages from at least 2 different sources."""
+    found: list[Conflict] = []
+    for c in out.conflicts:
+        passages = [refs[r] for r in dict.fromkeys(e.strip() for e in c.evidence) if r in refs]
+        by_source = {p.source_id: p.outlet for p in passages}
+        if len(by_source) >= 2:
+            found.append(
+                Conflict(
+                    source_ids=list(by_source),
+                    outlets=list(dict.fromkeys(by_source.values())),
+                    note=c.note.strip(),
+                )
+            )
+    return found
+
+
 def decide(claim_id: UUID, out: JudgeOut, refs: dict[str, Passage]) -> ClaimVerdict:
     cited = [refs[r] for r in dict.fromkeys(e.strip() for e in out.evidence) if r in refs]
     checks = {name: getattr(out, name).passed for name in CHECKS}
     notes = {name: getattr(out, name).note for name in CHECKS}
+    conflicts = conflicts_of(out, refs) if not checks["consistent"] else []
+    if conflicts:
+        named = "; ".join(f"{' vs '.join(c.outlets)}: {c.note}" for c in conflicts)
+        notes["consistent"] = f"sources disagree ({named})"
     outlets = {p.outlet.casefold() for p in cited}
     if out.sensitive:
         enough = len(outlets) >= MIN_OUTLETS_SENSITIVE
@@ -165,6 +205,7 @@ def decide(claim_id: UUID, out: JudgeOut, refs: dict[str, Passage]) -> ClaimVerd
             )
             for p in evidence
         ],
+        conflicts=conflicts,
     )
 
 
@@ -223,6 +264,7 @@ async def judge_passages(claim: ClaimRef, passages: Sequence[Passage]) -> ClaimV
             checks=v.checks,
             sensitive=v.sensitive,
             evidence=len(v.evidence),
+            conflicts=[{"outlets": c.outlets, "note": c.note} for c in v.conflicts],
         )
     return v
 

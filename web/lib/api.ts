@@ -18,6 +18,7 @@ export type SourceRef = S["SourceRef"];
 export type Judgement = S["Judgement"];
 export type Rejection = S["Rejection"];
 export type CorrectionRef = S["CorrectionRef"];
+export type ConflictRef = S["ConflictRef"];
 
 const API_URL = (process.env.NEWSROOM_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 

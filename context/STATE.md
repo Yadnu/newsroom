@@ -1,14 +1,14 @@
 # STATE
 
-Last updated: 2026-11-19 by: Claude Code
+Last updated: 2026-11-23 by: Claude Code
 
 ## Current phase
 
-Phase 6: Evals and polish. Phases 1 to 5 are complete.
+Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-6.3 contradiction detection in Editor
+None: 7.2 is done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -51,8 +51,12 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 ### Phase 6: Evals and polish
 - [x] 6.1 red team set (satire, stale, prompt injection), eval run in CI
 - [x] 6.2 correction pipeline: source retraction flags affected briefings
-- [ ] 6.3 contradiction detection in Editor
-- [ ] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
+- [x] 6.3 contradiction detection in Editor
+- [x] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
+
+### Phase 7: hardening
+- [x] 7.1 second judge provider: OpenRouter fallback for gpt-oss-120b, 429 fails over at once
+- [x] 7.2 schedule the retraction recheck in the ARQ worker
 
 ## Open questions (defaults in use until answered)
 
@@ -69,10 +73,14 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 - 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 22/24 attacks, 0/9 false blocks
   (2 known gaps); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
   attacks, 2/5 controls flagged.
+- 2026-11-23, judge_v1 (130/130), prompt `ca7ed1b1` (6 checks): catch rate 1.00 (30/30), precision 0.904, recall
+  0.971, false flag rate 0.113; 107 cases answered by OpenRouter after a Groq 429 (decision 0025).
+- 2026-11-23, contradictions_v1 (28/28), prompt `ca7ed1b1`: contradiction catch 1.00 (12/12), attributed
+  disagreements 6/6 approved, precision 0.706, false flag rate 0.313 (5/16, all over-strict `attributed`).
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 6.2. `newsroom retract` / `recheck` (404/410 or a publisher notice only) mark a source retracted and record a `corrections` row per affected claim (orphaned/weakened, on_air); the next `newsroom brief` opens with a fixed-template correction line that the Standards Desk clears only against that row (decision 0023). Archive API and web banner. Migration `c7d2e8f40a61` applied to the dev DB; test source `b41d6295` retracted there (test briefing `42c6f7d3`). Branch `phase6/corrections` stacks on #24 (the safe-line fix, needed because #23 merged before it); none merged.
-- Open: recheck has no schedule (CLI only). Judge false flags 0.138 (over-strict `attributed`); 10 judge_v1 cases pending (Groq TPM). Opinion and "confirm" known gaps. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
-- Next: 6.3 contradiction detection in the Editor: claims whose sources disagree are flagged instead of approved.
+- Done: 7.2. The ARQ worker runs `recheck_job` (retraction recheck) every `reporter_recheck_every_hours` (6) at minute 30; 0 turns it off. Branch `phase7/recheck-schedule` on `phase7/judge-fallback` (#30). Before it, 7.1: OpenRouter as the judge's fallback host (decision 0025), checked live: a direct probe judged 3/3 cases in strict JSON (3-5 s), and judge_v1 (130/130, 107 via OpenRouter) and contradictions_v1 (28/28) completed with no pending cases.
+- Open: over-strict `attributed` is the main judge false flag. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
+- Next: nothing left that needs no keys; candidates are the `attributed` false flags (judge prompt) or Langfuse once keys are in `.env`.

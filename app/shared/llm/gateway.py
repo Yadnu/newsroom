@@ -43,6 +43,7 @@ STRUCTURED_ATTEMPTS = 2  # resample once when the output fails validation
 _MAX_BACKOFF_S = 30.0
 _RATE_LIMIT_BACKOFF_S = 15.0
 EMBED_WINDOW_S = 60.0  # the providers' per-minute limits, as a sliding window
+CHAT_PROVIDERS = ("groq", "openrouter")  # model string "<provider>:<model id>"; no prefix = groq
 
 log = get_logger(__name__)
 
@@ -53,6 +54,15 @@ def cost_usd(prices: dict[str, tuple[float, float]], model: str, t_in: int, t_ou
     except KeyError:
         raise LLMConfigError(f"no price configured for model {model!r}") from None
     return (t_in * price_in + t_out * price_out) / 1_000_000
+
+
+def provider_of(model: str) -> tuple[str, str]:
+    """Split ``"openrouter:openai/gpt-oss-120b"`` into (provider, model id) (decision 0025).
+    Only a known provider counts as a prefix, so ids like ``"x/y:free"`` stay Groq models."""
+    prefix, sep, rest = model.partition(":")
+    if sep and prefix in CHAT_PROVIDERS and rest:
+        return prefix, rest
+    return "groq", model
 
 
 class Gateway:
@@ -98,7 +108,21 @@ class Gateway:
     # ---- chat -------------------------------------------------------------------------
 
     def fallback_for(self, task: TaskName) -> str | None:
-        return self._s.llm_fallbacks.get(task)
+        """The task's fallback model, or None when there is none or its host has no key."""
+        fallback = self._s.llm_fallbacks.get(task)
+        if fallback is None or self._chat_host(provider_of(fallback)[0])[1] is None:
+            return None
+        return fallback
+
+    def _chat_host(self, provider: str) -> tuple[str, Any, str]:
+        """(base url, key secret or None, env var name) for a chat provider."""
+        if provider == "openrouter":
+            return (
+                self._s.openrouter_base_url,
+                self._s.openrouter_api_key,
+                "NEWSROOM_OPENROUTER_API_KEY",
+            )
+        return self._s.groq_base_url, self._s.groq_api_key, "NEWSROOM_GROQ_API_KEY"
 
     async def complete[T: BaseModel](
         self, task: TaskName, messages: Sequence[Message], schema: type[T]
@@ -111,7 +135,10 @@ class Gateway:
             self._lf_trace(s, schema=schema.__name__, task=task)
             fallback = self.fallback_for(task)
             try:
-                result, usage = await self._complete(task, messages, schema, model)
+                # With a fallback, a rate limit fails over at once instead of waiting out retries.
+                result, usage = await self._complete(
+                    task, messages, schema, model, retry_429=fallback is None
+                )
             except (StructuredOutputError, LLMProviderError) as e:
                 if fallback is None or not _fallback_worthy(e):
                     raise
@@ -128,11 +155,19 @@ class Gateway:
             return result, usage
 
     async def _complete[T: BaseModel](
-        self, task: TaskName, messages: Sequence[Message], schema: type[T], model: str
+        self,
+        task: TaskName,
+        messages: Sequence[Message],
+        schema: type[T],
+        model: str,
+        *,
+        retry_429: bool = True,
     ) -> tuple[T, Usage]:
-        key = self._key(self._s.groq_api_key, "NEWSROOM_GROQ_API_KEY")
-        body = {
-            "model": model,
+        provider, model_id = provider_of(model)
+        base_url, secret, env_name = self._chat_host(provider)
+        key = self._key(secret, env_name)
+        body: dict[str, Any] = {
+            "model": model_id,
             "messages": list(messages),
             "response_format": {
                 "type": "json_schema",
@@ -143,6 +178,9 @@ class Gateway:
                 },
             },
         }
+        if provider == "openrouter":
+            # Route only to hosts that honour every parameter, strict json_schema included.
+            body["provider"] = {"require_parameters": True}
         start = time.perf_counter()
         started_at = datetime.now(UTC)
         t_in = t_out = attempts = 0
@@ -152,7 +190,7 @@ class Gateway:
             for _ in range(STRUCTURED_ATTEMPTS):
                 try:
                     data, n = await self._post(
-                        f"{self._s.groq_base_url}/chat/completions", key, body
+                        f"{base_url}/chat/completions", key, body, retry_429=retry_429
                     )
                 except LLMProviderError as e:
                     # Groq rejects schema-invalid generations with 400 json_validate_failed.
@@ -351,8 +389,11 @@ class Gateway:
         value: str = secret.get_secret_value()
         return value
 
-    async def _post(self, url: str, key: str, body: dict[str, Any]) -> tuple[dict[str, Any], int]:
-        """POST with retries on transient failures. Returns (json, attempts used)."""
+    async def _post(
+        self, url: str, key: str, body: dict[str, Any], *, retry_429: bool = True
+    ) -> tuple[dict[str, Any], int]:
+        """POST with retries on transient failures. Returns (json, attempts used).
+        ``retry_429=False`` raises on the first 429 (a fallback is waiting, decision 0025)."""
         headers = {"Authorization": f"Bearer {key}"}
         for attempt in range(1, self._s.llm_max_attempts + 1):
             last = attempt == self._s.llm_max_attempts
@@ -366,6 +407,8 @@ class Gateway:
             if resp.status_code < 400:
                 payload: dict[str, Any] = resp.json()
                 return payload, attempt
+            if resp.status_code == 429 and not retry_429:
+                last = True
             if resp.status_code in RETRYABLE_STATUS and not last:
                 await self._sleep(
                     self._backoff(attempt, resp.headers.get("retry-after"), resp.status_code)

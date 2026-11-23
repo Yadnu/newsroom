@@ -29,7 +29,7 @@ from app.standards_desk import ScreenResult, clear_stored, load_script
 pytestmark = pytest.mark.integration
 URL = os.environ.get("NEWSROOM_TEST_DATABASE_URL")
 ROOT = Path(__file__).resolve().parents[2]
-JUDGE_PASS = {"supported", "faithful", "attributed", "fresh", "corroborated"}
+JUDGE_PASS = {"supported", "faithful", "attributed", "fresh", "corroborated", "consistent"}
 
 
 def backend(state: dict[str, Any]) -> Any:

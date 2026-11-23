@@ -52,6 +52,9 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   `hours` (max `reporter_recheck_max` 200); retracts only on HTTP 404/410 or `RETRACTION_PATTERNS` (publisher
   notices), see `retraction_signal(status, body)`. Spans `reporter/retract_source`, `reporter/recheck_sources` >
   `recheck_page`. CLI `newsroom retract <id|url> --reason`, `newsroom recheck [--hours]`.
+- Scheduled recheck (task 7.2): `app/worker.py` `recheck_job` runs `recheck_sources()` every
+  `reporter_recheck_every_hours` (default 6, 0 = off) at minute 30, unique, not at startup. New retractions are
+  logged as `worker.sources_retracted`; the next `newsroom brief` airs their corrections (decision 0023).
 
 ## Invariants
 
@@ -94,3 +97,4 @@ blocks its DLL.
 - 2026-11-18: 10 more default feeds; task 1.6 acceptance met on a live run.
 - 2026-11-19: `search_live()` with Tavily + Firecrawl for on-air answers (task 5.4).
 - 2026-11-21: `retract_source()` and `recheck_sources()` (task 6.2, decision 0023).
+- 2026-11-23: ARQ `recheck_job` every 6 h runs the retraction recheck (task 7.2).

@@ -1,0 +1,67 @@
+{
+  "judged": 130,
+  "errors": 0,
+  "catch_rate": 1.0,
+  "planted": 30,
+  "contradiction_catch": null,
+  "recall": 0.9706,
+  "precision": 0.9041,
+  "false_flag_rate": 0.1129,
+  "accuracy": 0.9308,
+  "by_kind": {
+    "supported": {
+      "n": 62,
+      "correct": 55,
+      "accuracy": 0.8871
+    },
+    "unattributed": {
+      "n": 8,
+      "correct": 8,
+      "accuracy": 1.0
+    },
+    "distorted": {
+      "n": 9,
+      "correct": 9,
+      "accuracy": 1.0
+    },
+    "unsupported": {
+      "n": 11,
+      "correct": 11,
+      "accuracy": 1.0
+    },
+    "stale": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0
+    },
+    "sensitive_single": {
+      "n": 6,
+      "correct": 4,
+      "accuracy": 0.6667
+    },
+    "planted": {
+      "n": 30,
+      "correct": 30,
+      "accuracy": 1.0
+    }
+  },
+  "missed_planted": [],
+  "false_flags": [
+    "s01-c2",
+    "s03-c3",
+    "s05-c3",
+    "s08-c1",
+    "s09-c3",
+    "s11-c2",
+    "s14-c1"
+  ],
+  "set": "judge_v1",
+  "prompt_version": "ca7ed1b1",
+  "model": "openai/gpt-oss-120b",
+  "models": {
+    "openai/gpt-oss-120b": 23,
+    "openrouter:openai/gpt-oss-120b": 107
+  },
+  "cases": 130,
+  "run_at": "2026-11-23T02:14:19+00:00"
+}
