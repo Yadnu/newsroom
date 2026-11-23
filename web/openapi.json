@@ -207,6 +207,28 @@
         "title": "ClaimTrace",
         "type": "object"
       },
+      "ConflictRef": {
+        "description": "Sources the judge found disagreeing about the claim (task 6.3).",
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "outlets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Outlets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outlets",
+          "note"
+        ],
+        "title": "ConflictRef",
+        "type": "object"
+      },
       "CorrectionRef": {
         "properties": {
           "briefing_id": {
@@ -435,6 +457,14 @@
             ],
             "title": "Claim Id"
           },
+          "conflicts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConflictRef"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
           "current": {
             "title": "Current",
             "type": "boolean"
@@ -579,6 +609,14 @@
               }
             ],
             "title": "Claim Id"
+          },
+          "conflicts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConflictRef"
+            },
+            "title": "Conflicts",
+            "type": "array"
           },
           "current": {
             "title": "Current",

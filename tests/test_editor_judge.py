@@ -41,12 +41,14 @@ def out(
     evidence: Sequence[str] = ("E1",),
     sensitive: bool = False,
     confidence: float = 0.9,
+    conflicts: Sequence[dict[str, Any]] = (),
 ) -> str:
     checks = {name: {"passed": name not in failed, "note": f"{name} note"} for name in judge.CHECKS}
     return json.dumps(
         {
             **checks,
             "sensitive": sensitive,
+            "conflicts": list(conflicts),
             "evidence": list(evidence),
             "confidence": confidence,
             "reason": "Matches the evidence.",
@@ -205,12 +207,45 @@ def test_supported_but_no_cited_passage_is_rejected() -> None:
     assert "no evidence passage was cited" in v.reason
 
 
-@pytest.mark.parametrize("check", ["faithful", "attributed", "fresh"])
+@pytest.mark.parametrize("check", ["faithful", "attributed", "fresh", "consistent"])
 def test_other_failed_checks_ask_for_rewrite(check: str) -> None:
     v = _decide(out(failed=[check]), _passage("A"))
     assert v.verdict == Verdict.rewrite
     assert v.reason == f"{check}: {check} note"
     assert len(v.evidence) == 1
+
+
+def test_sources_that_disagree_ask_for_rewrite_naming_both_outlets() -> None:
+    raw = out(
+        failed=["consistent"],
+        evidence=["E1"],
+        conflicts=[{"evidence": ["E1", "E2"], "note": "120 vs 200 jobs"}],
+    )
+    v = _decide(raw, _passage("Ledger Tech", "Vexa cut 120 jobs."), _passage("Northwire", "200."))
+    assert v.verdict == Verdict.rewrite and not v.checks["consistent"]
+    (c,) = v.conflicts
+    assert c.outlets == ["Ledger Tech", "Northwire"] and len(c.source_ids) == 2
+    assert v.reason == "consistent: sources disagree (Ledger Tech vs Northwire: 120 vs 200 jobs)"
+
+
+def test_conflicts_need_two_known_sources() -> None:
+    same = _passage("Ledger Tech")
+    raw = out(
+        failed=["consistent"],
+        conflicts=[
+            {"evidence": ["E1", "E9"], "note": "unknown id"},
+            {"evidence": ["E1", "E1"], "note": "one passage"},
+        ],
+    )
+    v = _decide(raw, same)
+    assert v.verdict == Verdict.rewrite and v.conflicts == []  # the failed check still counts
+    assert v.reason == "consistent: consistent note"
+
+
+def test_conflicts_are_ignored_when_consistent_passes() -> None:
+    raw = out(conflicts=[{"evidence": ["E1", "E2"], "note": "minor"}])
+    v = _decide(raw, _passage("A"), _passage("B"))
+    assert v.verdict == Verdict.approved and v.conflicts == []
 
 
 def test_sensitive_claim_needs_two_outlets() -> None:
@@ -302,6 +337,7 @@ async def test_judge_script_judges_every_claim_and_traces(
     assert all(t.parent_id == outer.id and t.briefing_id == script.briefing_id for t in inner)
     line_of = {str(c.id): str(ln.id) for ln in lines for c in ln.claims}
     assert {t.payload["claim_id"]: t.payload["line_id"] for t in inner} == line_of
+    assert all(t.payload["conflicts"] == [] for t in inner)  # task 6.3: always recorded
     judge_calls = [t for t in trace_sink.traces if t.event == "complete.judge"]
     assert {t.parent_id for t in judge_calls} == {t.id for t in inner}
 

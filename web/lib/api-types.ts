@@ -206,6 +206,16 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * ConflictRef
+         * @description Sources the judge found disagreeing about the claim (task 6.3).
+         */
+        ConflictRef: {
+            /** Note */
+            note: string;
+            /** Outlets */
+            outlets: string[];
+        };
         /** CorrectionRef */
         CorrectionRef: {
             /**
@@ -296,6 +306,11 @@ export interface components {
             claim: string;
             /** Claim Id */
             claim_id: string | null;
+            /**
+             * Conflicts
+             * @default []
+             */
+            conflicts: components["schemas"]["ConflictRef"][];
             /** Current */
             current: boolean;
             /** Reason */
@@ -352,6 +367,11 @@ export interface components {
             claim: string;
             /** Claim Id */
             claim_id: string | null;
+            /**
+             * Conflicts
+             * @default []
+             */
+            conflicts: components["schemas"]["ConflictRef"][];
             /** Current */
             current: boolean;
             /** Line Id */

@@ -54,3 +54,25 @@ def test_score_metrics() -> None:
 def test_score_with_nothing_judged() -> None:
     out = score([_case(1, "flag", "planted")], {})
     assert out["catch_rate"] is None and out["judged"] == 0
+
+
+CONTRA = Path(__file__).resolve().parents[1] / "evals/data/contradictions_v1.json"
+
+
+def test_contradiction_set_and_score() -> None:
+    s = load(CONTRA)
+    kinds = Counter(c.kind for c in s.cases)
+    assert (
+        kinds["contradicted"] >= 10
+        and kinds["conflict_attributed"] >= 5
+        and kinds["supported"] >= 8
+    )
+    assert all(len({p.outlet for p in c.passages}) >= 2 for c in s.cases)
+    cases = [
+        _case(1, "flag", "contradicted"),
+        _case(2, "flag", "contradicted"),
+        _case(3, "approve", "conflict_attributed"),
+    ]
+    out = score(cases, {"c1": "rewrite", "c2": "approved", "c3": "approved"})
+    assert out["contradiction_catch"] == 0.5 and out["false_flag_rate"] == 0.0
+    assert out["by_kind"]["conflict_attributed"] == {"n": 1, "correct": 1, "accuracy": 1.0}

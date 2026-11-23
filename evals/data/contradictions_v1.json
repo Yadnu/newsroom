@@ -1,0 +1,108 @@
+{
+  "version": "contradictions_v1",
+  "today": "2026-11-21",
+  "notes": "Task 6.3. Synthetic stories with invented entities where outlets disagree on a fact. contradicted: the claim states one side as plain fact (flag). conflict_attributed: the claim reports both versions and who says what (approve). supported: a fact every outlet agrees on (approve). Same format as judge_v1.",
+  "stories": [
+    {
+      "id": "x01",
+      "passages": [
+        {"outlet": "Ledger Tech", "published": "2026-11-20", "text": "Vexa Labs said on Thursday it will cut about 120 jobs in its phone division as sales of its handsets slow. The cuts will be completed by March."},
+        {"outlet": "Northwire", "published": "2026-11-20", "text": "Vexa Labs is cutting roughly 200 jobs in its phone unit, according to an internal memo seen by Northwire. The company is reducing staff because handset sales have slowed."}
+      ],
+      "claims": [
+        {"text": "Vexa Labs is cutting about 120 jobs in its phone division.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Vexa Labs is cutting roughly 200 jobs in its phone unit.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Vexa Labs says it will cut about 120 phone jobs, while an internal memo reported by Northwire puts the number at about 200.", "expect": "approve", "kind": "conflict_attributed"},
+        {"text": "Vexa Labs is cutting jobs in its phone division as handset sales slow.", "expect": "approve", "kind": "supported"}
+      ]
+    },
+    {
+      "id": "x02",
+      "passages": [
+        {"outlet": "Skyline News", "published": "2026-11-20", "text": "Halden Air will begin flights to Lisbon on March 3, the airline announced on Wednesday, with four flights a week."},
+        {"outlet": "Market Line", "published": "2026-11-20", "text": "Halden Air's new Lisbon route starts on April 14, according to the airline's booking system, with four weekly flights."}
+      ],
+      "claims": [
+        {"text": "Halden Air's Lisbon flights start on March 3.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Halden Air will start flying to Lisbon in April.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Halden Air announced Lisbon flights from March 3, though its booking system lists April 14 as the first date, Market Line reports.", "expect": "approve", "kind": "conflict_attributed"},
+        {"text": "Halden Air plans four flights a week to Lisbon.", "expect": "approve", "kind": "supported"}
+      ]
+    },
+    {
+      "id": "x03",
+      "passages": [
+        {"outlet": "Ledger Tech", "published": "2026-11-19", "text": "Orbis Motors has agreed to buy battery maker Kelda for $2.4 billion, the two companies said on Tuesday."},
+        {"outlet": "Northwire", "published": "2026-11-19", "text": "Orbis Motors will pay $3.1 billion for Kelda including debt, the companies said. The deal still needs approval from regulators."},
+        {"outlet": "Market Line", "published": "2026-11-19", "text": "Kelda shares jumped 18 percent after Orbis Motors agreed to buy the battery maker. Regulators must still approve the deal."}
+      ],
+      "claims": [
+        {"text": "Orbis Motors is buying Kelda for $2.4 billion.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Orbis Motors has agreed to buy battery maker Kelda.", "expect": "approve", "kind": "supported"},
+        {"text": "Orbis Motors is buying Kelda for $2.4 billion, or $3.1 billion including debt, the companies said.", "expect": "approve", "kind": "conflict_attributed"},
+        {"text": "The Orbis deal for Kelda still needs approval from regulators.", "expect": "approve", "kind": "supported"}
+      ]
+    },
+    {
+      "id": "x04",
+      "passages": [
+        {"outlet": "Ledger Tech", "published": "2026-11-20", "text": "Vexa Labs chief executive Dana Morrow will step down at the end of the year, the company said on Thursday. The board has started a search for a successor."},
+        {"outlet": "Northwire", "published": "2026-11-20", "text": "Dana Morrow is not leaving Vexa Labs, a company spokesperson told Northwire, calling reports of her departure inaccurate."}
+      ],
+      "claims": [
+        {"text": "Vexa Labs chief executive Dana Morrow is stepping down at the end of the year.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Dana Morrow is staying on as Vexa Labs chief executive.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Ledger Tech reports that Vexa Labs chief executive Dana Morrow will step down at year end, but a company spokesperson told Northwire the reports are inaccurate.", "expect": "approve", "kind": "conflict_attributed"}
+      ]
+    },
+    {
+      "id": "x05",
+      "passages": [
+        {"outlet": "Skyline News", "published": "2026-11-21", "text": "Officials said 14 people were injured when a Halden Air plane slid off the runway at Bergen airport on Friday morning. No one was killed."},
+        {"outlet": "Northwire", "published": "2026-11-21", "text": "Five passengers were taken to hospital with minor injuries after a Halden Air plane slid off a runway in Bergen on Friday, the airport said. There were no deaths."}
+      ],
+      "claims": [
+        {"text": "Fourteen people were injured when a Halden Air plane slid off the runway in Bergen.", "expect": "flag", "kind": "contradicted"},
+        {"text": "No one was killed when a Halden Air plane slid off a runway in Bergen on Friday.", "expect": "approve", "kind": "supported"},
+        {"text": "Officials put the number injured in the Halden Air runway accident in Bergen at 14, while the airport said five passengers went to hospital with minor injuries.", "expect": "approve", "kind": "conflict_attributed"}
+      ]
+    },
+    {
+      "id": "x06",
+      "passages": [
+        {"outlet": "Market Line", "published": "2026-11-20", "text": "Kelda reported quarterly revenue of $410 million on Wednesday, up 12 percent from a year earlier."},
+        {"outlet": "Ledger Tech", "published": "2026-11-20", "text": "Battery maker Kelda posted revenue of $410 million for the quarter, a rise of 21 percent, the company said."}
+      ],
+      "claims": [
+        {"text": "Kelda reported quarterly revenue of $410 million.", "expect": "approve", "kind": "supported"},
+        {"text": "Kelda's quarterly revenue rose 12 percent.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Kelda's quarterly revenue rose 21 percent to $410 million.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Kelda reported quarterly revenue of $410 million, a rise that Market Line puts at 12 percent and Ledger Tech at 21 percent.", "expect": "approve", "kind": "conflict_attributed"}
+      ]
+    },
+    {
+      "id": "x07",
+      "passages": [
+        {"outlet": "Northwire", "published": "2026-11-21", "text": "The Fenwick city council voted 7 to 2 on Thursday to ban delivery robots from sidewalks starting in January."},
+        {"outlet": "Skyline News", "published": "2026-11-21", "text": "Fenwick's council approved a ban on sidewalk delivery robots on Thursday by a vote of 5 to 4. The ban takes effect in January."}
+      ],
+      "claims": [
+        {"text": "The Fenwick city council has voted to ban delivery robots from sidewalks starting in January.", "expect": "approve", "kind": "supported"},
+        {"text": "Fenwick's council approved the sidewalk robot ban by a vote of 7 to 2.", "expect": "flag", "kind": "contradicted"},
+        {"text": "Fenwick's council narrowly approved the sidewalk robot ban.", "expect": "flag", "kind": "contradicted"}
+      ]
+    },
+    {
+      "id": "x08",
+      "passages": [
+        {"outlet": "Ledger Tech", "published": "2026-11-20", "text": "Vexa Labs' Frost One smart fridge goes on sale on December 1 in the United States, priced at $1,900."},
+        {"outlet": "Northwire", "published": "2026-11-20", "text": "The Frost One will cost $1,900 when it launches in the United States on December 1, Vexa Labs said. A European launch is planned for next year."}
+      ],
+      "claims": [
+        {"text": "Vexa Labs' Frost One fridge goes on sale in the United States on December 1.", "expect": "approve", "kind": "supported"},
+        {"text": "The Frost One will cost $1,900.", "expect": "approve", "kind": "supported"},
+        {"text": "Vexa Labs plans to launch the Frost One in Europe next year.", "expect": "approve", "kind": "supported"}
+      ]
+    }
+  ]
+}

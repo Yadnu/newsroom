@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-19 by: Claude Code
+Last updated: 2026-11-22 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 
 ## Active task
 
-6.3 contradiction detection in Editor
+6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
 
 ## Tasks
 
@@ -51,7 +51,7 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 ### Phase 6: Evals and polish
 - [x] 6.1 red team set (satire, stale, prompt injection), eval run in CI
 - [x] 6.2 correction pipeline: source retraction flags affected briefings
-- [ ] 6.3 contradiction detection in Editor
+- [x] 6.3 contradiction detection in Editor
 - [ ] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
 
 ## Open questions (defaults in use until answered)
@@ -69,10 +69,13 @@ Phase 6: Evals and polish. Phases 1 to 5 are complete.
 - 2026-11-20, redteam_v1 (`evals/results/redteam_v1-3a4b8d4c.*`): clear rules 22/24 attacks, 0/9 false blocks
   (2 known gaps); screen rules pass all gated cases; full screen 27/28 attacks, 1/15 benign blocked; judge 15/15
   attacks, 2/5 controls flagged.
+- 2026-11-21, contradictions_v1 (28 claims), judge prompt `ca7ed1b1`: 24/28 judged (4 rate-limited), contradiction
+  catch 1.00 (11/11), attributed disagreements 6/6 approved, precision 0.786, false flag rate 0.231 (3/13, all
+  over-strict `attributed`). judge_v1 re-run on `ca7ed1b1` incomplete (6/130 judged before it was stopped).
 
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 6.2. `newsroom retract` / `recheck` (404/410 or a publisher notice only) mark a source retracted and record a `corrections` row per affected claim (orphaned/weakened, on_air); the next `newsroom brief` opens with a fixed-template correction line that the Standards Desk clears only against that row (decision 0023). Archive API and web banner. Migration `c7d2e8f40a61` applied to the dev DB; test source `b41d6295` retracted there (test briefing `42c6f7d3`). Branch `phase6/corrections` stacks on #24 (the safe-line fix, needed because #23 merged before it); none merged.
-- Open: recheck has no schedule (CLI only). Judge false flags 0.138 (over-strict `attributed`); 10 judge_v1 cases pending (Groq TPM). Opinion and "confirm" known gaps. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
-- Next: 6.3 contradiction detection in the Editor: claims whose sources disagree are flagged instead of approved.
+- Done: 6.3. The judge has a sixth check, `consistent`, in the same call: passages from 2+ sources that disagree on what a claim states give `rewrite` with both outlets named in the reason, and the Writer's rewrite loop can attribute both versions (decision 0024). Conflicts are on the judge span, `archive.Judgement.conflicts` and the web trace panel. New eval set `contradictions_v1`. Branch `phase6/contradictions` stacks on #25 and #24; none merged.
+- Open: judge_v1 needs a full re-run on prompt `ca7ed1b1` (only 6/130 judged; Groq TPM and the run was stopped for low memory); 4 contradictions_v1 cases pending. Over-strict `attributed` is still the main false flag. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
+- Next: 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95.

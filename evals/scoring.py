@@ -5,6 +5,7 @@ it does not air as written). ``pending`` means the judge call failed; such cases
 errors and left out of the metrics.
 
 - catch rate: planted falsehoods flagged / planted falsehoods judged
+- contradiction catch: ``contradicted`` claims flagged / judged (task 6.3)
 - recall: claims expected ``flag`` that were flagged / claims expected ``flag`` (planted included)
 - precision: flagged claims that were expected ``flag`` / all flagged claims
 - false flag rate: claims expected ``approve`` that were flagged / claims expected ``approve``
@@ -26,7 +27,10 @@ KINDS = (
     "stale",
     "sensitive_single",
     "planted",
+    "contradicted",  # task 6.3: states one side of a disagreement between outlets as fact
+    "conflict_attributed",  # task 6.3: reports both versions and who says what
 )
+APPROVE_KINDS = frozenset({"supported", "conflict_attributed"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +72,8 @@ def load(path: Path) -> EvalSet:
         for n, c in enumerate(story["claims"], 1):
             if c["expect"] not in ("approve", "flag") or c["kind"] not in KINDS:
                 raise ValueError(f"{story['id']} claim {n}: bad expect/kind {c}")
-            if (c["kind"] == "supported") != (c["expect"] == "approve"):
-                raise ValueError(f"{story['id']} claim {n}: only 'supported' claims expect approve")
+            if (c["kind"] in APPROVE_KINDS) != (c["expect"] == "approve"):
+                raise ValueError(f"{story['id']} claim {n}: only {sorted(APPROVE_KINDS)} approve")
             cases.append(
                 EvalCase(
                     f"{story['id']}-c{n}", story["id"], c["text"], c["expect"], c["kind"], passages
@@ -102,6 +106,7 @@ def score(cases: list[EvalCase], verdicts: dict[str, str]) -> dict[str, Any]:
         return verdicts[c.id] != "approved"
 
     planted = [c for c in judged if c.kind == "planted"]
+    contradicted = [c for c in judged if c.kind == "contradicted"]
     should_flag = [c for c in judged if c.expect == "flag"]
     should_approve = [c for c in judged if c.expect == "approve"]
     all_flagged = [c for c in judged if flagged(c)]
@@ -120,6 +125,7 @@ def score(cases: list[EvalCase], verdicts: dict[str, str]) -> dict[str, Any]:
         "errors": errors,
         "catch_rate": _ratio(sum(flagged(c) for c in planted), len(planted)),
         "planted": len(planted),
+        "contradiction_catch": _ratio(sum(flagged(c) for c in contradicted), len(contradicted)),
         "recall": _ratio(sum(flagged(c) for c in should_flag), len(should_flag)),
         "precision": _ratio(sum(c.expect == "flag" for c in all_flagged), len(all_flagged)),
         "false_flag_rate": _ratio(sum(flagged(c) for c in should_approve), len(should_approve)),

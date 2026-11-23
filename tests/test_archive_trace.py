@@ -33,9 +33,13 @@ def test_judgement_from_full_payload() -> None:
             "score": 0.4,
             "reason": "supported: no",
             "checks": {"supported": False, "faithful": True},
+            "conflicts": [{"outlets": ["Ledger Tech", "Northwire"], "note": "120 vs 200"}, "junk"],
         }
     )
     j = judgement_from_trace(row, {claim})
+    assert [(c.outlets, c.note) for c in j.conflicts] == [
+        (["Ledger Tech", "Northwire"], "120 vs 200")
+    ]
     assert (j.claim_id, j.verdict, j.score, j.current) == (claim, "rejected", 0.4, True)
     assert j.checks == {"supported": False, "faithful": True} and j.at == AT
     assert line_id_of(row) == line
@@ -45,6 +49,7 @@ def test_judgement_tolerates_old_and_malformed_payloads() -> None:
     old = _row({"claim_id": str(uuid4()), "verdict": "rewrite"})  # before line_id and claim text
     j = judgement_from_trace(old, set())
     assert j.claim == "" and j.reason == "" and j.checks == {} and j.score is None
+    assert j.conflicts == []
     assert j.current is False and line_id_of(old) is None
 
     junk = _row({"claim_id": "not-a-uuid", "line_id": 7, "score": "high", "checks": ["x"]})

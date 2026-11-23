@@ -6,7 +6,7 @@ phase: 2
 code: app/editor/
 depends_on: [writer, llm-gateway, data-model, archive]
 feeds: [standards-desk, writer]
-decisions: [0002, 0012, 0013, 0014, 0022]
+decisions: [0002, 0012, 0013, 0014, 0022, 0024]
 ---
 
 # editor
@@ -20,13 +20,15 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
 - `async def judge_script(script: Script) -> JudgedScript`: judges every claim concurrently
   (`editor_max_concurrency`), stores everything in one transaction, and sets the briefing status to `judged`.
 - `ClaimVerdict`: claim_id, verdict (approved | rewrite | rejected), score 0..1 (judge confidence), reason,
-  checks {supported, faithful, attributed, fresh, corroborated: bool}, sensitive,
-  evidence[`EvidencePassage`: source_id, outlet, passage, score (cosine)].
+  checks {supported, faithful, attributed, fresh, corroborated, consistent: bool}, sensitive,
+  evidence[`EvidencePassage`: source_id, outlet, passage, score (cosine)],
+  conflicts[`Conflict`: source_ids, outlets, note] (passages from 2+ sources that disagree; decision 0024).
   `JudgedScript`: briefing_id, verdicts, `count(verdict)`.
 - `async def retrieve_evidence(claims: Sequence[ClaimRef]) -> dict[claim_id, list[Passage]]` and
   `chunk_text(text, size, overlap)`.
-- Rubric: supported, faithful, attributed, fresh, corroborated (sensitive claims need 2 outlets).
-  Verdict rules are in decision 0012.
+- Rubric: supported, faithful, attributed, fresh, corroborated (sensitive claims need 2 outlets), consistent
+  (sources do not disagree on what the claim states, unless the claim attributes both versions). Verdict rules are
+  in decisions 0012 and 0024: a failed `consistent` gives `rewrite` with the outlets named in the reason.
 - `async def review_script(script: Script) -> ReviewedScript`: `judge_script()`, then up to `rewrite_max_rounds` (2)
   rounds of `writer.rewrite_line()` for lines with a non-approved claim, re-judging only new claims (decision 0013).
   `ReviewedScript`: script (current lines), verdicts (one per current claim), rounds, `count(verdict)`.
@@ -59,6 +61,12 @@ single-outlet sensitive claims (election turnout, central-bank remark) were not 
 Red team (task 6.1, decision 0022, `evals/run_redteam.py --live`): prompt `dad2a081` approved 3 of 4 satire claims;
 the judge prompt now says satire, parody and humor are not evidence (`30f59e69`): 15/15 attacks caught (satire,
 stale, injected passages and claims), 2 of 5 controls got rewrite (over-strict `attributed`).
+Contradictions (task 6.3, decision 0024): sixth check `consistent` in the same judge call; `editor/judge_claim`
+spans carry `conflicts` (outlets, note). Eval set `evals/data/contradictions_v1.json` (28 claims, 8 stories),
+prompt `ca7ed1b1`: 24/28 judged (4 rate-limited), contradiction catch 1.00 (11/11), attributed versions 6/6
+approved; 3 of 7 agreed facts got rewrite, all over-strict `attributed`, none from `consistent`. judge_v1 re-run
+on `ca7ed1b1` was cut short (6/130 judged: Groq TPM, then the run was stopped), so judge_v1 numbers are still
+from `30f59e69`.
 
 ## Open questions
 
@@ -70,6 +78,7 @@ stale, injected passages and claims), 2 of 5 controls got rewrite (over-strict `
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | `dad2a081` (gpt-oss-120b), judge_v1 | 1.00 (30/30) | 0.904 | 0.971 |
 | 2026-11-20 | `30f59e69` (gpt-oss-120b), judge_v1, 120/130 judged (10 rate-limited) | 1.00 (27/27) | 0.881 | 0.952 |
+| 2026-11-21 | `ca7ed1b1` (gpt-oss-120b), contradictions_v1, 24/28 judged; contradiction catch 1.00 (11/11) | - | 0.786 | 1.00 |
 
 ## Changelog
 
@@ -81,3 +90,4 @@ stale, injected passages and claims), 2 of 5 controls got rewrite (over-strict `
 - 2026-11-18: judge eval v1 baseline: catch 1.00, precision 0.904, recall 0.971 (task 2.4).
 - 2026-11-18: judge spans carry `line_id` for the Archive (task 3.1).
 - 2026-11-20: judge prompt: satire/parody is not evidence (task 6.1 red team); judge_v1 re-run.
+- 2026-11-21: sixth judge check `consistent` + `ClaimVerdict.conflicts`; contradictions_v1 eval (task 6.3, decision 0024).

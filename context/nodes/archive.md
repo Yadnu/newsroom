@@ -6,7 +6,7 @@ phase: 1
 code: app/archive/
 depends_on: [data-model]
 feeds: [web]
-decisions: [0005, 0009, 0013, 0023]
+decisions: [0005, 0009, 0013, 0023, 0024]
 ---
 
 # archive
@@ -34,6 +34,7 @@ Observability. Records every component event and builds the claim-to-source trac
   verdict `rejected` (and `rewrite`), newest first. `Rejection` = `Judgement` + briefing_id, line_id, line_text.
   `Judgement.current` is true while the claim still exists (false once a rewrite replaced it).
 - `SourceRef(id, outlet, title, url, published_at, retracted)`. Payload parsing: `judgement_from_trace()`, `line_id_of()`.
+- `Judgement.conflicts: list[ConflictRef(outlets, note)]` from the judge span payload; empty for older spans (task 6.3).
 - HTTP (`routes.py`, mounted in `app/main.py`): `GET /archive/lines/{line_id}/trace` -> `ClaimTrace` (404 unknown);
   `GET /archive/rejections?briefing_id=&limit=1..500&include_rewrite=` -> `list[Rejection]`.
 - `async def list_briefings(limit=50) -> list[BriefingSummary]` / `briefing_detail(id) -> BriefingDetail`
@@ -87,3 +88,4 @@ Briefing timeline done (task 3.3) for the web dashboard; live on `3873a08c`: pro
 - 2026-11-19: briefing list/detail with per-stage latency and cost; read spans off the timeline (task 3.3).
 - 2026-11-19: `LineSummary.kind` / `question` so answer lines show in the timeline (task 5.3).
 - 2026-11-21: corrections read API (task 6.2, decision 0023).
+- 2026-11-21: `Judgement.conflicts` read from judge spans (task 6.3, decision 0024).

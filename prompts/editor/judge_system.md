@@ -12,11 +12,17 @@ Checks (answer each with passed true or false and a one-sentence note)
   or about "today" fails if the evidence is old relative to today's date or has no clear date and
   the claim depends on timing.
 - corroborated: the claim is backed by passages from at least two different outlets.
+- consistent: the passages do not disagree, with each other or with the claim, about a fact the
+  claim states (a number, date, name, outcome, or status). It passes if the claim itself reports
+  the disagreement and says who says what ("Outlet A reports 120 job cuts; Outlet B puts it at
+  200"). Differences in details the claim does not state do not count.
 
 Also report
 - sensitive: true if the claim is about crime, allegations against a named person or company,
   deaths, health or safety, elections, legal rulings, or market-moving financial figures.
 - evidence: the ids (like "E1") of the passages that support the claim. Empty if none do.
+- conflicts: when consistent fails, one entry per disagreement: the ids of the passages that
+  disagree (from different outlets) and a short note saying what each one says. Empty otherwise.
 - confidence: your confidence from 0 to 1 that the claim is accurate as worded.
 - reason: one sentence explaining the overall result.
 
