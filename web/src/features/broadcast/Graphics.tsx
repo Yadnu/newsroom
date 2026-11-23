@@ -7,7 +7,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { safeHref } from "@/lib/format";
 import { bumperAt, countdown, kenBurns, pulse, slideIn, tickerOffset } from "@/src/broadcast/graphics";
-import type { BroadcastScript, Span } from "@/src/broadcast/script";
+import type { TimedWord } from "@/src/broadcast/lipsync";
+import type { BroadcastScript, Caption, Span } from "@/src/broadcast/script";
 
 export function Bumper({ script, t, reduced }: { script: BroadcastScript; t: number; reduced: boolean }) {
   const bumper = script.segments.find((s) => s.kind === "bumper");
@@ -68,7 +69,7 @@ function LowerThirdBox({ span, t, reduced, children }: { span: Span; t: number; 
 export function LowerThirds({ script, t, reduced }: { script: BroadcastScript; t: number; reduced: boolean }) {
   const breaking = script.banner === "BREAKING NEWS";
   return (
-    <>
+    <div className="contents portrait:hidden">
       {script.lowerThirds.map((l) =>
         l.kind === "headline" ? (
           <LowerThirdBox key={l.kind} span={l} t={t} reduced={reduced}>
@@ -95,7 +96,7 @@ export function LowerThirds({ script, t, reduced }: { script: BroadcastScript; t
           </LowerThirdBox>
         ),
       )}
-    </>
+    </div>
   );
 }
 
@@ -123,13 +124,13 @@ export function BRoll({ script, t, reduced }: { script: BroadcastScript; t: numb
   );
 }
 
-export function LiveBug({ t }: { t: number }) {
+export function LiveBug({ t, reduced = false }: { t: number; reduced?: boolean }) {
   const now = new Date();
   const clock = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   return (
     <div className="absolute left-[2.5%] top-[4%] flex items-stretch font-display text-[1.3cqw] uppercase tracking-widest">
       <span className="flex items-center gap-[0.5cqw] bg-breaking px-[0.8cqw] py-[0.25cqw] text-white">
-        <span aria-hidden className="inline-block h-[0.7cqw] w-[0.7cqw] rounded-full bg-white" style={{ opacity: pulse(t) }} />
+        <span aria-hidden className="inline-block h-[0.7cqw] w-[0.7cqw] rounded-full bg-white" style={{ opacity: reduced ? 1 : pulse(t) }} />
         Live
       </span>
       <span className="bg-black/60 px-[0.8cqw] py-[0.25cqw] tabular-nums text-white">{clock}</span>
@@ -137,7 +138,17 @@ export function LiveBug({ t }: { t: number }) {
   );
 }
 
-export function Ticker({ items, t, reduced }: { items: string[]; t: number; reduced: boolean }) {
+export function Ticker({
+  items,
+  t,
+  reduced,
+  compact = false,
+}: {
+  items: string[];
+  t: number;
+  reduced: boolean;
+  compact?: boolean;
+}) {
   const content = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
@@ -153,8 +164,14 @@ export function Ticker({ items, t, reduced }: { items: string[]; t: number; redu
   const text = items.join("   •   ") + "   •   ";
   const offset = reduced ? 0 : tickerOffset(t, width);
   return (
-    <div className="absolute inset-x-0 bottom-0 flex h-[6%] items-stretch bg-set/95 font-body text-[1.25cqw] text-white">
-      <span className="z-10 flex shrink-0 items-center bg-breaking px-[1cqw] font-display uppercase tracking-widest">
+    <div
+      className={
+        compact
+          ? "relative flex h-8 items-stretch bg-set font-body text-sm text-white"
+          : "absolute inset-x-0 bottom-0 flex h-[6%] items-stretch bg-set/95 font-body text-[1.25cqw] text-white portrait:hidden"
+      }
+    >
+      <span className={`z-10 flex shrink-0 items-center bg-breaking font-display uppercase tracking-widest ${compact ? "px-3 text-xs" : "px-[1cqw]"}`}>
         Headlines
       </span>
       <div className="relative min-w-0 flex-1 overflow-hidden" aria-label="Other headlines">
@@ -186,7 +203,9 @@ export function Outro({
   onPlayNext,
   onExit,
   onReplay,
+  compact = false,
 }: {
+  compact?: boolean;
   script: BroadcastScript;
   t: number;
   next: NextStory | null;
@@ -199,17 +218,25 @@ export function Outro({
   const outro = script.segments.find((s) => s.kind === "outro");
   if (!outro || t < outro.start + 1200) return null; // the anchor signs off and nods first
   const left = countdown(t, script.duration);
-  const btn = "rounded-full px-[1.6cqw] py-[0.6cqw] font-display text-[1.3cqw] uppercase tracking-widest";
+  const btn = compact
+    ? "rounded-full px-4 py-2 font-display text-sm uppercase tracking-widest"
+    : "rounded-full px-[1.6cqw] py-[0.6cqw] font-display text-[1.3cqw] uppercase tracking-widest";
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-set/80">
-      <div className="flex max-w-[70%] flex-col items-center gap-[1.2cqw] text-center text-white">
+    <div
+      className={
+        compact
+          ? "flex items-center justify-center bg-set px-4 py-4"
+          : "absolute inset-0 flex items-center justify-center bg-set/80 portrait:hidden"
+      }
+    >
+      <div className={`flex flex-col items-center text-center text-white ${compact ? "gap-3" : "max-w-[70%] gap-[1.2cqw]"}`}>
         {next && !cancelled ? (
           <>
-            <p className="font-display text-[1.4cqw] uppercase tracking-[0.3em] text-gold">
+            <p className={`font-display uppercase tracking-[0.3em] text-gold ${compact ? "text-xs" : "text-[1.4cqw]"}`}>
               Next story in {left}
             </p>
-            <p className="font-display text-[3cqw] uppercase leading-tight">{next.title}</p>
-            <div className="flex gap-[1cqw]">
+            <p className={`font-display uppercase leading-tight ${compact ? "text-xl" : "text-[3cqw]"}`}>{next.title}</p>
+            <div className={`flex flex-wrap justify-center ${compact ? "gap-2" : "gap-[1cqw]"}`}>
               <button type="button" onClick={onPlayNext} className={`${btn} bg-breaking text-white`}>
                 Play now
               </button>
@@ -220,8 +247,10 @@ export function Outro({
           </>
         ) : (
           <>
-            <p className="font-display text-[3cqw] uppercase tracking-widest">That&apos;s the story</p>
-            <div className="flex gap-[1cqw]">
+            <p className={`font-display uppercase tracking-widest ${compact ? "text-xl" : "text-[3cqw]"}`}>
+              That&apos;s the story
+            </p>
+            <div className={`flex flex-wrap justify-center ${compact ? "gap-2" : "gap-[1cqw]"}`}>
               <button type="button" onClick={onReplay} className={`${btn} bg-white/15 text-white`}>
                 Replay
               </button>
@@ -238,5 +267,20 @@ export function Outro({
         )}
       </div>
     </div>
+  );
+}
+
+/** The caption with the spoken word highlighted. */
+export function CaptionText({ caption, word }: { caption: Caption; word: TimedWord | null }) {
+  if (!caption.words.length) return <>{caption.text}</>;
+  return (
+    <>
+      {caption.words.map((w, i) => (
+        <span key={i} className={w === word ? "text-gold" : undefined}>
+          {i ? " " : ""}
+          {w.text}
+        </span>
+      ))}
+    </>
   );
 }

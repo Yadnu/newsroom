@@ -4,11 +4,11 @@ Last updated: 2026-11-23 by: Claude Code
 
 ## Current phase
 
-Phase 7: hardening. Phases 0 to 6 are complete.
+Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-8.6 responsive, reduced motion, error states, tests, README (see `FRONTEND_PLAN.md`)
+None: Phase 8 (frontend) is done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -65,7 +65,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 - [x] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
 - [x] 8.4 studio scene, animated anchor, lip sync
 - [x] 8.5 bumper, lower thirds, ticker, B-roll, outro
-- [ ] 8.6 responsive, reduced motion, error states, tests, README
+- [x] 8.6 responsive, reduced motion, error states, tests, README
 
 ## Open questions (defaults in use until answered)
 
@@ -93,6 +93,6 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 8.5. Broadcast graphics as pure functions of show time (`src/broadcast/graphics.ts`): bumper, non-overlapping lower thirds, B-roll Ken Burns, LIVE bug, ticker, outro countdown with cancel and auto-advance (checked live: advanced to the next story at the end), next-story preload; sized in container units. No sting sound (optional, no asset). Branch `phase8/graphics` on `phase8/anchor` (#36). Earlier: 8.4 anchor + word timings (decision 0028).
+- Done: 8.6, closing Phase 8. Player phone layout (picture + `PortraitPanel`, compact controls), image and API error states, captions-only fallback verified with blocked audio, hook tests (Vitest 57), README section on the web app and running it with the backend, new demo GIF (feed + telecast). Branch `phase8/hardening` on `phase8/graphics` (#37). Phase 8 PRs: #33 plan, #34 feed, #35 telecasts, #36 anchor, #37 graphics, this one.
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 8.6 per `FRONTEND_PLAN.md`: phone layout of the player (graphics scale but are tiny at 390 px; controls wrap), reduced-motion pass, error states (backend down mid-show, audio 404), README section on running frontend + backend.
+- Next: no task left in STATE. Candidates: telecast audio cleanup (var/media grows), refresh summaries when a story gains sources, MP3 audio, categories once the topic scope widens, push-to-talk questions during telecasts.

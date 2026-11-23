@@ -29,3 +29,12 @@ test("a down backend becomes an ApiError", async () => {
   const bad = (async () => new Response("", { status: 502 })) as unknown as typeof fetch;
   await expect(pressPage(null, bad)).rejects.toBeInstanceOf(ApiError);
 });
+
+test("describeError gives readers a sentence, not a status code", async () => {
+  const { describeError } = await import("./client");
+  expect(describeError(new ApiError(0, "/x"))).toMatch(/offline/);
+  expect(describeError(new ApiError(404, "/x"))).toMatch(/no longer in the feed/);
+  expect(describeError(new ApiError(502, "/x"))).toMatch(/server had a problem/);
+  expect(describeError(new ApiError(418, "/x"))).toBe("The request failed (418).");
+  expect(describeError(new Error("boom"))).toMatch(/Something went wrong/);
+});

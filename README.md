@@ -9,11 +9,12 @@ has `verdict = approved` and at least one stored evidence passage.** The Standar
 with a type (`ClearedScript`) that only `clear_for_air()` can build, and the Archive traces any
 spoken sentence back to its source URL in one click.
 
-![Demo: the Archive traces a sentence to its sources; the Player reads the briefing](docs/demo.gif)
+![Demo: the Press feed, then a telecast: bumper, studio with lower third, B-roll, next-story outro](docs/demo.gif)
 
-A briefing built from the day's RSS feeds on 2026-11-23: the briefing list, the script with a verdict dot
-per sentence, two sentences traced to their sources, and the Player. Grey dots are claims still
-`pending` (the judge hit the Groq free-tier rate limit), which the Standards Desk keeps off air.
+Frames from the web app on 2026-11-23, live data: a Press feed card, then the telecast of one story (the
+intro bumper, the anchor in the studio with the headline lower third and word-highlighted captions, the
+B-roll cut, and the countdown to the next story). Every spoken line of a telecast was approved by the
+Editor and cleared by the Standards Desk; the full trace is in the Archive at `/archive`.
 
 ## Architecture
 
@@ -38,6 +39,8 @@ flowchart LR
   db --- editor
   archive["Archive<br/>spans, claim trace,<br/>rejections, corrections"] --> web["Web<br/>Archive dashboard + Player"]
   anchor --> web
+  reporter --> press["Press<br/>story feed, telecasts"]
+  press --> web
 ```
 
 - **Reporter** pulls RSS, dedupes by URL and content hash, embeds (Voyage) and clusters sources into
@@ -55,12 +58,32 @@ flowchart LR
   sources air first, from a fixed template.
 - **Anchor** voices cleared lines with Cartesia through Pipecat and records per-line audio timestamps.
 - **Caller** transcribes questions with Deepgram and classifies the intent.
+- **Press** serves the story feed with crawler summaries and runs telecasts: one story through the whole path,
+  voiced once to an audio file the web player streams.
 - **Archive** records a span for every step (latency, tokens, cost) in Postgres, and serves the
   claim trace, rejection log and corrections. LLM calls also go to Langfuse when configured.
 
 Every LLM call goes through one gateway (`app/shared/llm/`) with routing, retries, structured output
 and cost accounting. Fetched web content is treated as data and never goes into a system prompt.
 Design decisions are in [`context/decisions/`](context/decisions/).
+
+## Press and telecasts (web app)
+
+The web app (`web/`, Next.js) has three parts:
+
+- **Press** (`/`): a full-screen card feed of the stories the Reporter gathered, newest first. Each card has the
+  feed thumbnail (credited to the outlet), a ~60-word summary written by the Writer from the sources (labelled
+  "not yet fact-checked"; it paraphrases and is checked against copying), the outlets and the source links.
+  Wheel, arrow keys, space, or swipe to move.
+- **Telecast** (`/watch/<story>`): "Watch broadcast" runs the full pipeline on that one story (Writer, Editor
+  judge with rewrites, Standards Desk, Anchor voice) in about a minute and plays it as a TV segment: bumper,
+  animated anchor with lip sync from the TTS's word timings, lower thirds with the fact-check count, B-roll,
+  ticker, captions, and a countdown to the next story. Pause, seek, speed and replay keep audio and animation
+  together (one show clock); without audio it runs captions-only. Phones held upright get the picture with a
+  readable panel under it.
+- **Archive** (`/archive`): every briefing and telecast, each sentence traced to its claims, verdicts and sources.
+
+Design notes: [`FRONTEND_PLAN.md`](FRONTEND_PLAN.md) and decisions 0026 to 0028.
 
 ## Eval numbers
 
@@ -122,6 +145,22 @@ cd web && npm ci && npm run dev     # Press feed on :3000, Archive at /archive
 Other commands: `newsroom ask --briefing <id> --wav q.wav` (transcribe and classify a question),
 `newsroom search "<question>"` (live web search), `newsroom retract <source id|url> --reason "..."`,
 `newsroom recheck`, `newsroom corrections`, `newsroom summarize` (Press feed summaries; the worker also writes them).
+
+### Web app and backend together
+
+1. Start Postgres (`docker compose up -d db redis`) and migrate (`uv run alembic upgrade head`).
+2. Fill the feed: `uv run python -m app.reporter` (fetch, embed, cluster) then `uv run newsroom summarize`, or run
+   the worker, which does both every 15 minutes and rechecks sources for retractions every 6 hours:
+   `uv run arq app.worker.WorkerSettings` (needs Redis).
+3. Start the API: `uv run fastapi dev app/main.py` (port 8000). Telecasts run inside it and write audio to
+   `var/media/`, served at `/media`.
+4. Start the web app: `cd web && npm ci && npm run dev` (port 3000). It reaches the API through its own `/api` and
+   `/media` rewrites, so no CORS setup is needed. Point it elsewhere with `NEWSROOM_API_URL`
+   (see `web/.env.example`).
+
+Keys: Groq for the Writer and Editor (OpenRouter as the judge's fallback), Voyage for embeddings, Cartesia for the
+anchor's voice (`NEWSROOM_ANCHOR_TTS=fake` gives a silent anchor, and the telecast then runs captions-only
+timing), Deepgram for spoken questions in the briefing Player.
 
 ## Develop
 

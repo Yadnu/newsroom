@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
+import { useState } from "react";
 
 import { safeHref } from "@/lib/format";
 import { mouthAt, withAmplitude, wordAt } from "@/src/broadcast/lipsync";
@@ -8,7 +9,7 @@ import { poseAt } from "@/src/broadcast/pose";
 import { type BroadcastScript, activeCaption, segmentsAt } from "@/src/broadcast/script";
 import { gradientFor } from "@/src/features/feed/look";
 
-import { BRoll, Bumper, LiveBug, LowerThirds, type NextStory, Outro, Ticker } from "./Graphics";
+import { BRoll, Bumper, CaptionText, LiveBug, LowerThirds, type NextStory, Outro, Ticker } from "./Graphics";
 import { StudioScene } from "./StudioScene";
 
 export interface StageProps {
@@ -61,12 +62,7 @@ export function Stage({
 
       {onAir && !at.includes("broll") && (
         <div className="absolute right-[5%] top-[12%] w-[42%] shadow-2xl">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element -- publisher thumbnail, any host
-            <img src={image} alt="" referrerPolicy="no-referrer" className="aspect-video w-full rounded-sm object-cover" />
-          ) : (
-            <div aria-hidden className="aspect-video w-full rounded-sm" style={{ background: gradientFor(script.storyId) }} />
-          )}
+          <StoryImage src={image} storyId={script.storyId} />
           <div className="bg-set/90 px-[0.8cqw] py-[0.3cqw] font-display text-[1.1cqw] uppercase tracking-widest text-gold">
             {script.outlets.slice(0, 3).join(" · ")}
           </div>
@@ -74,22 +70,15 @@ export function Stage({
       )}
 
       <BRoll script={script} t={time} reduced={reduced} />
-      {onAir && <LiveBug t={time} />}
+      {onAir && <LiveBug t={time} reduced={reduced} />}
       <LowerThirds script={script} t={time} reduced={reduced} />
 
       {captions && caption && (
         <p
           aria-live="off"
-          className="absolute bottom-[8%] left-1/2 w-[84%] -translate-x-1/2 rounded-sm bg-black/80 px-[1cqw] py-[0.4cqw] text-center font-body text-[1.7cqw] leading-snug text-white"
+          className="absolute bottom-[8%] left-1/2 w-[84%] -translate-x-1/2 rounded-sm bg-black/80 px-[1cqw] py-[0.4cqw] text-center font-body text-[1.7cqw] leading-snug text-white portrait:hidden"
         >
-          {caption.words.length
-            ? caption.words.map((w, i) => (
-                <span key={i} className={w === word ? "text-gold" : undefined}>
-                  {i ? " " : ""}
-                  {w.text}
-                </span>
-              ))
-            : caption.text}
+          <CaptionText caption={caption} word={word} />
         </p>
       )}
 
@@ -106,5 +95,23 @@ export function Stage({
         onReplay={onReplay}
       />
     </div>
+  );
+}
+
+/** The story image, or its gradient if there is none or it fails to load (missing image, 404). */
+function StoryImage({ src, storyId }: { src: string | undefined; storyId: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <div aria-hidden className="aspect-video w-full rounded-sm" style={{ background: gradientFor(storyId) }} />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- publisher thumbnail, any host
+    <img
+      src={src}
+      alt=""
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      className="aspect-video w-full rounded-sm object-cover"
+    />
   );
 }

@@ -22,7 +22,7 @@ export interface ControlsProps {
 }
 
 const BTN =
-  "rounded px-2.5 py-1.5 font-body text-sm text-white/85 hover:bg-white/10 hover:text-white disabled:opacity-30";
+  "rounded px-2 py-1.5 font-body text-sm text-white/85 hover:bg-white/10 hover:text-white disabled:opacity-30 sm:px-2.5";
 
 export function Controls(p: ControlsProps) {
   const { captions, muted, rate, toggleCaptions, toggleMuted, setRate } = usePlayer();
@@ -38,7 +38,7 @@ export function Controls(p: ControlsProps) {
         onChange={(e) => p.onSeek(Number(e.target.value))}
         className="h-1 w-full cursor-pointer accent-[var(--color-breaking)]"
       />
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <button type="button" className={BTN} onClick={p.onPrev} disabled={!p.onPrev} aria-label="Previous story">
           ⏮
         </button>
@@ -51,12 +51,13 @@ export function Controls(p: ControlsProps) {
         <button type="button" className={BTN} onClick={p.onReplay} aria-label="Replay">
           ↺
         </button>
-        <span className="px-2 font-body text-xs tabular-nums text-white/70">
+        <span className="px-1 font-body text-xs tabular-nums text-white/70 sm:px-2">
           {clock(p.time)} / {clock(p.duration)}
         </span>
         {p.audioFailed && (
           <span className="rounded bg-white/10 px-2 py-0.5 font-body text-xs text-white/70">
-            Captions only: audio unavailable
+            <span className="hidden sm:inline">Captions only: audio unavailable</span>
+            <span className="sm:hidden" title="Audio unavailable: captions only">CC only</span>
           </span>
         )}
         <span className="ml-auto" />

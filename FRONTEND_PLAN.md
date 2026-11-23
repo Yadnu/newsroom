@@ -1,6 +1,6 @@
 # Newsroom frontend: Press feed + on-demand animated TV telecast
 
-Status: approved 2026-11-23, including the backend changes in section 3. I build in phases and stop after
+Status: approved and built 2026-11-23 (tasks 8.1 to 8.6), including the backend changes in section 3. I build in phases and stop after
 each one for your review: one PR per phase, and I never merge.
 
 ## 1. Context

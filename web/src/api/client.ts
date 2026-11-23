@@ -73,3 +73,14 @@ export const TELECAST_STEPS = ["queued", "writing", "checking", "clearing", "voi
 export function isRunning(step: string): boolean {
   return (TELECAST_STEPS as readonly string[]).includes(step);
 }
+
+/** A reader-facing sentence for a failed request (task 8.6). */
+export function describeError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 0) return "The newsroom is offline right now. Check your connection and try again.";
+    if (error.status === 404) return "This story is no longer in the feed, or has too few sources to broadcast.";
+    if (error.status >= 500) return "The newsroom server had a problem. Try again in a moment.";
+    return `The request failed (${error.status}).`;
+  }
+  return "Something went wrong. Try again.";
+}

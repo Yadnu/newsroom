@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { describeError } from "@/src/api/client";
 import { usePressFeed } from "@/src/api/press";
 
 import { CardSkeleton } from "./CardSkeleton";
@@ -81,8 +82,8 @@ export function FeedPager() {
       <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 bg-set px-6 text-center text-white">
         <p className="font-display text-2xl uppercase tracking-wide">The press desk is offline</p>
         <p className="max-w-md font-body text-sm text-white/65">
-          {error.message}. Start the API with <code>uv run fastapi dev app/main.py</code>, then try
-          again.
+          {describeError(error)} If you run Newsroom yourself, start the API with{" "}
+          <code>uv run fastapi dev app/main.py</code>.
         </p>
         <button
           type="button"

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import type { TelecastView } from "@/src/api/client";
+import { type TelecastView, describeError } from "@/src/api/client";
 import { usePressFeed } from "@/src/api/press";
 import { useTelecast } from "@/src/api/telecast";
 import { useAmplitude } from "@/src/audio/useAmplitude";
@@ -14,6 +14,7 @@ import { usePlayer } from "@/src/store/player";
 
 import { Controls } from "./Controls";
 import type { NextStory } from "./Graphics";
+import { PortraitPanel } from "./PortraitPanel";
 import { Preparing, TelecastFailed } from "./Preparing";
 import { Stage } from "./Stage";
 
@@ -37,7 +38,7 @@ export function BroadcastPlayer({ storyId }: { storyId: string }) {
   const go = (id: string | undefined) => (id ? () => router.push(`/watch/${id}`) : undefined);
 
   if (error) {
-    return <TelecastFailed telecast={telecast} message={error.message} onRetry={retry} />;
+    return <TelecastFailed telecast={telecast} message={describeError(error)} onRetry={retry} />;
   }
   if (telecast?.step === "failed") {
     return (
@@ -127,11 +128,11 @@ function Show({
       )}
       {preload.audio && <link rel="preload" href={preload.audio} as="audio" />}
       {preload.image && safeHref(preload.image) && <link rel="preload" href={safeHref(preload.image)} as="image" />}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-0 items-center justify-center landscape:flex-1">
         <div
           role="region"
           aria-label={`Broadcast: ${script.title}`}
-          className="relative aspect-video max-h-full w-full max-w-[calc((100vh-5.5rem)*16/9)]"
+          className="relative aspect-video max-h-full w-full landscape:max-w-[calc((100vh-5.5rem)*16/9)]"
         >
           <Stage
             script={script}
@@ -142,7 +143,7 @@ function Show({
             next={next}
             cancelled={cancelled}
             onCancel={() => setCancelled(true)}
-            onPlayNext={onNext}
+            onPlayNext={onNext ?? onExit}
             onExit={onExit}
             onReplay={() => {
               setCancelled(true);
@@ -160,6 +161,21 @@ function Show({
           )}
         </div>
       </div>
+      <PortraitPanel
+        script={script}
+        time={show.time}
+        captions={captions}
+        tickerItems={tickerItems}
+        next={next}
+        cancelled={cancelled}
+        onCancel={() => setCancelled(true)}
+        onPlayNext={onNext ?? onExit}
+        onExit={onExit}
+        onReplay={() => {
+          setCancelled(true);
+          replay();
+        }}
+      />
       <Controls
         time={show.time}
         duration={script.duration}
