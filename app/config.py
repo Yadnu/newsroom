@@ -159,6 +159,8 @@ class Settings(BaseSettings):
     # Recheck of cited sources for retractions (task 6.2, decision 0023).
     reporter_recheck_hours: int = Field(default=48, ge=1)
     reporter_recheck_max: int = Field(default=200, ge=1)
+    # The ARQ worker reruns the recheck every N hours, at minute 30 (task 7.2). 0 = off.
+    reporter_recheck_every_hours: int = Field(default=6, ge=0, le=24)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)

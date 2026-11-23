@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-None: 7.1 is done. Open items are in the handoff below.
+None: 7.2 is done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -56,6 +56,7 @@ None: 7.1 is done. Open items are in the handoff below.
 
 ### Phase 7: hardening
 - [x] 7.1 second judge provider: OpenRouter fallback for gpt-oss-120b, 429 fails over at once
+- [x] 7.2 schedule the retraction recheck in the ARQ worker
 
 ## Open questions (defaults in use until answered)
 
@@ -79,6 +80,6 @@ None: 7.1 is done. Open items are in the handoff below.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 7.1. The gateway knows a second chat host: `openrouter:<model id>` goes to OpenRouter. The judge falls back to the same `gpt-oss-120b` there when Groq fails, and with a usable fallback a 429 fails over at once instead of ~75 s of retries (decision 0025). The judge eval records the answering model per case. Branch `phase7/judge-fallback` stacks on #29, #28, #27, #25, #24; none merged.
-- Open: no `NEWSROOM_OPENROUTER_API_KEY` in `.env` yet, so the OpenRouter path is unit tested only; with the key, probe it and re-run judge_v1 on prompt `ca7ed1b1` (6/130 judged) and the 4 pending contradictions_v1 cases. Latency samples are small. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (add the OpenRouter key there too). Langfuse untested live.
-- Next: add the OpenRouter key, then the live check and eval re-runs above.
+- Done: 7.2. The ARQ worker runs `recheck_job` (retraction recheck) every `reporter_recheck_every_hours` (6) at minute 30; 0 turns it off. Branch `phase7/recheck-schedule` on `phase7/judge-fallback` (#30). Before it, 7.1: OpenRouter as the judge's fallback host (decision 0025); the live probe through OpenRouter passed (3/3 cases, strict JSON, 3-5 s).
+- Open: judge_v1 re-run on prompt `ca7ed1b1` was in progress when this was written (82/130 judged, 65 of them by OpenRouter after a Groq 429); its numbers go on the 7.1 branch. contradictions_v1 is complete (28/28). Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
+- Next: record the judge_v1 results; the remaining items need keys (Langfuse, Tavily/Firecrawl) or repo secrets.
