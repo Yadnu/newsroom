@@ -8,10 +8,12 @@ import { usePressFeed } from "@/src/api/press";
 import { useTelecast } from "@/src/api/telecast";
 import { useAmplitude } from "@/src/audio/useAmplitude";
 import { useShowClock } from "@/src/audio/useShowClock";
+import { safeHref } from "@/lib/format";
 import { buildBroadcastScript } from "@/src/broadcast/script";
 import { usePlayer } from "@/src/store/player";
 
 import { Controls } from "./Controls";
+import type { NextStory } from "./Graphics";
 import { Preparing, TelecastFailed } from "./Preparing";
 import { Stage } from "./Stage";
 
@@ -25,7 +27,11 @@ export function BroadcastPlayer({ storyId }: { storyId: string }) {
   const index = stories.findIndex((s) => s.id === storyId);
   const title = telecast?.story?.title ?? stories[index]?.title ?? "";
   const prevId = index > 0 ? stories[index - 1].id : undefined;
-  const nextId = index >= 0 && index < stories.length - 1 ? stories[index + 1].id : undefined;
+  const nextStory = index >= 0 && index < stories.length - 1 ? stories[index + 1] : undefined;
+  const nextId = nextStory?.id;
+  const tickerItems = stories.filter((s) => s.id !== storyId).slice(0, 12).map((s) => s.title);
+  // Preload the next story's broadcast while this one plays, if it is already recorded.
+  const nextAudio = nextStory?.telecast?.step === "ready" ? `/media/telecasts/${nextStory.telecast.id}.wav` : null;
 
   const exit = () => router.push("/");
   const go = (id: string | undefined) => (id ? () => router.push(`/watch/${id}`) : undefined);
@@ -50,6 +56,9 @@ export function BroadcastPlayer({ storyId }: { storyId: string }) {
       onExit={exit}
       onPrev={go(prevId)}
       onNext={go(nextId)}
+      next={nextStory ? { title: nextStory.title } : null}
+      tickerItems={tickerItems}
+      preload={{ audio: nextAudio, image: nextStory?.image_url ?? null }}
     />
   );
 }
@@ -59,11 +68,17 @@ function Show({
   onExit,
   onPrev,
   onNext,
+  next,
+  tickerItems,
+  preload,
 }: {
   telecast: TelecastView;
   onExit: () => void;
   onPrev?: () => void;
   onNext?: () => void;
+  next: NextStory | null;
+  tickerItems: string[];
+  preload: { audio: string | null; image: string | null };
 }) {
   const script = useMemo(() => buildBroadcastScript(telecast), [telecast]);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
@@ -73,6 +88,12 @@ function Show({
   const { setRate, toggle, seek, replay, time } = show;
 
   useEffect(() => setRate(rate), [rate, setRate]);
+
+  // Outro: auto-advance to the next story when the show ends, unless the viewer cancelled.
+  const [cancelled, setCancelled] = useState(false);
+  useEffect(() => {
+    if (show.ended && next && !cancelled && onNext) onNext();
+  }, [show.ended, next, cancelled, onNext]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -104,13 +125,30 @@ function Show({
       {script.audioUrl && (
         <audio ref={setAudio} src={script.audioUrl} preload="auto" muted={muted} />
       )}
+      {preload.audio && <link rel="preload" href={preload.audio} as="audio" />}
+      {preload.image && safeHref(preload.image) && <link rel="preload" href={safeHref(preload.image)} as="image" />}
       <div className="flex min-h-0 flex-1 items-center justify-center">
         <div
           role="region"
           aria-label={`Broadcast: ${script.title}`}
           className="relative aspect-video max-h-full w-full max-w-[calc((100vh-5.5rem)*16/9)]"
         >
-          <Stage script={script} time={show.time} captions={captions} amplitude={amplitude} />
+          <Stage
+            script={script}
+            time={show.time}
+            captions={captions}
+            amplitude={amplitude}
+            tickerItems={tickerItems}
+            next={next}
+            cancelled={cancelled}
+            onCancel={() => setCancelled(true)}
+            onPlayNext={onNext}
+            onExit={onExit}
+            onReplay={() => {
+              setCancelled(true);
+              replay();
+            }}
+          />
           {show.blocked && (
             <button
               type="button"

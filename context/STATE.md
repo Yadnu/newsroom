@@ -8,7 +8,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-8.5 bumper, lower thirds, ticker, B-roll, outro (see `FRONTEND_PLAN.md`)
+8.6 responsive, reduced motion, error states, tests, README (see `FRONTEND_PLAN.md`)
 
 ## Tasks
 
@@ -64,7 +64,7 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 - [x] 8.2 backend B1 (RSS images, story summaries, `GET /press/stories`) + Feed mode
 - [x] 8.3 backend B2 (telecast job, audio files, `/media`) + broadcast player skeleton
 - [x] 8.4 studio scene, animated anchor, lip sync
-- [ ] 8.5 bumper, lower thirds, ticker, B-roll, outro
+- [x] 8.5 bumper, lower thirds, ticker, B-roll, outro
 - [ ] 8.6 responsive, reduced motion, error states, tests, README
 
 ## Open questions (defaults in use until answered)
@@ -93,6 +93,6 @@ Phase 7: hardening. Phases 0 to 6 are complete.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 8.4 (decision 0028). Cartesia word timestamps are captured per line (`LineTiming.words`, `script_lines.audio_words`, migration `f2a6d8c4b917` applied to the dev DB) and served as `TelecastLine.words`; live: real timings ("Director" 120-600 ms). Web: studio set + original SVG anchor; pose and letter-viseme mouth are pure functions of show time; word-highlighted captions; amplitude only for estimated words. GSAP dropped. Branch `phase8/anchor` on `phase8/telecast` (#35). Earlier: 8.3 telecasts (decision 0027).
+- Done: 8.5. Broadcast graphics as pure functions of show time (`src/broadcast/graphics.ts`): bumper, non-overlapping lower thirds, B-roll Ken Burns, LIVE bug, ticker, outro countdown with cancel and auto-advance (checked live: advanced to the next story at the end), next-story preload; sized in container units. No sting sound (optional, no asset). Branch `phase8/graphics` on `phase8/anchor` (#36). Earlier: 8.4 anchor + word timings (decision 0028).
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 8.5 per `FRONTEND_PLAN.md`: animated bumper, lower thirds (they overlap the anchor today), ticker, LIVE bug, B-roll Ken Burns, outro with 5 s next-story countdown. Phone layout of the player is 8.6.
+- Next: 8.6 per `FRONTEND_PLAN.md`: phone layout of the player (graphics scale but are tiny at 390 px; controls wrap), reduced-motion pass, error states (backend down mid-show, audio 404), README section on running frontend + backend.

@@ -108,12 +108,15 @@ export function buildBroadcastScript(t: TelecastView, now: Date = new Date()): B
       estimated: real.length === 0,
     };
   });
-  const mid = body.start + audioDuration * 0.55;
+  // Lower thirds never overlap: the headline first (at most 45% of the body), then the fact-check
+  // bar after a gap, from 55% of the body; on a short story the second is dropped if there is no room.
+  const headlineEnd = body.start + 800 + Math.min(7000, audioDuration * 0.45);
+  const factStart = Math.max(body.start + audioDuration * 0.55, headlineEnd + 400);
   const candidates: LowerThird[] = [
-    { kind: "headline", ...clampSpan(body.start + 800, body.start + 7800, body) },
-    { kind: "factcheck", ...clampSpan(mid, mid + 6000, body) },
+    { kind: "headline", ...clampSpan(body.start + 800, headlineEnd, body) },
+    { kind: "factcheck", ...clampSpan(factStart, factStart + 6000, body) },
   ];
-  const lowerThirds = candidates.filter((l) => l.end > l.start);
+  const lowerThirds = candidates.filter((l) => l.end - l.start >= 1500);
 
   const verdicts: Record<string, number> = t.verdicts ?? {};
   const claims = Object.values(verdicts).reduce((a, b) => a + b, 0);
