@@ -106,7 +106,7 @@ p50 1.6 s, p95 2.0 s (n = 13).
 
 Requires Python 3.12, [uv](https://docs.astral.sh/uv/), Docker and Node 24 (what CI uses). Copy `.env.example` to
 `.env` and fill in the keys you have (Groq, Voyage, Deepgram, Cartesia; Tavily and Firecrawl for
-live search; Langfuse optional).
+live search; OpenRouter optional, as the judge's fallback host when Groq rate-limits; Langfuse optional).
 
 ```bash
 docker compose up -d db redis       # Postgres 16 + pgvector, Redis 7

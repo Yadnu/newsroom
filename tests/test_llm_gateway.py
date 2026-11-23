@@ -16,7 +16,7 @@ from app.shared.llm import (
     Message,
     StructuredOutputError,
 )
-from app.shared.llm.gateway import cost_usd, embed_batches, estimate_tokens
+from app.shared.llm.gateway import cost_usd, embed_batches, estimate_tokens, provider_of
 from app.shared.llm.schema import strict_json_schema
 
 MSGS: list[Message] = [{"role": "user", "content": "Is the claim supported?"}]
@@ -393,7 +393,22 @@ async def test_invalid_output_falls_back_to_task_fallback_model(trace_sink: Any)
     assert s.payload["model"] == "openai/gpt-oss-120b"
 
 
-async def test_rate_limit_after_retries_falls_back() -> None:
+async def test_rate_limit_fails_over_at_once_when_there_is_a_fallback() -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(httpx.Response(429), _chat(good))
+    result, _ = await _gw(rec, llm_max_attempts=4).complete("draft", MSGS, Verdict)
+    assert result.approved is True
+    assert [rec.body(i)["model"] for i in range(2)] == ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+
+
+async def test_server_error_still_retries_before_falling_back() -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(httpx.Response(503), httpx.Response(503), _chat(good))
+    result, _ = await _gw(rec, llm_max_attempts=2).complete("draft", MSGS, Verdict)
+    assert result.approved is True and rec.body(2)["model"] == "openai/gpt-oss-120b"
+
+
+async def test_fallback_model_retries_its_own_rate_limits() -> None:
     good = Verdict(approved=True, reason="ok").model_dump_json()
     rec = Recorder(httpx.Response(429), httpx.Response(429), _chat(good))
     result, _ = await _gw(rec, llm_max_attempts=2).complete("draft", MSGS, Verdict)
@@ -407,11 +422,76 @@ async def test_auth_error_does_not_fall_back() -> None:
     assert len(rec.requests) == 1
 
 
-async def test_judge_has_no_fallback() -> None:
-    rec = Recorder(_chat("not json"), _chat("{}"))
-    with pytest.raises(StructuredOutputError):
-        await _gw(rec).complete("judge", MSGS, Verdict)
-    assert len(rec.requests) == 2
+async def test_judge_has_no_fallback_without_an_openrouter_key() -> None:
+    rec = Recorder(httpx.Response(429), httpx.Response(429), httpx.Response(429))
+    gw = _gw(rec, llm_max_attempts=3)
+    assert gw.fallback_for("judge") is None
+    with pytest.raises(LLMProviderError):
+        await gw.complete("judge", MSGS, Verdict)
+    assert len(rec.requests) == 3  # no fallback: rate limits keep today's retries
+
+
+async def test_judge_falls_back_to_the_same_model_on_openrouter(trace_sink: Any) -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(httpx.Response(429), _chat(good, 40, 8))
+    gw = _gw(rec, openrouter_api_key="sk-or-test", llm_max_attempts=4)
+    assert gw.fallback_for("judge") == "openrouter:openai/gpt-oss-120b"
+    result, usage = await gw.complete("judge", MSGS, Verdict)
+    assert result.approved is True
+    groq, router = rec.requests
+    assert groq.url.host == "api.groq.com" and groq.headers["authorization"] == "Bearer gsk-test"
+    assert str(router.url) == "https://openrouter.ai/api/v1/chat/completions"
+    assert router.headers["authorization"] == "Bearer sk-or-test"
+    body = rec.body(1)
+    assert body["model"] == "openai/gpt-oss-120b"
+    assert body["provider"] == {"require_parameters": True}
+    assert body["response_format"]["json_schema"]["strict"] is True
+    assert "provider" not in rec.body(0)
+    assert usage.model == "openrouter:openai/gpt-oss-120b"
+    assert usage.cost_usd == pytest.approx((40 * 0.04 + 8 * 0.18) / 1_000_000)
+    (s,) = [t for t in trace_sink.traces if t.event == "complete.judge"]
+    assert s.payload["fallback_from"] == "openai/gpt-oss-120b"
+    assert s.payload["model"] == "openrouter:openai/gpt-oss-120b"
+
+
+async def test_a_route_can_name_openrouter_directly() -> None:
+    good = Verdict(approved=True, reason="ok").model_dump_json()
+    rec = Recorder(_chat(good))
+    gw = _gw(
+        rec,
+        openrouter_api_key="sk-or-test",
+        llm_routes={
+            "draft": "openai/gpt-oss-20b",
+            "classify": "openai/gpt-oss-20b",
+            "answer": "openai/gpt-oss-20b",
+            "judge": "openrouter:openai/gpt-oss-120b",
+        },
+    )
+    await gw.complete("judge", MSGS, Verdict)
+    assert rec.requests[0].url.host == "openrouter.ai"
+
+
+async def test_openrouter_route_without_a_key_is_a_config_error() -> None:
+    routes = {t: "openrouter:openai/gpt-oss-120b" for t in ("draft", "classify", "answer", "judge")}
+    gw = _gw(Recorder(), llm_routes=routes)
+    with pytest.raises(LLMConfigError, match="NEWSROOM_OPENROUTER_API_KEY"):
+        await gw.complete("judge", MSGS, Verdict)
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("openrouter:openai/gpt-oss-120b", ("openrouter", "openai/gpt-oss-120b")),
+        ("openrouter:openai/gpt-oss-120b:free", ("openrouter", "openai/gpt-oss-120b:free")),
+        ("groq:openai/gpt-oss-20b", ("groq", "openai/gpt-oss-20b")),
+        ("openai/gpt-oss-120b", ("groq", "openai/gpt-oss-120b")),
+        ("openai/gpt-oss-120b:free", ("groq", "openai/gpt-oss-120b:free")),
+        ("other:model", ("groq", "other:model")),
+        ("openrouter:", ("groq", "openrouter:")),
+    ],
+)
+def test_provider_of(model: str, expected: tuple[str, str]) -> None:
+    assert provider_of(model) == expected
 
 
 def test_fallback_model_must_be_priced() -> None:

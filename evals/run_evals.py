@@ -14,8 +14,11 @@ import asyncio
 import json
 import sys
 import uuid
+from collections import Counter
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -52,6 +55,36 @@ def previous_results(out: Path, fresh: bool) -> dict[str, str]:
     return done
 
 
+def answered_by(traces: Sequence[Any], claim_id: uuid.UUID) -> str | None:
+    """The model that answered the judge call for ``claim_id`` (the fallback host when Groq was
+    rate-limited, decision 0025), read off the in-memory spans."""
+    judged = [
+        t
+        for t in traces
+        if t.event == "judge_claim" and str(t.payload.get("claim_id")) == str(claim_id)
+    ]
+    for j in judged:
+        for t in traces:
+            if t.event == "complete.judge" and t.parent_id == j.id:
+                model = t.payload.get("model")
+                return str(model) if model else None
+    return None
+
+
+def models_used(lines: Iterable[str]) -> dict[str, int]:
+    """Cases per answering model, from the latest judged row of each case in a results file."""
+    latest: dict[str, str] = {}
+    for line in lines:
+        row = json.loads(line)
+        if row["verdict"] != Verdict.pending.value:
+            latest[row["id"]] = row.get("model") or "unknown"
+    return dict(Counter(latest.values()))
+
+
+def read_lines(path: Path) -> list[str]:
+    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+
+
 def append(out: Path, row: dict[str, object]) -> None:
     with out.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row) + "\n")
@@ -60,7 +93,8 @@ def append(out: Path, row: dict[str, object]) -> None:
 async def run(args: argparse.Namespace) -> int:
     evalset = load(Path(args.data))
     judge.today = lambda: evalset.today  # pin "today" to the set's date
-    set_sink(MemorySink())  # offline: keep traces out of the database
+    sink = MemorySink()
+    set_sink(sink)  # offline: keep traces out of the database
     version = prompt_version(*PROMPTS)
     model = llm.get_gateway().model_for("judge")
     out = Path(args.out or ROOT / f"evals/results/{evalset.version}-{version}.jsonl")
@@ -79,9 +113,8 @@ async def run(args: argparse.Namespace) -> int:
 
     async def one(case: EvalCase) -> None:
         async with limit:
-            v = await judge.judge_passages(
-                ClaimRef(uuid.uuid4(), case.text, []), passages_for(case)
-            )
+            ref = ClaimRef(uuid.uuid4(), case.text, [])
+            v = await judge.judge_passages(ref, passages_for(case))
         verdict = v.verdict.value
         row: dict[str, object] = {
             "id": case.id,
@@ -92,7 +125,7 @@ async def run(args: argparse.Namespace) -> int:
             "sensitive": v.sensitive,
             "checks": v.checks,
             "reason": v.reason,
-            "model": model,
+            "model": answered_by(sink.traces, ref.id) or model,
             "prompt_version": version,
         }
         async with lock:
@@ -110,6 +143,7 @@ async def run(args: argparse.Namespace) -> int:
         "set": evalset.version,
         "prompt_version": version,
         "model": model,
+        "models": models_used(await asyncio.to_thread(read_lines, out)),
         "cases": len(cases),
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }

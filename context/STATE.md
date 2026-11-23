@@ -4,11 +4,11 @@ Last updated: 2026-11-23 by: Claude Code
 
 ## Current phase
 
-Phase 6: Evals and polish. Phases 1 to 5 are complete.
+Phase 7: hardening. Phases 0 to 6 are complete.
 
 ## Active task
 
-None: Phase 6 tasks are done. Open items are in the handoff below.
+None: 7.1 is done. Open items are in the handoff below.
 
 ## Tasks
 
@@ -54,6 +54,9 @@ None: Phase 6 tasks are done. Open items are in the handoff below.
 - [x] 6.3 contradiction detection in Editor
 - [x] 6.4 README: architecture diagram, demo GIF, eval numbers, latency p50 and p95
 
+### Phase 7: hardening
+- [x] 7.1 second judge provider: OpenRouter fallback for gpt-oss-120b, 429 fails over at once
+
 ## Open questions (defaults in use until answered)
 
 - Topic scope for v1. Default: AI and tech news.
@@ -76,6 +79,6 @@ None: Phase 6 tasks are done. Open items are in the handoff below.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 6.4. README rewritten: architecture diagram (Mermaid), demo GIF (`docs/demo.gif`, headless-Chrome frames of the Archive and Player on briefing `e4f4a284`, built 2026-11-23 from live feeds), eval table, latency p50/p95 per stage from `evals/run_latency.py` (new; reads span latencies from `traces`). Branch `phase6/readme` stacks on #27, #25, #24; none merged. Fix `fix/cli-utf8` (on `phase6/readme`): the CLI switches cp1252 stdout/stderr to UTF-8, so `newsroom brief` no longer crashes on a Windows pipe.
-- Open: judge_v1 full re-run on prompt `ca7ed1b1`; Groq free-tier limits leave most judge calls rate-limited (17 of 23 claims pending in `e4f4a284`), and eval runs retry for ~75 s per rate-limited case. Latency samples are small (2 answers, 2 full reviews). Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets. Langfuse untested live.
-- Next: no task left in STATE; pick from the open items (a paid or second judge provider would unblock the evals and latency numbers).
+- Done: 7.1. The gateway knows a second chat host: `openrouter:<model id>` goes to OpenRouter. The judge falls back to the same `gpt-oss-120b` there when Groq fails, and with a usable fallback a 429 fails over at once instead of ~75 s of retries (decision 0025). The judge eval records the answering model per case. Branch `phase7/judge-fallback` stacks on #29, #28, #27, #25, #24; none merged.
+- Open: no `NEWSROOM_OPENROUTER_API_KEY` in `.env` yet, so the OpenRouter path is unit tested only; with the key, probe it and re-run judge_v1 on prompt `ca7ed1b1` (6/130 judged) and the 4 pending contradictions_v1 cases. Latency samples are small. Recheck has no schedule. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (add the OpenRouter key there too). Langfuse untested live.
+- Next: add the OpenRouter key, then the live check and eval re-runs above.

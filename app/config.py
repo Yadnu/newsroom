@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     # Chat completions (decision 0008): Groq, OpenAI-compatible API.
     groq_api_key: SecretStr | None = None
     groq_base_url: str = "https://api.groq.com/openai/v1"
+    # Second chat host (decision 0025): a model string "openrouter:<model id>" goes to OpenRouter.
+    # Without a key, routes and fallbacks that name it are skipped (no judge fallback).
+    openrouter_api_key: SecretStr | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     llm_timeout_s: float = 60.0
     llm_max_attempts: int = 4
     # Task -> model (decision 0002). Env override is JSON: NEWSROOM_LLM_ROUTES='{"judge": "..."}'.
@@ -95,13 +99,16 @@ class Settings(BaseSettings):
         }
     )
     # Task -> fallback model, tried once when the routed model gives invalid output twice or a
-    # transient error outlives the retries (decision 0014). No judge fallback: a weaker judge is
-    # worse than no verdict. Env override is JSON.
+    # transient error outlives the retries (decision 0014). The judge falls back only to the same
+    # model on a second host, never a weaker one (decision 0025), and only when that host has a
+    # key. With a usable fallback, a 429 fails over at once instead of retrying.
+    # Env override is JSON.
     llm_fallbacks: dict[str, str] = Field(
         default_factory=lambda: {
             "draft": "openai/gpt-oss-120b",
             "classify": "openai/gpt-oss-120b",
             "answer": "openai/gpt-oss-120b",
+            "judge": "openrouter:openai/gpt-oss-120b",
         }
     )
     # Model -> (input, output) USD per 1M tokens. Groq list prices 2026-11-16; free tier bills $0
@@ -110,6 +117,8 @@ class Settings(BaseSettings):
         default_factory=lambda: {
             "openai/gpt-oss-20b": (0.075, 0.30),
             "openai/gpt-oss-120b": (0.15, 0.60),
+            # OpenRouter's price depends on the host it picks; about this on 2026-11-23.
+            "openrouter:openai/gpt-oss-120b": (0.04, 0.18),
             "voyage-4-lite": (0.02, 0.0),
         }
     )

@@ -1,7 +1,7 @@
 ---
 id: "0014"
 title: Per-task fallback model; one failed story or claim never sinks a briefing
-status: accepted
+status: accepted (judge fallback superseded by 0025)
 date: 2026-11-18
 nodes: [llm-gateway, writer, editor]
 ---

@@ -6,7 +6,7 @@ phase: 2
 code: app/editor/
 depends_on: [writer, llm-gateway, data-model, archive]
 feeds: [standards-desk, writer]
-decisions: [0002, 0012, 0013, 0014, 0022, 0024]
+decisions: [0002, 0012, 0013, 0014, 0022, 0024, 0025]
 ---
 
 # editor
@@ -34,7 +34,8 @@ LLM judge. Checks each claim against retrieved source passages and approves, req
   `ReviewedScript`: script (current lines), verdicts (one per current claim), rounds, `count(verdict)`.
 - `judge_all(claims, line_ids=None)` (judge without storing; `line_ids` claim id -> line id goes on each judge span) and `store_verdicts(verdicts, briefing_id=None)`.
 - Writes `claims.verdict/score/reason/judged_at` and `claim_evidence` (replaced on re-judge).
-- A failed judge call (`LLMError`; the judge has no fallback model) gives `verdict=pending`, which is not stored
+- A failed judge call (`LLMError`, after the fallback to the same model on OpenRouter when that key is set;
+  decision 0025) gives `verdict=pending`, which is not stored
   and not sent back to the Writer. A rewrite that raises `LLMError` keeps the old line (decision 0014).
 - Prompts: `prompts/editor/judge_system.md` (static) and `judge_user.md` (`$today`, `$claim`, `$evidence`).
   Passages go in escaped `<evidence id="E<n>" outlet published>` blocks, in the user turn only.
@@ -91,3 +92,4 @@ from `30f59e69`.
 - 2026-11-18: judge spans carry `line_id` for the Archive (task 3.1).
 - 2026-11-20: judge prompt: satire/parody is not evidence (task 6.1 red team); judge_v1 re-run.
 - 2026-11-21: sixth judge check `consistent` + `ClaimVerdict.conflicts`; contradictions_v1 eval (task 6.3, decision 0024).
+- 2026-11-23: judge falls back to gpt-oss-120b on OpenRouter; eval rows record the answering model (task 7.1, decision 0025).

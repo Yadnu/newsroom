@@ -6,7 +6,7 @@ phase: 1
 code: app/shared/llm/
 depends_on: [archive, data-model]
 feeds: [reporter, writer, editor, caller]
-decisions: [0002, 0005, 0007, 0008, 0014, 0015]
+decisions: [0002, 0005, 0007, 0008, 0014, 0015, 0025]
 ---
 
 # llm-gateway
@@ -35,9 +35,12 @@ The only way code talks to LLMs and embedding models: routing, retries, structur
   `langfuse_batch_size` (50). Langfuse trace id = the gateway's archive span id; `sessionId` = briefing id.
 - Routing table `Settings.llm_routes` (task -> model) and prices `Settings.llm_prices`
   (model -> USD per 1M in/out). Both can be overridden from env as JSON.
-- Fallbacks `Settings.llm_fallbacks` (task -> model; default draft/classify/answer -> `gpt-oss-120b`, no judge
-  fallback): tried once after `StructuredOutputError` or a retryable provider error that outlived the retries
-  (decision 0014). `Gateway.fallback_for(task)`. Fallback models must be priced.
+- Fallbacks `Settings.llm_fallbacks` (task -> model; default draft/classify/answer -> `gpt-oss-120b`, judge ->
+  `openrouter:openai/gpt-oss-120b`): tried once after `StructuredOutputError` or a retryable provider error
+  (decision 0014). `Gateway.fallback_for(task)` returns None when the fallback's host has no key. With a usable
+  fallback, a 429 fails over at once; 5xx/transport errors retry first (decision 0025). Fallbacks must be priced.
+- Hosts (decision 0025): a model string `openrouter:<id>` goes to OpenRouter (`openrouter_base_url`,
+  `openrouter_api_key`, body adds `provider.require_parameters`); no or unknown prefix = Groq. `provider_of(model)`.
 
 ## Invariants
 
@@ -56,7 +59,8 @@ cover 408/409/429/5xx and transport errors with exponential backoff, honor `retr
 capped by `llm_max_attempts`. Embeddings go to Voyage in batches of at most 1000 texts and a token cap, one request at a time, paced
 per minute when limits are set (decision 0015). A 429 without `retry-after` backs off 15 s per attempt. Usage is logged as a
 structlog `llm.call` event and recorded on an archive span (`complete.<task>` / `embed`,
-with tokens, cost, model and attempts; no prompt text). Fallback model per task (decision 0014); the span records `fallback_from`. Langfuse export (task 3.2, `langfuse.py`): plain httpx to `POST /api/public/ingestion`, no SDK; one trace
+with tokens, cost, model and attempts; no prompt text). Fallback model per task (decisions 0014, 0025); the span records `fallback_from`. OpenRouter is the judge's
+second host, unit tested only until a key is set (none in `.env` on 2026-11-23). Langfuse export (task 3.2, `langfuse.py`): plain httpx to `POST /api/public/ingestion`, no SDK; one trace
 per call plus one generation per model tried (fallbacks show as an `ERROR` generation then a `DEFAULT` one),
 with messages and output clipped to 20K chars each. Events are batched from a background task; send
 failures are logged by status and dropped. Not yet run against a live Langfuse project (no keys in `.env`). Live Groq calls work (writer/editor smoke runs). Live Voyage embedding works
@@ -79,3 +83,4 @@ allows 8000 TPM on `gpt-oss-120b` and a judge call is about 4K tokens, so at `ed
 - 2026-11-18: token-capped embed batches, per-minute pacing, longer 429 backoff (decision 0015).
 - 2026-11-19: Langfuse export of chat and embed calls over the ingestion API (task 3.2, decision 0005).
 - 2026-11-19: embed pacing is a sliding 60 s window, so bursts within the limits go out at once (task 5.3).
+- 2026-11-23: OpenRouter as a second chat host; judge fallback to the same model there; 429 fails over at once (task 7.1, decision 0025).
