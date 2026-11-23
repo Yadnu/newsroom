@@ -12,6 +12,7 @@ from app.archive import start_archive, stop_archive
 from app.archive.routes import router as archive_router
 from app.config import get_settings
 from app.log import configure_logging, get_logger
+from app.press.routes import router as press_router
 
 
 class Health(BaseModel):
@@ -35,6 +36,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Newsroom", lifespan=lifespan)
 app.include_router(archive_router)
 app.include_router(anchor_router)
+app.include_router(press_router)
 
 
 @app.get("/health")

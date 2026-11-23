@@ -27,7 +27,7 @@ async function Briefing({
   return (
     <>
       <p className="muted">
-        <Link href="/">Briefings</Link> /{" "}
+        <Link href="/archive">Briefings</Link> /{" "}
         <span className="mono">{shortId(b.id)}</span>
       </p>
       <h1>Briefing of {when(b.created_at)}</h1>

@@ -4,14 +4,14 @@ type: app
 status: in-progress
 phase: 4
 code: web/
-depends_on: [anchor, archive]
+depends_on: [anchor, archive, press]
 feeds: []
-decisions: []
+decisions: [0026]
 ---
 
 # web
 
-Next.js player and Archive dashboard.
+Next.js app: the Press feed, the Player, and the Archive dashboard.
 
 ## Contract
 
@@ -27,7 +27,13 @@ Next.js player and Archive dashboard.
   Answers (task 5.3): the card shows "Checking sources...", then the answer lines, highlighted while spoken;
   playback resumes by itself. The briefing page labels answer lines "Answer to: <question>".
 - `NEWSROOM_PUBLIC_API_URL`: the API as the browser reaches it (WebSocket base); defaults to `NEWSROOM_API_URL`.
-- Archive dashboard (task 3.3): `/` briefing list (verdict counts, wall time, tokens, cost);
+- Press feed (task 8.2): `/` full-screen vertical pager of `/press/stories` (wheel, arrow/PageUp/PageDown/j/k/space
+  keys, touch swipe, prev/next buttons; next page prefetched 3 cards before the end). Card: feed thumbnail credited
+  to its outlet or a stable gradient, outlets + time ago, headline, crawler summary labelled "not yet fact-checked",
+  up to 3 source links, "Watch broadcast" (disabled until 8.3). Loading skeleton, offline state with retry, empty
+  state. Code in `src/` (`api/client.ts` typed fetch via `/api`, `api/press.ts` TanStack infinite query,
+  `features/feed/`). Route groups: `app/(press)` (no header, `data-press` reset) and `app/(archive)`.
+- Archive dashboard (task 3.3): `/archive` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
   cited source links, evidence passages, earlier verdicts), stage table, and the briefing's rejections;
   `/rejections[?only=rejected]` global rejection log linking to each sentence.
@@ -35,18 +41,21 @@ Next.js player and Archive dashboard.
 
 ## Invariants
 
-- Talks only to the FastAPI backend: server components for data (`lib/api.ts` is `server-only`); the browser
-  opens only the Anchor WebSocket.
+- Talks only to the FastAPI backend: Archive pages read through server components (`lib/api.ts` is `server-only`);
+  the browser calls the API only through the same-origin `/api/*` rewrite (`next.config.ts`, to
+  `NEWSROOM_API_URL`) and opens the Anchor WebSocket.
 - API types generated from OpenAPI: `scripts/export_openapi.py` writes `web/openapi.json`, `npm run gen:api`
   writes `lib/api-types.ts`. CI fails if either is stale.
 - Links built from feed data go through `safeHref()` (http/https only).
 
 ## Current state
 
-Next.js 16.4 (App Router, Cache Components, React 19.3) in `web/`, no CSS framework, system fonts.
+Next.js 16.4 (App Router, Cache Components, React 19.3) in `web/`. Archive: plain CSS (`app/archive.css`, imported
+into Tailwind's `base` layer, no preflight). Press: Tailwind v4 utilities, Framer Motion (`MotionConfig
+reducedMotion="user"`), TanStack Query, Oswald/Inter via `next/font`. Tests are Vitest (`npm test`).
 Every API read awaits `connection()` inside a `<Suspense>` boundary, so pages prerender a shell and stream data at
 request time; the build never calls the API. Commands: `npm run dev|build|lint|typecheck|test`
-(`typecheck` runs `next typegen` first; tests are `node --test` on pure helpers). CI job `web` runs them all.
+(`typecheck` runs `next typegen` first). CI job `web` runs them all.
 Verified live (2026-11-19) against the dev DB: one click on a sentence of briefing `3873a08c` shows its
 TechCrunch source link. Older rejections have no `line_id`, so the log shows them unlinked.
 Player (task 4.3): `components/Player.tsx` (client) + pure `lib/player.ts` (PCM decode, `AudioClock`, `activeLine`,
@@ -67,3 +76,4 @@ automated (no browser in the agent environment).
 - 2026-11-19: answer card in the Player, answer lines labelled on the briefing page (task 5.3).
 - 2026-11-21: briefing page Corrections banner and `Correction` line badge; corrections badge on the list (task 6.2).
 - 2026-11-21: trace panel shows "Sources disagree" conflicts under a judgement (task 6.3).
+- 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).

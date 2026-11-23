@@ -1,0 +1,450 @@
+:root {
+  --bg: #f7f6f3;
+  --panel: #ffffff;
+  --ink: #1d1d1b;
+  --muted: #6b6a66;
+  --line: #e3e1db;
+  --accent: #b4441e;
+  --hover: #f1efe9;
+  --selected: #fbeee6;
+  --approved: #1f7a4d;
+  --approved-bg: #e3f3ea;
+  --rewrite: #8a5a00;
+  --rewrite-bg: #fbf0d5;
+  --rejected: #b3261e;
+  --rejected-bg: #fbe4e2;
+  --pending: #5f6368;
+  --pending-bg: #ececec;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: Georgia, "Times New Roman", serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151514;
+    --panel: #1e1e1c;
+    --ink: #ecebe7;
+    --muted: #a09e98;
+    --line: #34332f;
+    --accent: #f08a5d;
+    --hover: #262623;
+    --selected: #33251d;
+    --approved: #6fcf97;
+    --approved-bg: #16301f;
+    --rewrite: #f2c14e;
+    --rewrite-bg: #33290f;
+    --rejected: #ff8a80;
+    --rejected-bg: #3a1a18;
+    --pending: #b0b3b8;
+    --pending-bg: #2b2b2b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 var(--sans);
+}
+
+a {
+  color: var(--accent);
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.brand {
+  font: 600 18px var(--serif);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand span {
+  color: var(--accent);
+}
+
+.top nav {
+  display: flex;
+  gap: 16px;
+}
+
+.top nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.top nav a:hover {
+  color: var(--ink);
+}
+
+main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+h1 {
+  font: 600 26px/1.2 var(--serif);
+  margin: 0 0 4px;
+}
+
+h2 {
+  font: 600 13px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 28px 0 10px;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+td.num,
+th.num {
+  text-align: right;
+}
+
+td.wrap {
+  white-space: normal;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: var(--hover);
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 4px;
+  background: var(--pending-bg);
+  color: var(--pending);
+}
+
+.badge.approved {
+  background: var(--approved-bg);
+  color: var(--approved);
+}
+
+.badge.rewrite {
+  background: var(--rewrite-bg);
+  color: var(--rewrite);
+}
+
+.badge.rejected {
+  background: var(--rejected-bg);
+  color: var(--rejected);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stat {
+  padding: 10px 14px;
+  min-width: 120px;
+}
+
+.stat b {
+  display: block;
+  font-size: 18px;
+}
+
+.stat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.script {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.script a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  font: 16px/1.55 var(--serif);
+}
+
+.script a:hover {
+  background: var(--hover);
+}
+
+.script a[aria-current="true"] {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.script .story {
+  font: 600 11px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 12px 10px 2px;
+}
+
+.dots {
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 3px;
+  background: var(--pending);
+  vertical-align: middle;
+}
+
+.dot.approved {
+  background: var(--approved);
+}
+
+.dot.rewrite {
+  background: var(--rewrite);
+}
+
+.dot.rejected {
+  background: var(--rejected);
+}
+
+.trace {
+  padding: 16px 18px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.trace blockquote {
+  margin: 0 0 12px;
+  font: 17px/1.5 var(--serif);
+}
+
+.claim {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.claim p {
+  margin: 4px 0;
+}
+
+.sources {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.sources li {
+  margin: 3px 0;
+}
+
+.passage {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty {
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.error {
+  padding: 16px;
+  border: 1px solid var(--rejected);
+  background: var(--rejected-bg);
+  color: var(--rejected);
+  border-radius: 8px;
+}
+
+details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.player {
+  padding: 12px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.controls button {
+  font: 600 14px var(--sans);
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--panel);
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.transcript a.heard {
+  color: var(--ink);
+}
+
+.transcript a.speaking {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.transcript a.held {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
+
+.controls button.talk {
+  background: transparent;
+  color: var(--accent);
+  margin-left: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.controls button.talk.live {
+  background: var(--rejected);
+  border-color: var(--rejected);
+  color: var(--panel);
+}
+
+.caller {
+  padding: 10px 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.caller .question {
+  margin: 6px 0;
+}
+
+.heard-text {
+  font: italic 15px/1.4 var(--serif);
+  margin: 4px 0;
+}
+
+.caller .answer {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 16px/1.5 var(--serif);
+  background: var(--hover);
+}
+
+.caller .answer.speaking {
+  background: var(--selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Corrections banner on a briefing (task 6.2) */
+.banner {
+  border-left: 4px solid var(--rejected);
+  margin-bottom: 1rem;
+}
+.banner h2 {
+  margin-top: 0;
+}
+.banner ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.banner li {
+  margin: 0.3rem 0;
+}

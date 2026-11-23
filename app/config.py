@@ -162,6 +162,9 @@ class Settings(BaseSettings):
     # The ARQ worker reruns the recheck every N hours, at minute 30 (task 7.2). 0 = off.
     reporter_recheck_every_hours: int = Field(default=6, ge=0, le=24)
 
+    # Press feed (task 8.2): crawler summaries per worker run, newest stories first. 0 = off.
+    press_summaries_per_run: int = Field(default=8, ge=0, le=100)
+
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)
     standards_max_transition_words: int = Field(default=10, ge=1)

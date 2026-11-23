@@ -77,6 +77,10 @@ def test_embedding_text_is_capped() -> None:
 # ---- worker job ---------------------------------------------------------------------------
 
 
+async def _no_summaries() -> int:
+    return 0
+
+
 async def test_ingest_job_runs_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
@@ -95,6 +99,7 @@ async def test_ingest_job_runs_pipeline(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(worker, "ingest_feeds", ingest)
     monkeypatch.setattr(worker, "embed_pending_sources", embed)
     monkeypatch.setattr(worker, "cluster_stories", cluster)
+    monkeypatch.setattr(worker, "fill_summaries", _no_summaries)
     result = await worker.ingest_job({})
     assert calls == ["ingest", "embed", "cluster:24"]
     assert result["ingest"]["new_sources"] == 4
@@ -114,5 +119,6 @@ async def test_ingest_job_skips_embedding_without_key(monkeypatch: pytest.Monkey
     monkeypatch.setattr(worker, "ingest_feeds", ingest)
     monkeypatch.setattr(worker, "embed_pending_sources", embed)
     monkeypatch.setattr(worker, "cluster_stories", cluster)
+    monkeypatch.setattr(worker, "fill_summaries", _no_summaries)
     result = await worker.ingest_job({})
     assert result["embedded"] == 0

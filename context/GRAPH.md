@@ -14,16 +14,17 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | Node | Type | Status | Phase | Code | Depends on | Feeds | Decisions |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [archive](nodes/archive.md) | component | in-progress | 1 | `app/archive/` | data-model | web | 0005, 0009, 0013, 0023, 0024 |
-| [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive | 0001, 0007, 0011, 0020, 0023 |
+| [data-model](nodes/data-model.md) | shared | done | 1 | `app/db/` | - | reporter, writer, editor, archive, press | 0001, 0007, 0011, 0020, 0023 |
 | [llm-gateway](nodes/llm-gateway.md) | shared | in-progress | 1 | `app/shared/llm/` | archive, data-model | reporter, writer, editor, caller | 0002, 0005, 0007, 0008, 0014, 0015, 0025 |
-| [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive, standards-desk | producer | 0003, 0010, 0021, 0023 |
+| [reporter](nodes/reporter.md) | component | in-progress | 1 | `app/reporter/` | data-model, llm-gateway, archive, standards-desk | producer, press | 0003, 0010, 0021, 0023, 0026 |
 | [editor](nodes/editor.md) | component | in-progress | 2 | `app/editor/` | writer, llm-gateway, data-model, archive | standards-desk, writer | 0002, 0012, 0013, 0014, 0022, 0024, 0025 |
 | [producer](nodes/producer.md) | component | in-progress | 2 | `app/producer/` | reporter, caller, standards-desk, archive | writer, anchor | 0020, 0021, 0023 |
-| [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor | 0002, 0011, 0013, 0014, 0020, 0023 |
+| [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor, press | 0002, 0011, 0013, 0014, 0020, 0023, 0026 |
 | [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017, 0020 |
-| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller, reporter | 0016, 0019, 0022, 0023 |
-| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive | - | - |
+| [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller, reporter, press | 0016, 0019, 0022, 0023 |
+| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026 |
 | [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018, 0019 |
+| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, standards-desk, data-model, archive | web | 0026 |
 
 ## Edges
 
@@ -35,6 +36,7 @@ flowchart LR
   data_model["data-model (done)"]
   editor["editor (in-progress)"]
   llm_gateway["llm-gateway (in-progress)"]
+  press["press (in-progress)"]
   producer["producer (in-progress)"]
   reporter["reporter (in-progress)"]
   standards_desk["standards-desk (in-progress)"]
@@ -45,6 +47,7 @@ flowchart LR
   archive --> caller
   archive --> editor
   archive --> llm_gateway
+  archive --> press
   archive --> producer
   archive --> reporter
   archive --> standards_desk
@@ -56,6 +59,7 @@ flowchart LR
   data_model --> archive
   data_model --> editor
   data_model --> llm_gateway
+  data_model --> press
   data_model --> reporter
   data_model --> writer
   editor --> standards_desk
@@ -64,14 +68,18 @@ flowchart LR
   llm_gateway --> editor
   llm_gateway --> reporter
   llm_gateway --> writer
+  press --> web
   producer --> anchor
   producer --> writer
+  reporter --> press
   reporter --> producer
   standards_desk --> anchor
   standards_desk --> caller
+  standards_desk --> press
   standards_desk --> producer
   standards_desk --> reporter
   writer --> editor
+  writer --> press
 ```
 
 <!-- graph:end -->

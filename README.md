@@ -116,12 +116,12 @@ uv run newsroom stories --top 10    # ingest and cluster today's stories
 uv run newsroom brief --minutes 3   # rundown, script, fact-check; prints each claim's verdict
 uv run newsroom speak <briefing_id> --out brief.wav
 uv run fastapi dev app/main.py      # API on :8000
-cd web && npm ci && npm run dev     # Archive dashboard and Player on :3000
+cd web && npm ci && npm run dev     # Press feed on :3000, Archive at /archive
 ```
 
 Other commands: `newsroom ask --briefing <id> --wav q.wav` (transcribe and classify a question),
 `newsroom search "<question>"` (live web search), `newsroom retract <source id|url> --reason "..."`,
-`newsroom recheck`, `newsroom corrections`.
+`newsroom recheck`, `newsroom corrections`, `newsroom summarize` (Press feed summaries; the worker also writes them).
 
 ## Develop
 

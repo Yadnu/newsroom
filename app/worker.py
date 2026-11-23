@@ -16,6 +16,7 @@ from arq.cron import CronJob
 from app.archive import start_archive, stop_archive
 from app.config import get_settings
 from app.log import configure_logging, get_logger
+from app.press import fill_summaries
 from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.reporter.retract import recheck_sources
 from app.shared import llm
@@ -24,7 +25,7 @@ log = get_logger(__name__)
 
 
 async def ingest_job(ctx: dict[Any, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
-    """Ingest feeds, embed new sources, cluster them into stories."""
+    """Ingest feeds, embed new sources, cluster them into stories, write Press summaries."""
     result: dict[str, Any] = {"ingest": (await ingest_feeds()).model_dump()}
     try:
         result["embedded"] = await embed_pending_sources()
@@ -33,6 +34,11 @@ async def ingest_job(ctx: dict[Any, Any], *args: Any, **kwargs: Any) -> dict[str
         result["embedded"] = 0
     stories = await cluster_stories(get_settings().reporter_cluster_window_hours)
     result["stories_touched"] = len(stories)
+    try:
+        result["summaries"] = await fill_summaries()
+    except llm.LLMConfigError as e:  # no chat key: the feed shows titles only
+        log.warning("worker.summaries_skipped", reason=str(e))
+        result["summaries"] = 0
     return result
 
 
