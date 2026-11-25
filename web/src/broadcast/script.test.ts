@@ -23,6 +23,7 @@ function telecast(over: Partial<TelecastView> = {}, imageUrl: string | null = "h
     created_at: "2026-11-23T11:00:00Z",
     updated_at: "2026-11-23T11:01:00Z",
     audio_url: "/media/telecasts/t1.wav",
+    audio_lead_ms: 0,
     duration_ms: 20_000,
     lines: [
       { id: "l2", text: "Second.", start_ms: 6000, end_ms: 12_000, words: [] },

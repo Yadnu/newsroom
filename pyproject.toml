@@ -9,6 +9,7 @@ dependencies = [
     "fastapi[standard]>=0.163.1",
     "feedparser>=6.0.14",
     "httpx>=0.28.1",
+    "lameenc>=1.9.0",
     "numpy>=2.5.5",
     "pgvector>=0.5.1",
     "pipecat-ai[cartesia,deepgram,websocket]==1.16.0",
@@ -63,5 +64,5 @@ testpaths = ["tests"]
 markers = ["integration: needs Docker Postgres/Redis"]
 
 [[tool.mypy.overrides]]
-module = ["feedparser", "feedparser.*"]
+module = ["feedparser", "feedparser.*", "lameenc"]
 ignore_missing_imports = true

@@ -40,6 +40,7 @@ RETRYABLE_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504})
 EMBED_BATCH = 1000  # Voyage max inputs per request
 EMBED_CHARS_PER_TOKEN = 3  # conservative estimate for sizing batches before the call
 STRUCTURED_ATTEMPTS = 2  # resample once when the output fails validation
+DEFAULT_MAX_TOKENS = 4096
 _MAX_BACKOFF_S = 30.0
 _RATE_LIMIT_BACKOFF_S = 15.0
 EMBED_WINDOW_S = 60.0  # the providers' per-minute limits, as a sliding window
@@ -169,6 +170,9 @@ class Gateway:
         body: dict[str, Any] = {
             "model": model_id,
             "messages": list(messages),
+            # Without a cap OpenRouter reserves the model's whole context against the account's
+            # credit and answers 402 once the balance is lower (task 9.3). Reasoning counts here.
+            "max_tokens": self._s.llm_max_tokens.get(task, DEFAULT_MAX_TOKENS),
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {

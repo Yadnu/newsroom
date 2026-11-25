@@ -60,3 +60,5 @@ Done (task 1.1). Models in `app/db/models.py`, async engine and session in `app/
 - 2026-11-23: migration `d4e1a7b93c02`: `sources.image_url` (text, nullable) for feed thumbnails (task 8.2).
 - 2026-11-23: migration `e8b3c5d2f610`: `telecasts` (story_id, briefing_id, step, error, audio_path, duration_ms; task 8.3).
 - 2026-11-23: migration `f2a6d8c4b917`: `script_lines.audio_words` (JSONB, per-word audio timings; task 8.4).
+- 2026-11-23: migration `a7c1e4f9d203`: `telecasts.step` may be `expired` (task 9.1).
+- 2026-11-23: migration `b3d5f7a9c124`: `stories.summary_sources` (task 9.2).

@@ -44,7 +44,8 @@ export interface BroadcastScript {
   approved: number;
   claims: number;
   audioUrl: string | null;
-  audioOffset: number; // show time at which audio time 0 plays
+  audioOffset: number; // show time at which speech starts
+  audioLead: number; // ms of silence at the start of the file before speech (MP3 encoder delay)
   audioDuration: number;
   duration: number;
   segments: Segment[]; // bumper, intro, body, outro in order; broll (if any) overlaps body
@@ -133,6 +134,7 @@ export function buildBroadcastScript(t: TelecastView, now: Date = new Date()): B
     claims,
     audioUrl: t.audio_url ?? null,
     audioOffset: body.start,
+    audioLead: t.audio_lead_ms ?? 0,
     audioDuration,
     duration,
     segments,

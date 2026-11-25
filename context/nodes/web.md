@@ -33,12 +33,12 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
   up to 3 source links, "Watch broadcast" (links to the telecast; "Fact-checked broadcast ready" when one is). Loading skeleton, offline state with retry, empty
   state. Code in `src/` (`api/client.ts` typed fetch via `/api`, `api/press.ts` TanStack infinite query,
   `features/feed/`). Route groups: `app/(press)` (no header, `data-press` reset) and `app/(archive)`.
-- Telecast player (task 8.3): `/watch/[storyId]` starts or reuses the story's telecast (`useTelecast`: POST, then
-  polls every 2 s), shows the real steps ("Going to air"), then plays it. `src/broadcast/script.ts`
+- Telecast player (task 8.3): `/watch/[storyId]` starts or reuses the story's telecast (`useTelecast`: one
+  deduplicated POST query, then polls every 2 s), shows the real steps ("Going to air"), then plays it. `src/broadcast/script.ts`
   `buildBroadcastScript()` is the single timeline (bumper 2.5 s, intro, body = audio, b-roll on a caption boundary
   near 40%, outro 5 s; captions, lower thirds, BREAKING if newest source < 3 h and 3+ outlets);
   `src/broadcast/clock.ts` `ShowClock` is the only clock (audio element is master during speech, wall clock
-  otherwise and for captions-only). Controls: play/pause, replay, seek bar, prev/next story, mute, captions (on by
+  otherwise and for captions-only; media time is offset by `audio_lead_ms` for MP3, task 9.4). Controls: play/pause, replay, seek bar, prev/next story, mute, captions (on by
   default), speed 0.75-1.5, exit; keys space/k, m, c, r, arrows, n/p, Esc.
   Studio (task 8.4, decision 0028): `StudioScene` (skyline, light sweep, desk) and `Anchor` (original layered SVG).
   `poseAt()` (blinks, breathing, tilts, papers, nod, brows) and `mouthAt()` (letter visemes from word timings;
@@ -103,3 +103,5 @@ automated (no browser in the agent environment).
 - 2026-11-23: studio scene, animated anchor, word-timed lip sync and captions (task 8.4).
 - 2026-11-23: broadcast graphics: bumper, lower thirds, B-roll Ken Burns, LIVE bug, ticker, outro with auto-advance (task 8.5).
 - 2026-11-23: phone portrait layout, error states, reduced-motion pass, hook tests, README run guide (task 8.6).
+- 2026-11-23: telecast start is a deduplicated query, not a mutation (no double POST in dev; task 9.3).
+- 2026-11-23: MP3 telecasts: the clock skips the encoder delay (`audioLead`) (task 9.4).

@@ -119,11 +119,20 @@ async def test_summarize_story_gives_up_after_two_bad_answers(groq: Any) -> None
 @pytest.fixture
 def press(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Fake DB side of the summary job; ``answers`` are what the writer returns in order."""
-    state: dict[str, Any] = {"stored": {}, "answers": [], "feedback": []}
+    state: dict[str, Any] = {
+        "stored": {},
+        "counts": {},
+        "answers": [],
+        "feedback": [],
+        "todo": None,
+    }
     source = _source("Acme began shipping its new AI chip to data centers on Monday morning.")
 
-    async def needing(limit: int, min_sources: int = 2) -> list[tuple[UUID, str]]:
-        return [(uuid4(), "Acme ships chip")][:limit]
+    async def needing(
+        limit: int, min_sources: int = 2, growth: int | None = None
+    ) -> list[summaries.SummaryTodo]:
+        todo = state["todo"] or [summaries.SummaryTodo(uuid4(), "Acme ships chip", 3, False)]
+        return list(todo)[:limit]
 
     async def sources(story_id: UUID, n: int = 4) -> list[SourceText]:
         return [source]
@@ -135,8 +144,10 @@ def press(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             raise answer
         return str(answer)
 
-    async def store(story_id: UUID, summary: str) -> None:
-        state["stored"][story_id] = summary
+    async def store(story_id: UUID, summary: str | None, n_sources: int) -> None:
+        if summary is not None:
+            state["stored"][story_id] = summary
+        state["counts"][story_id] = n_sources
 
     monkeypatch.setattr(summaries, "stories_needing_summary", needing)
     monkeypatch.setattr(summaries, "story_sources", sources)
@@ -269,3 +280,26 @@ def test_story_image_is_the_newest_source_with_one() -> None:
     story = feed_mod._story(Row(), [Member("B", None), Member("A", "https://i/a.jpg")])
     assert (story.image_url, story.image_outlet) == ("https://i/a.jpg", "A")
     assert story.outlets == ["A", "B"] and story.n_sources == 2
+
+
+async def test_a_clean_summary_records_its_source_count(press: dict[str, Any]) -> None:
+    press["answers"] = [f"Acme has started delivering a chip for AI work. {WORDS_40}"]
+    assert await summaries.fill_summaries(1) == 1
+    assert list(press["counts"].values()) == [3]
+
+
+async def test_a_failed_refresh_keeps_the_old_summary_but_records_the_count(
+    press: dict[str, Any],
+) -> None:
+    sid = uuid4()
+    press["todo"] = [summaries.SummaryTodo(sid, "Acme", 5, True)]
+    press["answers"] = [WriterError("bad")]
+    assert await summaries.fill_summaries(1) == 0
+    assert press["stored"] == {} and press["counts"] == {sid: 5}  # not retried until it grows
+
+
+async def test_a_failed_new_summary_is_retried_next_run(press: dict[str, Any]) -> None:
+    press["todo"] = [summaries.SummaryTodo(uuid4(), "Acme", 2, False)]
+    press["answers"] = [WriterError("bad")]
+    assert await summaries.fill_summaries(1) == 0
+    assert press["counts"] == {}

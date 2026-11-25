@@ -89,6 +89,7 @@ class Story(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     title: str = Field(sa_type=Text)
     summary: str | None = Field(default=None, sa_type=Text)
+    summary_sources: int | None = None  # live sources the summary was written from (task 9.2)
     created_at: datetime = _ts()
     centroid: list[float] | None = _vector()
 
@@ -202,7 +203,16 @@ class Correction(SQLModel, table=True):
     created_at: datetime = _ts()
 
 
-TELECAST_STEPS = ("queued", "writing", "checking", "clearing", "voicing", "ready", "failed")
+TELECAST_STEPS = (
+    "queued",
+    "writing",
+    "checking",
+    "clearing",
+    "voicing",
+    "ready",
+    "failed",
+    "expired",  # audio removed after press_telecast_retention_days (task 9.1)
+)
 
 
 class Telecast(SQLModel, table=True):
@@ -212,7 +222,8 @@ class Telecast(SQLModel, table=True):
     __tablename__ = "telecasts"
     __table_args__ = (
         CheckConstraint(
-            "step IN ('queued', 'writing', 'checking', 'clearing', 'voicing', 'ready', 'failed')",
+            "step IN ('queued', 'writing', 'checking', 'clearing', 'voicing', 'ready', 'failed',"
+            " 'expired')",
             name="ck_telecasts_step",
         ),
     )

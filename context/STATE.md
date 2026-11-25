@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-None: Phase 8 (frontend) is done. Open items are in the handoff below.
+9.5 categories (feed tags, filter, category bar)
 
 ## Tasks
 
@@ -67,6 +67,14 @@ None: Phase 8 (frontend) is done. Open items are in the handoff below.
 - [x] 8.5 bumper, lower thirds, ticker, B-roll, outro
 - [x] 8.6 responsive, reduced motion, error states, tests, README
 
+### Phase 9: Press follow-ups (plan approved 2026-11-23)
+- [x] 9.1 telecast audio retention (cleanup job, `expired` telecasts)
+- [x] 9.2 refresh summaries when a story gains sources
+- [x] 9.3 telecasts as ARQ worker jobs, in-process fallback
+- [x] 9.4 MP3 telecast audio
+- [ ] 9.5 categories (feed tags, filter, category bar)
+- [ ] 9.6 spoken and typed questions during a telecast
+
 ## Open questions (defaults in use until answered)
 
 - Topic scope for v1. Default: AI and tech news.
@@ -93,6 +101,6 @@ None: Phase 8 (frontend) is done. Open items are in the handoff below.
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 8.6, closing Phase 8. Player phone layout (picture + `PortraitPanel`, compact controls), image and API error states, captions-only fallback verified with blocked audio, hook tests (Vitest 57), README section on the web app and running it with the backend, new demo GIF (feed + telecast). Branch `phase8/hardening` on `phase8/graphics` (#37). Phase 8 PRs: #33 plan, #34 feed, #35 telecasts, #36 anchor, #37 graphics, this one.
+- Done: 9.4. Telecast audio is MP3 (lameenc 64 kbps, WAV kept if encoding fails) with `audio_lead_ms` (46 ms encoder delay) applied by the player clock; `newsroom transcode-media` converted the 11 existing telecasts on the dev DB (8.8 MB -> 1.5 MB); played in headless Chrome as audio/mpeg with captions in sync. Branch `phase9/mp3` on `phase9/worker-telecasts` (#41). Earlier: 9.3 worker jobs + OpenRouter max_tokens fix.
 - Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: no task left in STATE. Candidates: telecast audio cleanup (var/media grows), refresh summaries when a story gains sources, MP3 audio, categories once the topic scope widens, push-to-talk questions during telecasts.
+- Next: 9.5 categories, 9.6 questions during telecasts. Groq's daily cap for gpt-oss-120b was spent on 2026-11-23 (rolling 24 h).

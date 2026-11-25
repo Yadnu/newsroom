@@ -2,14 +2,17 @@
 
 - ``ingest_job`` every ``reporter_ingest_every_minutes``: ingest, embed, cluster.
 - ``recheck_job`` every ``reporter_recheck_every_hours`` at minute 30: retraction recheck.
+- ``cleanup_job`` daily at 03:15: telecast audio retention (task 9.1).
+- ``telecast_job``: telecasts queued by the API (task 9.3).
 
 Needs Redis (``NEWSROOM_REDIS_URL``) and Postgres. Starts and flushes the archive writer so job
 spans reach ``traces`` (decision 0009).
 """
 
 from typing import Any, ClassVar
+from uuid import UUID
 
-from arq import cron
+from arq import cron, func
 from arq.connections import RedisSettings
 from arq.cron import CronJob
 
@@ -17,6 +20,9 @@ from app.archive import start_archive, stop_archive
 from app.config import get_settings
 from app.log import configure_logging, get_logger
 from app.press import fill_summaries
+from app.press.media import cleanup_media
+from app.press.queue import WORKER_HEALTH_S
+from app.press.telecast import run_telecast
 from app.reporter import cluster_stories, embed_pending_sources, ingest_feeds
 from app.reporter.retract import recheck_sources
 from app.shared import llm
@@ -60,6 +66,18 @@ async def recheck_job(ctx: dict[Any, Any], *args: Any, **kwargs: Any) -> dict[st
     }
 
 
+async def cleanup_job(ctx: dict[Any, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Delete telecast audio past its retention and orphan files (task 9.1)."""
+    report = await cleanup_media()
+    return {"expired": report.expired, "orphans": report.orphans, "bytes_freed": report.bytes_freed}
+
+
+async def telecast_job(ctx: dict[Any, Any], telecast_id: str, story_id: str) -> str:
+    """A telecast queued by the API (task 9.3). ``run_telecast`` never raises; see the row."""
+    await run_telecast(UUID(telecast_id), UUID(story_id))
+    return telecast_id
+
+
 async def startup(_ctx: dict[str, Any]) -> None:
     configure_logging(get_settings())
     await start_archive()
@@ -93,11 +111,20 @@ def cron_jobs() -> list[CronJob]:
     if hours := recheck_hours(settings.reporter_recheck_every_hours):
         # Minute 30 keeps it clear of the ingest run at minute 0.
         jobs.append(cron(recheck_job, hour=hours, minute=30, unique=True, timeout=900))
+    if settings.press_telecast_retention_days > 0:
+        jobs.append(cron(cleanup_job, hour={3}, minute=15, unique=True, timeout=600))
     return jobs
 
 
 class WorkerSettings:
-    functions: ClassVar[list[Any]] = [ingest_job, recheck_job]
+    functions: ClassVar[list[Any]] = [
+        ingest_job,
+        recheck_job,
+        cleanup_job,
+        func(telecast_job, timeout=900, max_tries=1),
+    ]
+    max_jobs = 4 + get_settings().press_telecast_concurrency
+    health_check_interval = WORKER_HEALTH_S  # the API queues telecasts only while this is fresh
     cron_jobs: ClassVar[list[CronJob]] = cron_jobs()
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     on_startup = startup

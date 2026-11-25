@@ -1,7 +1,8 @@
 """Telecasts: a reader asks to broadcast one Press story (task 8.3, decision 0027).
 
-``start_telecast()`` records a ``telecasts`` row and runs the job in the background (this API
-process, ``press_telecast_concurrency`` at a time). The job is the same path as a briefing, on one
+``start_telecast()`` records a ``telecasts`` row and runs the job in the background: on the ARQ
+worker, or in this API process when Redis is unreachable (``press_telecast_runner``, task 9.3;
+``press_telecast_concurrency`` at a time either way). The job is the same path as a briefing, on one
 story: ``rundown_for_story`` -> ``draft_script`` -> ``review_script`` (Editor judge and rewrites)
 -> ``clear_for_air`` (Standards Desk) -> ``speak`` into a WAV file under ``media_dir``. Only cleared
 lines are voiced. Each step is written to the row, so the web player can show progress.
@@ -12,21 +13,25 @@ died) reads as failed.
 """
 
 import asyncio
-from collections.abc import Callable
+import inspect
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import func, select, update
+from sqlalchemy import func, insert, select, text, update
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.anchor import AnchorConfigError, AnchorError, WavFileSession, speak
 from app.archive import span
 from app.config import get_settings
 from app.db.models import Claim, ScriptLine, Telecast, utcnow
-from app.db.session import get_engine, session_scope
+from app.db.session import get_engine
 from app.editor import review_script
 from app.log import get_logger
+from app.press import queue
+from app.press.audio import AudioEncodeError, encode_mp3, lead_ms
 from app.press.feed import PressStory, press_story
 from app.producer import NoStoriesError, rundown_for_story
 from app.shared import llm
@@ -86,6 +91,7 @@ class TelecastView(BaseModel):
     updated_at: datetime
     audio_url: str | None = None  # same-origin path, e.g. /media/telecasts/<id>.wav
     duration_ms: int | None = None
+    audio_lead_ms: int = 0  # silence at the start of the file (MP3 encoder delay, task 9.4)
     lines: list[TelecastLine] = []  # voiced lines with audio timings (ready only)
     verdicts: dict[str, int] = {}  # the briefing's claims by verdict
     story: PressStory | None = None
@@ -93,7 +99,7 @@ class TelecastView(BaseModel):
 
 # ---- running -----------------------------------------------------------------------------------
 
-Runner = Callable[[UUID, UUID], None]
+Runner = Callable[[UUID, UUID], Awaitable[None] | None]
 _tasks: set[asyncio.Task[None]] = set()
 _slots: asyncio.Semaphore | None = None
 
@@ -103,9 +109,36 @@ def media_dir() -> Path:
 
 
 def audio_file(telecast_id: UUID) -> tuple[Path, str]:
-    """(absolute path, path relative to media_dir) of a telecast's WAV file."""
+    """(absolute path, path relative to media_dir) of the WAV the Anchor writes (then MP3)."""
     rel = f"telecasts/{telecast_id}.wav"
     return media_dir() / rel, rel
+
+
+async def dispatch(telecast_id: UUID, story_id: UUID) -> None:
+    """Run the job where ``press_telecast_runner`` says (task 9.3): the ARQ worker, falling back to
+    this process when Redis is unreachable (``auto``), or in this process (``inprocess``)."""
+    mode = get_settings().press_telecast_runner
+    if mode != "inprocess" and await queue.enqueue_telecast(
+        telecast_id, story_id, need_worker=mode == "auto"
+    ):
+        return
+    if mode == "worker":
+        await _set(telecast_id, step="failed", error="queued: the worker queue is unavailable")
+        return
+    schedule(telecast_id, story_id)
+
+
+def to_mp3(wav: Path, rel: str) -> str:
+    """Encode the telecast's WAV to MP3 and remove the WAV (task 9.4). On failure keep the WAV: the
+    telecast still airs. Returns the audio path relative to media_dir."""
+    mp3 = wav.with_suffix(".mp3")
+    try:
+        encode_mp3(wav, mp3)
+    except AudioEncodeError as e:
+        log.warning("press.mp3_failed", error=str(e)[:200])
+        return rel
+    wav.unlink(missing_ok=True)
+    return rel.removesuffix(".wav") + ".mp3"
 
 
 def schedule(telecast_id: UUID, story_id: UUID) -> None:
@@ -155,6 +188,7 @@ async def run_telecast(telecast_id: UUID, story_id: UUID) -> None:
             path, rel = audio_file(telecast_id)
             path.parent.mkdir(parents=True, exist_ok=True)
             report = await speak(cleared, WavFileSession(path, settings.anchor_sample_rate))
+            rel = await asyncio.to_thread(to_mp3, path, rel)
             await _set(telecast_id, step="ready", audio_path=rel, duration_ms=report.audio_ms)
             s.set(step="ready", lines=len(report.lines), audio_ms=report.audio_ms)
         except Exception as e:
@@ -186,20 +220,35 @@ def failure_reason(e: Exception) -> str | None:
 # ---- requests ----------------------------------------------------------------------------------
 
 
-async def start_telecast(story_id: UUID, runner: Runner = schedule) -> TelecastView:
+async def start_telecast(story_id: UUID, runner: Runner | None = None) -> TelecastView:
     """Reuse a recent or running telecast of the story, or start a new one."""
     if await press_story(story_id) is None:
         raise StoryNotFoundError(str(story_id))
-    if (current := await reusable(story_id)) is not None:
+    # One request at a time per story decides reuse-or-create (two tabs, or React running an effect
+    # twice in development, must not start two jobs): a transaction-scoped advisory lock.
+    async with get_engine().begin() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))"),
+            {"k": f"telecast:{story_id}"},
+        )
+        current = await reusable(story_id, conn)
+        if current is None:
+            now = utcnow()
+            new_id = uuid4()
+            await conn.execute(
+                insert(_telecasts).values(
+                    id=new_id, story_id=story_id, step="queued", created_at=now, updated_at=now
+                )
+            )
+    if current is not None:
         return await telecast_view(current)
-    row = Telecast(story_id=story_id)
-    async with session_scope() as session:
-        session.add(row)
-    runner(row.id, story_id)
-    return await telecast_view(row.id)
+    started = (runner or dispatch)(new_id, story_id)
+    if inspect.isawaitable(started):
+        await started
+    return await telecast_view(new_id)
 
 
-async def reusable(story_id: UUID) -> UUID | None:
+async def reusable(story_id: UUID, conn: AsyncConnection | None = None) -> UUID | None:
     settings = get_settings()
     now = utcnow()
     query = (
@@ -211,7 +260,10 @@ async def reusable(story_id: UUID) -> UUID | None:
         .order_by(_telecasts.c.created_at.desc())
         .limit(5)
     )
-    async with get_engine().connect() as conn:
+    if conn is None:
+        async with get_engine().connect() as own:
+            rows = (await own.execute(query)).all()
+    else:
         rows = (await conn.execute(query)).all()
     for r in rows:
         if r.step == "ready" and r.audio_path and (media_dir() / r.audio_path).is_file():
@@ -253,6 +305,7 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
             view.verdicts = {str(v): int(n) for v, n in counts.all()}
         if view.step == "ready" and row.audio_path and view.briefing_id is not None:
             view.audio_url = f"/media/{row.audio_path}"
+            view.audio_lead_ms = lead_ms(row.audio_path, get_settings().anchor_sample_rate)
             view.duration_ms = row.duration_ms
             lines = await conn.execute(
                 select(
@@ -291,3 +344,31 @@ async def wait_for_jobs() -> None:
     """For tests and shutdown: wait for running telecast jobs."""
     if _tasks:
         await asyncio.gather(*list(_tasks), return_exceptions=True)
+
+
+async def transcode_existing(dry_run: bool = False) -> tuple[int, int]:
+    """Convert ready telecasts stored as WAV to MP3 (task 9.4). Returns (converted, bytes saved)."""
+    query = select(_telecasts.c.id, _telecasts.c.audio_path).where(
+        _telecasts.c.step == "ready", _telecasts.c.audio_path.like("%.wav")
+    )
+    async with get_engine().connect() as conn:
+        rows = (await conn.execute(query)).all()
+    converted = saved = 0
+    for r in rows:
+        wav = media_dir() / str(r.audio_path)
+        if not wav.is_file():
+            continue
+        before = wav.stat().st_size
+        if dry_run:
+            converted += 1
+            saved += before * 5 // 6  # about six times smaller
+            continue
+        rel = await asyncio.to_thread(to_mp3, wav, str(r.audio_path))
+        if rel.endswith(".mp3"):
+            converted += 1
+            saved += before - (media_dir() / rel).stat().st_size
+            async with get_engine().begin() as conn:
+                await conn.execute(
+                    update(_telecasts).where(_telecasts.c.id == r.id).values(audio_path=rel)
+                )
+    return converted, saved

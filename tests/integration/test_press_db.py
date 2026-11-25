@@ -113,8 +113,8 @@ async def test_feed_story_carries_image_sources_and_summary(db: AsyncEngine) -> 
     sid = await _story(
         db, "with image", [("A", 1), ("B", 2)], images={1: "https://img.b.test/x.jpg"}
     )
-    assert [t for _, t in await stories_needing_summary(10)] == ["with image"]
-    await store_summary(sid, "A short paraphrase.")
+    assert [s.title for s in await stories_needing_summary(10)] == ["with image"]
+    await store_summary(sid, "A short paraphrase.", 2)
     assert await stories_needing_summary(10) == []
 
     (story,) = await press_stories(limit=5)
@@ -256,3 +256,65 @@ async def test_start_reuses_running_and_replaces_stale_or_failed(
         await tc.start_telecast(uuid4(), runner=runner)
     with pytest.raises(tc.TelecastNotFoundError):
         await tc.telecast_view(uuid4())
+
+
+async def test_expired_rows_and_mark_expired(db: AsyncEngine) -> None:
+    from app.press import media
+
+    sid = await _story(db, "old telecast", [("A", 1), ("B", 2)])
+    old = await _telecast(
+        db, sid, "ready", minutes_ago=60 * 24 * 10, audio_path="telecasts/old.wav"
+    )
+    await _telecast(db, sid, "ready", minutes_ago=5, audio_path="telecasts/new.wav")
+    rows = await media.expired_rows(utcnow() - timedelta(days=7))
+    assert rows == [(old, "telecasts/old.wav")]
+    assert await media.referenced_paths() == {"telecasts/old.wav", "telecasts/new.wav"}
+    await media.mark_expired([old])
+    view = await tc.telecast_view(old)
+    assert view.step == "expired" and view.audio_url is None
+    assert await media.referenced_paths() == {"telecasts/new.wav"}
+
+
+async def test_summaries_are_refreshed_once_a_story_grows(db: AsyncEngine) -> None:
+    fresh = await _story(db, "no summary yet", [("A", 1), ("B", 1)])
+    grown = await _story(db, "grew by two", [("A", 2), ("B", 2), ("C", 2), ("D", 2)])
+    steady = await _story(db, "grew by one", [("A", 3), ("B", 3), ("C", 3)])
+    legacy = await _story(db, "legacy summary", [("A", 4), ("B", 4), ("C", 4), ("D", 4)])
+    await store_summary(grown, "old", 2)
+    await store_summary(steady, "old", 2)
+    async with db.begin() as conn:  # a task 8.2 summary: no source count recorded
+        await conn.execute(text("UPDATE stories SET summary = 'old' WHERE id = :i"), {"i": legacy})
+
+    todo = await stories_needing_summary(10, growth=2)
+    assert [(t.story_id, t.n_sources, t.refresh) for t in todo] == [
+        (fresh, 2, False),  # missing summaries first
+        (grown, 4, True),
+        (legacy, 4, True),  # counted as written from 2 sources
+    ]
+    await store_summary(grown, None, 4)  # a failed refresh records the count, keeps the text
+    assert grown not in [t.story_id for t in await stories_needing_summary(10, growth=2)]
+    async with db.connect() as conn:
+        assert (
+            await conn.execute(text("SELECT summary FROM stories WHERE id = :i"), {"i": grown})
+        ).scalar_one() == "old"
+
+
+async def test_concurrent_starts_for_one_story_make_one_telecast(
+    db: AsyncEngine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import asyncio
+
+    monkeypatch.setattr(tc, "media_dir", lambda: tmp_path)
+    sid = await _story(db, "double click", [("A", 1), ("B", 2)])
+    started: list[UUID] = []
+    views = await asyncio.gather(
+        *(tc.start_telecast(sid, runner=lambda t, s: started.append(t)) for _ in range(3))
+    )
+    assert len({v.id for v in views}) == 1 and len(started) == 1
+    async with db.connect() as conn:
+        n = (
+            await conn.execute(
+                text("SELECT count(*) FROM telecasts WHERE story_id = :s"), {"s": sid}
+            )
+        ).scalar_one()
+    assert n == 1

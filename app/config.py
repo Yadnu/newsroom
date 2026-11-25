@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     embed_requests_per_minute: int = Field(default=0, ge=0)
     embed_tokens_per_minute: int = Field(default=0, ge=0)
     embed_batch_max_tokens: int = Field(default=100_000, ge=1)
+    # Output cap per task, reasoning included (gpt-oss reasons before answering). Env override JSON.
+    llm_max_tokens: dict[str, int] = Field(
+        default_factory=lambda: {"draft": 4096, "judge": 4096, "answer": 2048, "classify": 1024}
+    )
 
     # Chat completions (decision 0008): Groq, OpenAI-compatible API.
     groq_api_key: SecretStr | None = None
@@ -164,13 +168,20 @@ class Settings(BaseSettings):
 
     # Press feed (task 8.2): crawler summaries per worker run, newest stories first. 0 = off.
     press_summaries_per_run: int = Field(default=8, ge=0, le=100)
+    # A summary is rewritten once its story has this many more live sources (task 9.2).
+    press_summary_refresh_growth: int = Field(default=2, ge=1)
     # Telecasts (task 8.3, decision 0027): one-story broadcasts rendered to WAV under media_dir and
     # served at /media. Jobs run in the API process.
     media_dir: str = "var/media"
     press_telecast_seconds: int = Field(default=45, ge=15, le=180)
     press_telecast_concurrency: int = Field(default=2, ge=1, le=8)
+    # Telecast jobs (task 9.3): auto = ARQ worker, in-process when Redis is unreachable;
+    # worker = worker only; inprocess = always here.
+    press_telecast_runner: Literal["auto", "worker", "inprocess"] = "auto"
     press_telecast_reuse_hours: float = Field(default=6.0, ge=0)
     press_telecast_stale_minutes: int = Field(default=20, ge=1)
+    # Audio retention (task 9.1): telecast audio older than this is deleted daily. 0 = keep forever.
+    press_telecast_retention_days: float = Field(default=7.0, ge=0)
 
     # Standards Desk air gate (task 4.1, decision 0016).
     standards_max_copied_words: int = Field(default=12, ge=5)

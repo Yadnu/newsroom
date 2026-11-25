@@ -24,7 +24,7 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller, reporter, press | 0016, 0019, 0022, 0023 |
 | [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026, 0027, 0028 |
 | [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018, 0019 |
-| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, data-model, archive | web | 0026, 0027, 0028 |
+| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, data-model, archive | web | 0026, 0027, 0028, 0029 |
 
 ## Edges
 

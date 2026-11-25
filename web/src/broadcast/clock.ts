@@ -14,7 +14,8 @@ export interface MediaLike {
 
 export const MAX_DRIFT_MS = 120;
 
-type Timing = Pick<BroadcastScript, "duration" | "audioOffset" | "audioDuration">;
+type Timing = Pick<BroadcastScript, "duration" | "audioOffset" | "audioDuration"> &
+  Partial<Pick<BroadcastScript, "audioLead">>;
 
 export class ShowClock {
   playing = false;
@@ -43,6 +44,15 @@ export class ShowClock {
   private anchor(at: number): void {
     this.base = at;
     this.anchoredAt = this.now();
+  }
+
+  /** Show time -> media seconds; the file starts with `audioLead` ms of encoder silence (MP3). */
+  private mediaTime(t: number): number {
+    return (t - this.script.audioOffset + (this.script.audioLead ?? 0)) / 1000;
+  }
+
+  private showTime(mediaSeconds: number): number {
+    return this.script.audioOffset + mediaSeconds * 1000 - (this.script.audioLead ?? 0);
   }
 
   private inAudio(t: number): boolean {
@@ -97,7 +107,7 @@ export class ShowClock {
     }
     const media = this.media;
     if (this.playing && media && this.inAudio(t) && !media.paused) {
-      const fromMedia = this.script.audioOffset + media.currentTime * 1000;
+      const fromMedia = this.showTime(media.currentTime);
       if (Math.abs(fromMedia - t) > MAX_DRIFT_MS) {
         this.anchor(fromMedia);
         t = fromMedia;
@@ -112,7 +122,7 @@ export class ShowClock {
     if (!media) return;
     const t = this.time();
     if (this.playing && this.inAudio(t)) {
-      const want = (t - this.script.audioOffset) / 1000;
+      const want = this.mediaTime(t);
       if (force || media.paused) {
         if (force || Math.abs(media.currentTime - want) * 1000 > MAX_DRIFT_MS) {
           media.currentTime = want;
@@ -123,7 +133,7 @@ export class ShowClock {
     } else if (!media.paused) {
       media.pause();
     } else if (force && this.inAudio(t)) {
-      media.currentTime = (t - this.script.audioOffset) / 1000;
+      media.currentTime = this.mediaTime(t);
     }
   }
 }
