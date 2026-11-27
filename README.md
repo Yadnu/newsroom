@@ -74,7 +74,8 @@ The web app (`web/`, Next.js) has three parts:
 - **Press** (`/`): a full-screen card feed of the stories the Reporter gathered, newest first. Each card has the
   feed thumbnail (credited to the outlet), a ~60-word summary written by the Writer from the sources (labelled
   "not yet fact-checked"; it paraphrases and is checked against copying), the outlets and the source links.
-  Wheel, arrow keys, space, or swipe to move.
+  Wheel, arrow keys, space, or swipe to move. A category bar (AI, Tech, Business, Science; from each outlet's feed)
+  filters the feed and keeps the choice in the URL (`/?category=AI`).
 - **Telecast** (`/watch/<story>`): "Watch broadcast" runs the full pipeline on that one story (Writer, Editor
   judge with rewrites, Standards Desk, Anchor voice) in about a minute and plays it as a TV segment: bumper,
   animated anchor with lip sync from the TTS's word timings, lower thirds with the fact-check count, B-roll,

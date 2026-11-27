@@ -112,6 +112,24 @@
         "title": "BriefingSummary",
         "type": "object"
       },
+      "CategoryCount": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "stories": {
+            "title": "Stories",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "stories"
+        ],
+        "title": "CategoryCount",
+        "type": "object"
+      },
       "ClaimTrace": {
         "properties": {
           "audio_end_ms": {
@@ -660,6 +678,17 @@
       },
       "PressStory": {
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1596,6 +1625,32 @@
         "summary": "Health"
       }
     },
+    "/press/categories": {
+      "get": {
+        "description": "Categories with feed stories, most first (task 9.5). The web bar shows them when 2+ exist.",
+        "operationId": "list_categories_press_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryCount"
+                  },
+                  "title": "Response List Categories Press Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Categories",
+        "tags": [
+          "press"
+        ]
+      }
+    },
     "/press/stories": {
       "get": {
         "description": "Newest stories first. Summaries come from the crawler desk and are not fact-checked.",
@@ -1645,6 +1700,23 @@
                 }
               ],
               "title": "After Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 30,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
             }
           }
         ],

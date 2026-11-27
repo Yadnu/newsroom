@@ -2,12 +2,15 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { describeError } from "@/src/api/client";
-import { usePressFeed } from "@/src/api/press";
+import { usePressCategories, usePressFeed } from "@/src/api/press";
 
 import { CardSkeleton } from "./CardSkeleton";
+import { activeCategory, barCategories, categoryHref } from "./categories";
+import { CategoryBar } from "./CategoryBar";
 import {
   type Step,
   STEP_COOLDOWN_MS,
@@ -26,9 +29,26 @@ const slide = {
 };
 
 export function FeedPager() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const { data: categoryList } = usePressCategories();
+  const category = activeCategory(search.get("category"), categoryList);
   const { stories, isPending, isError, error, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    usePressFeed();
+    usePressFeed(category);
   const [index, setIndex] = useState(0);
+  const [shownCategory, setShownCategory] = useState(category);
+  if (shownCategory !== category) {
+    // A new filter is a new feed: start at its first story (React's reset-on-change pattern).
+    setShownCategory(category);
+    setIndex(0);
+  }
+  const selectCategory = useCallback(
+    (next: string | null) => router.replace(categoryHref(next, search.toString()), { scroll: false }),
+    [router, search],
+  );
+  const bar = (
+    <CategoryBar categories={barCategories(categoryList)} active={category} onSelect={selectCategory} />
+  );
   const [dir, setDir] = useState<Step>(1);
   const wheelRest = useRef(0);
   const lockedUntil = useRef(0);
@@ -95,6 +115,21 @@ export function FeedPager() {
       </div>
     );
   }
+  if (count === 0 && category) {
+    return (
+      <div className="relative flex h-full flex-col items-center justify-center gap-3 bg-set px-6 text-center text-white">
+        <div className="absolute inset-x-0 top-3">{bar}</div>
+        <p className="font-display text-2xl uppercase tracking-wide">No {category} stories right now</p>
+        <button
+          type="button"
+          onClick={() => selectCategory(null)}
+          className="rounded-full bg-white px-5 py-2 font-display text-sm uppercase tracking-widest text-set"
+        >
+          Show all stories
+        </button>
+      </div>
+    );
+  }
   if (count === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-set px-6 text-center text-white">
@@ -141,16 +176,19 @@ export function FeedPager() {
         </motion.div>
       </AnimatePresence>
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
-        <span className="pointer-events-auto rounded bg-black/55 px-3 py-1 font-display text-sm uppercase tracking-[0.25em] text-white">
-          Newsroom <span className="text-gold">Press</span>
-        </span>
-        <Link
-          href="/archive"
-          className="pointer-events-auto rounded bg-black/55 px-3 py-1 font-body text-xs text-white/80 hover:text-white"
-        >
-          Archive
-        </Link>
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 py-3">
+        <div className="flex items-center justify-between px-4">
+          <span className="pointer-events-auto rounded bg-black/55 px-3 py-1 font-display text-sm uppercase tracking-[0.25em] text-white">
+            Newsroom <span className="text-gold">Press</span>
+          </span>
+          <Link
+            href="/archive"
+            className="pointer-events-auto rounded bg-black/55 px-3 py-1 font-body text-xs text-white/80 hover:text-white"
+          >
+            Archive
+          </Link>
+        </div>
+        {bar}
       </header>
 
       <nav

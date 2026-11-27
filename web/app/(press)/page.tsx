@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
+import { CardSkeleton } from "@/src/features/feed/CardSkeleton";
 import { FeedPager } from "@/src/features/feed/FeedPager";
 
 export const metadata: Metadata = {
@@ -10,7 +12,10 @@ export const metadata: Metadata = {
 export default function PressPage() {
   return (
     <main className="h-full w-full">
-      <FeedPager />
+      {/* FeedPager reads ?category= (task 9.5); Next needs a Suspense boundary around useSearchParams. */}
+      <Suspense fallback={<CardSkeleton />}>
+        <FeedPager />
+      </Suspense>
     </main>
   );
 }

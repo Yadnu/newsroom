@@ -32,6 +32,35 @@ class PressSource(BaseModel):
     published_at: datetime | None
 
 
+def story_categories() -> Any:
+    """Subquery (story_id, category): each story's most common category among its live sources,
+    ties to the one seen most recently (task 9.5). Stories whose sources carry none are absent."""
+    seen_at = func.coalesce(_sources.c.published_at, _sources.c.fetched_at)
+    counts = (
+        select(
+            _links.c.story_id,
+            _sources.c.category,
+            func.count().label("n"),
+            func.max(seen_at).label("last"),
+        )
+        .join(_sources, _sources.c.id == _links.c.source_id)
+        .where(_sources.c.retracted.is_(False), _sources.c.category.is_not(None))
+        .group_by(_links.c.story_id, _sources.c.category)
+        .subquery()
+    )
+    ranked = select(
+        counts.c.story_id,
+        counts.c.category,
+        func.row_number()
+        .over(
+            partition_by=counts.c.story_id,
+            order_by=(counts.c.n.desc(), counts.c.last.desc(), counts.c.category),
+        )
+        .label("rn"),
+    ).subquery()
+    return select(ranked.c.story_id, ranked.c.category).where(ranked.c.rn == 1).subquery()
+
+
 class TelecastRef(BaseModel):
     """The story's latest telecast (task 8.3)."""
 
@@ -50,6 +79,7 @@ class PressStory(BaseModel):
     latest_at: datetime
     sources: list[PressSource]
     telecast: TelecastRef | None = None
+    category: str | None = None  # from the sources' feeds (task 9.5)
 
 
 class PressCursor(BaseModel):
@@ -64,23 +94,35 @@ async def press_stories(
     after: PressCursor | None = None,
     min_sources: int = 2,
     story_id: UUID | None = None,
+    category: str | None = None,
 ) -> list[PressStory]:
-    """Up to ``limit`` stories, newest first, starting after the ``after`` cursor."""
+    """Up to ``limit`` stories, newest first, starting after the ``after`` cursor; only
+    ``category`` if given."""
     seen_at = func.coalesce(_sources.c.published_at, _sources.c.fetched_at)
     latest = func.max(seen_at)
     n_sources = func.count(_sources.c.id)
+    cats = story_categories()
     query = (
-        select(_stories.c.id, _stories.c.title, _stories.c.summary, latest.label("latest_at"))
+        select(
+            _stories.c.id,
+            _stories.c.title,
+            _stories.c.summary,
+            cats.c.category,
+            latest.label("latest_at"),
+        )
         .join(_links, _links.c.story_id == _stories.c.id)
         .join(_sources, _sources.c.id == _links.c.source_id)
+        .outerjoin(cats, cats.c.story_id == _stories.c.id)
         .where(_sources.c.retracted.is_(False))
-        .group_by(_stories.c.id, _stories.c.title, _stories.c.summary)
+        .group_by(_stories.c.id, _stories.c.title, _stories.c.summary, cats.c.category)
         .having(n_sources >= min_sources)
         .order_by(latest.desc(), _stories.c.id)
         .limit(limit)
     )
     if story_id is not None:
         query = query.where(_stories.c.id == story_id)
+    if category is not None:
+        query = query.where(cats.c.category == category)
     if after is not None:
         query = query.having(
             or_(latest < after.latest_at, and_(latest == after.latest_at, _stories.c.id > after.id))
@@ -147,4 +189,33 @@ def _story(row: Any, members: list[Any], telecast: TelecastRef | None = None) ->
             for m in members[:MAX_SOURCES_PER_STORY]
         ],
         telecast=telecast,
+        category=getattr(row, "category", None),
     )
+
+
+class CategoryCount(BaseModel):
+    name: str
+    stories: int
+
+
+async def press_categories(min_sources: int = 2) -> list[CategoryCount]:
+    """Categories that have feed stories (2+ live sources), most stories first (task 9.5)."""
+    cats = story_categories()
+    eligible = (
+        select(_stories.c.id)
+        .join(_links, _links.c.story_id == _stories.c.id)
+        .join(_sources, _sources.c.id == _links.c.source_id)
+        .where(_sources.c.retracted.is_(False))
+        .group_by(_stories.c.id)
+        .having(func.count(_sources.c.id) >= min_sources)
+        .subquery()
+    )
+    query = (
+        select(cats.c.category, func.count().label("n"))
+        .join(eligible, eligible.c.id == cats.c.story_id)
+        .group_by(cats.c.category)
+        .order_by(func.count().desc(), cats.c.category)
+    )
+    async with get_engine().connect() as conn:
+        rows = (await conn.execute(query)).all()
+    return [CategoryCount(name=r.category, stories=int(r.n)) for r in rows]

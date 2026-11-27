@@ -248,7 +248,9 @@ async def _get(path: str, **params: Any) -> httpx.Response:
 async def test_press_route_pages_with_a_keyset_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[tuple[int, PressCursor | None]] = []
 
-    async def fake(limit: int = 20, after: PressCursor | None = None) -> list[PressStory]:
+    async def fake(
+        limit: int = 20, after: PressCursor | None = None, category: str | None = None
+    ) -> list[PressStory]:
         seen.append((limit, after))
         return [_story(i) for i in range(1, limit + 1)] if after is None else [_story(9)]
 
@@ -303,3 +305,36 @@ async def test_a_failed_new_summary_is_retried_next_run(press: dict[str, Any]) -
     press["answers"] = [WriterError("bad")]
     assert await summaries.fill_summaries(1) == 0
     assert press["counts"] == {}
+
+
+async def test_category_filter_and_categories_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.press.feed import CategoryCount
+
+    asked: list[str | None] = []
+
+    async def fake(
+        limit: int = 20, after: PressCursor | None = None, category: str | None = None
+    ) -> list[PressStory]:
+        asked.append(category)
+        return []
+
+    async def cats() -> list[CategoryCount]:
+        return [CategoryCount(name="AI", stories=9), CategoryCount(name="Business", stories=2)]
+
+    monkeypatch.setattr("app.press.routes.press_stories", fake)
+    monkeypatch.setattr("app.press.routes.press_categories", cats)
+    assert (await _get("/press/stories", category="AI")).status_code == 200
+    assert (await _get("/press/stories")).status_code == 200
+    assert asked == ["AI", None]
+    assert (await _get("/press/stories", category="x" * 31)).status_code == 422
+    assert (await _get("/press/categories")).json() == [
+        {"name": "AI", "stories": 9},
+        {"name": "Business", "stories": 2},
+    ]
+
+
+def test_every_default_feed_has_a_category() -> None:
+    from app.config import DEFAULT_FEEDS
+
+    assert {f.category for f in DEFAULT_FEEDS} == {"AI", "Tech", "Business", "Science"}
+    assert next(f for f in DEFAULT_FEEDS if f.outlet == "Bloomberg").category == "Business"

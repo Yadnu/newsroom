@@ -6,7 +6,7 @@ phase: 4
 code: web/
 depends_on: [anchor, archive, press]
 feeds: []
-decisions: [0026, 0027, 0028]
+decisions: [0026, 0027, 0028, 0030]
 ---
 
 # web
@@ -31,7 +31,10 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
   keys, touch swipe, prev/next buttons; next page prefetched 3 cards before the end). Card: feed thumbnail credited
   to its outlet or a stable gradient, outlets + time ago, headline, crawler summary labelled "not yet fact-checked",
   up to 3 source links, "Watch broadcast" (links to the telecast; "Fact-checked broadcast ready" when one is). Loading skeleton, offline state with retry, empty
-  state. Code in `src/` (`api/client.ts` typed fetch via `/api`, `api/press.ts` TanStack infinite query,
+  state. Category bar (task 9.5, decision 0030): `CategoryBar` chips (All + name and count) under the header when
+  `barCategories()` finds 2+ categories with stories; the choice is `?category=` (`activeCategory()`, `categoryHref()`
+  in `features/feed/categories.ts`; unknown names read as All), part of the feed's query key, and resets the pager to
+  the first story; cards show their category tag. Code in `src/` (`api/client.ts` typed fetch via `/api`, `api/press.ts` TanStack infinite query,
   `features/feed/`). Route groups: `app/(press)` (no header, `data-press` reset) and `app/(archive)`.
 - Telecast player (task 8.3): `/watch/[storyId]` starts or reuses the story's telecast (`useTelecast`: one
   deduplicated POST query, then polls every 2 s), shows the real steps ("Going to air"), then plays it. `src/broadcast/script.ts`
@@ -92,10 +95,7 @@ automated (no browser in the agent environment).
 ## Changelog
 
 - 2026-11-16: node created from the design doc.
-- 2026-11-19: Archive dashboard scaffolded and built (task 3.3).
-- 2026-11-19: live Player with synced, clickable transcript (task 4.3).
-- 2026-11-19: push-to-talk questions in the Player (task 5.1).
-- 2026-11-19: answer card in the Player, answer lines labelled on the briefing page (task 5.3).
+- 2026-11-19: Archive dashboard (3.3); live Player with synced transcript (4.3); push-to-talk (5.1); answer card (5.3).
 - 2026-11-21: briefing page Corrections banner and `Correction` line badge; corrections badge on the list (task 6.2).
 - 2026-11-21: trace panel shows "Sources disagree" conflicts under a judgement (task 6.3).
 - 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).
@@ -105,3 +105,4 @@ automated (no browser in the agent environment).
 - 2026-11-23: phone portrait layout, error states, reduced-motion pass, hook tests, README run guide (task 8.6).
 - 2026-11-23: telecast start is a deduplicated query, not a mutation (no double POST in dev; task 9.3).
 - 2026-11-23: MP3 telecasts: the clock skips the encoder delay (`audioLead`) (task 9.4).
+- 2026-11-26: category bar, `?category=` filter, category tag on cards (task 9.5).

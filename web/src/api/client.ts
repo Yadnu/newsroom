@@ -6,6 +6,7 @@ export type PressStory = S["PressStory"];
 export type PressSource = S["PressSource"];
 export type PressPage = S["PressPage"];
 export type PressCursor = S["PressCursor"];
+export type CategoryCount = S["CategoryCount"];
 export type TelecastView = S["TelecastView"];
 export type TelecastLine = S["TelecastLine"];
 export type TelecastWord = S["TelecastWord"];
@@ -47,16 +48,26 @@ export async function apiGet<T>(
 
 export const PAGE_SIZE = 10;
 
-export function pressPage(after: PressCursor | null, fetcher?: typeof fetch): Promise<PressPage> {
+export function pressPage(
+  after: PressCursor | null,
+  fetcher?: typeof fetch,
+  category?: string | null,
+): Promise<PressPage> {
   return apiGet<PressPage>(
     "/press/stories",
     {
       limit: PAGE_SIZE,
       after_latest_at: after?.latest_at,
       after_id: after?.id,
+      category: category ?? undefined,
     },
     fetcher,
   );
+}
+
+/** Categories that have feed stories, most first (task 9.5). */
+export function pressCategories(fetcher?: typeof fetch): Promise<CategoryCount[]> {
+  return apiGet<CategoryCount[]>("/press/categories", {}, fetcher);
 }
 
 /** Ask for a telecast of a story (reuses a recent or running one). */

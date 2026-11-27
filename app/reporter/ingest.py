@@ -40,6 +40,7 @@ class NewSource:
     trust_score: float
     published_at: datetime | None = None
     image_url: str | None = None
+    category: str | None = None
 
 
 StoreFn = Callable[[Sequence[NewSource]], Awaitable[int]]
@@ -87,17 +88,24 @@ async def insert_new_sources(rows: Sequence[NewSource]) -> int:
                     "fetched_at": utcnow(),
                     "retracted": False,
                     "image_url": r.image_url,
+                    "category": r.category,
                 }
                 for r in rows[i : i + INSERT_CHUNK]
             ]
             stmt = pg_insert(table).values(values).on_conflict_do_nothing().returning(table.c.id)
             inserted += len((await conn.execute(stmt)).all())
-        # Sources stored before task 8.2 (or before the feed carried one) get their thumbnail now.
+        # Sources stored before tasks 8.2 / 9.5 get their thumbnail and category now.
         images = [{"u": r.url, "img": r.image_url} for r in rows if r.image_url]
         if images:
             await conn.execute(
                 text("UPDATE sources SET image_url = :img WHERE url = :u AND image_url IS NULL"),
                 images,
+            )
+        categories = [{"u": r.url, "c": r.category} for r in rows if r.category]
+        if categories:
+            await conn.execute(
+                text("UPDATE sources SET category = :c WHERE url = :u AND category IS NULL"),
+                categories,
             )
     return inserted
 
@@ -197,6 +205,7 @@ def _dedupe(results: Sequence[_FeedResult], report: IngestReport) -> list[NewSou
                     trust_score=r.feed.trust_score,
                     published_at=e.published_at,
                     image_url=e.image_url,
+                    category=r.feed.category,
                 )
             )
     return rows

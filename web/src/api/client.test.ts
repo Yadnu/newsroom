@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { ApiError, apiUrl, pressPage } from "./client";
+import { ApiError, apiUrl, pressCategories, pressPage } from "./client";
 
 test("apiUrl goes through the same-origin rewrite and drops empty params", () => {
   expect(apiUrl("/press/stories", { limit: 10, after_id: undefined })).toBe(
@@ -19,6 +19,24 @@ test("pressPage sends the keyset cursor", async () => {
   expect(seen[0]).toBe(
     "/api/press/stories?limit=10&after_latest_at=2026-11-23T09%3A00%3A00Z&after_id=abc",
   );
+});
+
+test("pressPage filters by category only when one is chosen; categories have their own route", async () => {
+  const seen: string[] = [];
+  const fetcher = (async (url: string) => {
+    seen.push(url);
+    return new Response(JSON.stringify(url.includes("categories") ? [] : { stories: [], next: null }), {
+      status: 200,
+    });
+  }) as unknown as typeof fetch;
+  await pressPage(null, fetcher, "AI");
+  await pressPage(null, fetcher, null);
+  await pressCategories(fetcher);
+  expect(seen).toEqual([
+    "/api/press/stories?limit=10&category=AI",
+    "/api/press/stories?limit=10",
+    "/api/press/categories",
+  ]);
 });
 
 test("a down backend becomes an ApiError", async () => {

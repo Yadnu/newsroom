@@ -6,7 +6,7 @@ phase: 1
 code: app/db/
 depends_on: []
 feeds: [reporter, writer, editor, archive, press]
-decisions: [0001, 0007, 0011, 0020, 0023]
+decisions: [0001, 0007, 0011, 0020, 0023, 0030]
 ---
 
 # data-model
@@ -20,7 +20,7 @@ Postgres schema and migrations. Holds the trace chain from source to spoken audi
 - Embedding model and dimension: Voyage `voyage-4-lite` (config `embedding_model`), `EMBEDDING_DIM = 1024`, cosine distance (decision 0007).
 - Public surface (`app.db`): models `Source`, `Story`, `StorySource`, `Briefing`, `ScriptLine`, `Claim`, `ClaimEvidence`, `ClaimSource`, `Correction`, `Trace`; enums `Verdict` (pending | approved | rewrite | rejected), `BriefingStatus` (draft | judged | cleared | aired | failed); `EMBEDDING_DIM`; `get_engine() -> AsyncEngine`; `session_scope()` async context manager (commit on success, rollback on error).
 - Key columns:
-  - `sources`: url (unique), outlet, title, published_at, fetched_at, content, content_hash (unique, 64 chars), trust_score 0..1, retracted, retracted_at, retraction_reason, embedding vector(1024).
+  - `sources`: url (unique), outlet, title, published_at, fetched_at, content, content_hash (unique, 64 chars), trust_score 0..1, retracted, retracted_at, retraction_reason, image_url, category, embedding vector(1024).
   - `stories`: title, summary, created_at, centroid vector(1024). `story_sources` is the (story_id, source_id) link.
   - `briefings`: status, target_minutes. `script_lines`: briefing_id, story_id, order (unique per briefing), text, audio_start_ms, audio_end_ms,
     kind (`script` | `answer`, check constraint, default `script`), question (text, answers only; decision 0020).
@@ -62,3 +62,4 @@ Done (task 1.1). Models in `app/db/models.py`, async engine and session in `app/
 - 2026-11-23: migration `f2a6d8c4b917`: `script_lines.audio_words` (JSONB, per-word audio timings; task 8.4).
 - 2026-11-23: migration `a7c1e4f9d203`: `telecasts.step` may be `expired` (task 9.1).
 - 2026-11-23: migration `b3d5f7a9c124`: `stories.summary_sources` (task 9.2).
+- 2026-11-26: migration `c9e2a4b6d815`: `sources.category` (varchar 30, nullable; task 9.5, decision 0030).
