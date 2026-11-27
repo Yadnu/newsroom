@@ -6,7 +6,7 @@ phase: 8
 code: app/press/
 depends_on: [reporter, writer, editor, standards-desk, producer, anchor, data-model, archive]
 feeds: [web]
-decisions: [0026, 0027, 0028, 0029]
+decisions: [0026, 0027, 0028, 0029, 0030]
 ---
 
 # press
@@ -16,13 +16,18 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
 
 ## Contract
 
-- `GET /press/stories?limit=20&after_latest_at=&after_id=` -> `PressPage{stories: PressStory[], next: PressCursor | null}`.
+- `GET /press/stories?limit=20&after_latest_at=&after_id=&category=` -> `PressPage{stories: PressStory[], next: PressCursor | null}`.
   Newest first (newest live source's `published_at`, else `fetched_at`), keyset-paged on `(latest_at, id)`; `limit`
   1..50; the two cursor params go together (422 otherwise). A short page has `next = null`.
 - `PressStory{id, title, summary | null, image_url | null, image_outlet | null, outlets, n_sources, latest_at,
   sources: PressSource[id, outlet, title, url, published_at] (newest first, max 8)}`. Only stories with 2+ live
   (non-retracted) sources. Image = the newest source with a feed thumbnail, credited to its outlet.
-- `async def press_stories(limit, after: PressCursor | None, min_sources=2) -> list[PressStory]` (`feed.py`).
+- `async def press_stories(limit, after: PressCursor | None, min_sources=2, story_id=None, category=None) ->
+  list[PressStory]` (`feed.py`).
+- Categories (task 9.5, decision 0030): `PressStory.category: str | null` = the most common `sources.category`
+  among its live sources (ties: most recently seen, then name; `story_categories()` subquery). `category=` (max 30)
+  filters, paging included. `GET /press/categories` -> `CategoryCount[name, stories]` (feed-eligible stories, most
+  first) from `press_categories(min_sources=2)`.
 - `async def fill_summaries(limit=press_summaries_per_run) -> int` (`summaries.py`): summaries for the newest stories
   without one. Each comes from `writer.summarize_story()` and must pass `standards_desk.clear.copied_run()`
   (`standards_max_copied_words`, 12) against the story's sources; a copying summary is retried once with that
@@ -73,6 +78,8 @@ Task 8.2 (decision 0026). Live 2026-11-23 on the dev DB: ingest backfilled thumb
 Telecast live 2026-11-23 (Cartesia voice, OpenRouter judge fallback): "Gemini 4 Neon" went writing -> checking
 (76 s) -> voicing (10 s) -> ready in 90 s: 10 lines, 45.3 s of audio, 10/10 claims approved; `/media` served it
 with Range through the web proxy. Job unit tests fake the pipeline; DB tests cover reuse, stale rows and the view.
+Categories live 2026-11-26 on the dev DB after the backfill: AI 7, Business 3, Tech 2 stories; the filter and its
+cursor return only that category. Older stories whose sources left the feeds have no category (All only).
 
 ## Open questions
 
@@ -87,3 +94,4 @@ with Range through the web proxy. Job unit tests fake the pipeline; DB tests cov
 - 2026-11-23: summaries refreshed when a story gains 2+ live sources (task 9.2).
 - 2026-11-23: telecasts run on the ARQ worker when one is alive, else in-process; per-story start lock (task 9.3).
 - 2026-11-23: MP3 telecast audio, `audio_lead_ms`, `newsroom transcode-media` (task 9.4).
+- 2026-11-26: story categories by majority of live sources, `?category=` filter, `GET /press/categories` (task 9.5, decision 0030).

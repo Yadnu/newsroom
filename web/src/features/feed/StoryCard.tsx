@@ -42,6 +42,11 @@ export function StoryCard({ story, active }: { story: PressStory; active: boolea
 
       <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-3 px-5 pb-5 pt-3 sm:px-10">
         <p className="font-body text-xs uppercase tracking-[0.18em] text-gold">
+          {story.category && (
+            <span className="mr-2 rounded-sm border border-gold/60 px-1.5 py-px text-[10px] tracking-[0.2em]">
+              {story.category}
+            </span>
+          )}
           {outletsLine(story.outlets)} · {timeAgo(story.latest_at)}
         </p>
         <h2 className="font-display text-2xl font-semibold uppercase leading-tight tracking-wide text-white sm:text-4xl">

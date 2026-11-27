@@ -6,7 +6,7 @@ phase: 1
 code: app/reporter/
 depends_on: [data-model, llm-gateway, archive, standards-desk]
 feeds: [producer, press]
-decisions: [0003, 0010, 0021, 0023, 0026]
+decisions: [0003, 0010, 0021, 0023, 0026, 0030]
 ---
 
 # reporter
@@ -21,7 +21,9 @@ Fetches news from the internet, dedupes it, and clusters sources into stories.
   duplicates, errors (feed url -> reason).
 - `async def insert_new_sources(rows: Sequence[NewSource]) -> int`: `INSERT ... ON CONFLICT DO NOTHING`
   against the unique `url` and `content_hash`. Returns the number of rows inserted. Then sets `image_url` on
-  existing rows that had none (task 8.2).
+  existing rows that had none (task 8.2), and `category` likewise (task 9.5).
+- `FeedConfig(url, outlet, trust_score=0.5, category="Tech")`: every default feed names one of AI, Tech, Business,
+  Science (decision 0030); `NewSource.category` carries it to `sources.category`.
 - Scheduled job: `app/worker.py` `WorkerSettings` (ARQ) runs `ingest_job` on a cron every
   `reporter_ingest_every_minutes` (default 15), at startup, unique. The job runs ingest, then
   embed, then cluster. A missing Voyage key skips the embed step with a warning. Run with `uv run arq app.worker.WorkerSettings`.
@@ -100,3 +102,4 @@ blocks its DLL.
 - 2026-11-21: `retract_source()` and `recheck_sources()` (task 6.2, decision 0023).
 - 2026-11-23: ARQ `recheck_job` every 6 h runs the retraction recheck (task 7.2).
 - 2026-11-23: feed thumbnails parsed (`FeedEntry.image_url`, `entry_image()`) and stored as `sources.image_url`; ingest backfills missing ones (task 8.2).
+- 2026-11-26: a category per feed, stored on `sources.category` and backfilled by ingest (task 9.5, decision 0030).

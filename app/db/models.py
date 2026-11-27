@@ -80,6 +80,7 @@ class Source(SQLModel, table=True):
     retracted_at: datetime | None = _ts_opt()  # task 6.2, decision 0023
     retraction_reason: str | None = Field(default=None, sa_type=Text)
     image_url: str | None = Field(default=None, sa_type=Text)  # feed thumbnail (task 8.2)
+    category: str | None = Field(default=None, max_length=30)  # from the feed (task 9.5)
     embedding: list[float] | None = _vector()
 
 

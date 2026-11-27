@@ -61,6 +61,7 @@ async def _story(
     members: list[tuple[str, float]],
     retracted: int = 0,
     images: dict[int, str] | None = None,
+    categories: dict[int, str] | None = None,
 ) -> UUID:
     """members: (outlet, hours_ago). The first ``retracted`` members are marked retracted."""
     sid = uuid4()
@@ -74,8 +75,8 @@ async def _story(
             await conn.execute(
                 text(
                     "INSERT INTO sources (id, url, outlet, title, published_at, fetched_at,"
-                    " content, content_hash, trust_score, retracted, image_url)"
-                    " VALUES (:id, :url, :o, :t, :p, now(), 'c', :h, 0.5, :r, :img)"
+                    " content, content_hash, trust_score, retracted, image_url, category)"
+                    " VALUES (:id, :url, :o, :t, :p, now(), 'c', :h, 0.5, :r, :img, :cat)"
                 ),
                 {
                     "id": src,
@@ -86,6 +87,7 @@ async def _story(
                     "h": src.hex.ljust(64, "0"),
                     "r": i < retracted,
                     "img": (images or {}).get(i),
+                    "cat": (categories or {}).get(i),
                 },
             )
             await conn.execute(
@@ -318,3 +320,18 @@ async def test_concurrent_starts_for_one_story_make_one_telecast(
             )
         ).scalar_one()
     assert n == 1
+
+
+async def test_story_category_is_the_majority_and_filters_the_feed(db: AsyncEngine) -> None:
+    from app.press.feed import press_categories
+
+    await _story(
+        db, "ai story", [("A", 1), ("B", 2), ("C", 3)], categories={0: "AI", 1: "AI", 2: "Tech"}
+    )
+    # tie: the newest source (hours ago 1) decides
+    await _story(db, "tie", [("A", 1), ("B", 2)], categories={0: "Business", 1: "Tech"})
+    await _story(db, "no category", [("A", 4), ("B", 5)])
+    stories = {s.title: s.category for s in await press_stories(limit=10)}
+    assert stories == {"ai story": "AI", "tie": "Business", "no category": None}
+    assert [s.title for s in await press_stories(limit=10, category="AI")] == ["ai story"]
+    assert [(c.name, c.stories) for c in await press_categories()] == [("AI", 1), ("Business", 1)]

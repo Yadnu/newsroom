@@ -1,6 +1,6 @@
 # STATE
 
-Last updated: 2026-11-23 by: Claude Code
+Last updated: 2026-11-26 by: Claude Code
 
 ## Current phase
 
@@ -8,7 +8,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 
 ## Active task
 
-9.5 categories (feed tags, filter, category bar)
+9.6 spoken and typed questions during a telecast
 
 ## Tasks
 
@@ -72,7 +72,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 - [x] 9.2 refresh summaries when a story gains sources
 - [x] 9.3 telecasts as ARQ worker jobs, in-process fallback
 - [x] 9.4 MP3 telecast audio
-- [ ] 9.5 categories (feed tags, filter, category bar)
+- [x] 9.5 categories (feed tags, filter, category bar)
 - [ ] 9.6 spoken and typed questions during a telecast
 
 ## Open questions (defaults in use until answered)
@@ -101,6 +101,6 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 9.4. Telecast audio is MP3 (lameenc 64 kbps, WAV kept if encoding fails) with `audio_lead_ms` (46 ms encoder delay) applied by the player clock; `newsroom transcode-media` converted the 11 existing telecasts on the dev DB (8.8 MB -> 1.5 MB); played in headless Chrome as audio/mpeg with captions in sync. Branch `phase9/mp3` on `phase9/worker-telecasts` (#41). Earlier: 9.3 worker jobs + OpenRouter max_tokens fix.
-- Open: `sensitive_single` 3/6 (single-outlet sensitive claims not marked sensitive) and one `unattributed` miss. Latency samples are small. Live search waits for Tavily/Firecrawl keys. Evals and Brief workflows need repo secrets (Groq and OpenRouter keys). Langfuse untested live.
-- Next: 9.5 categories, 9.6 questions during telecasts. Groq's daily cap for gpt-oss-120b was spent on 2026-11-23 (rolling 24 h).
+- Done: 9.5. Each feed has a category (AI, Tech, Business, Science) stored on `sources.category` (migration `c9e2a4b6d815`, applied to the dev DB, ingest backfilled it); a story's category is the majority of its live sources, read-time SQL (decision 0030); `?category=` filter + `GET /press/categories`; web category bar synced to `?category=`, tags on cards. Live on the dev DB: AI 7, Business 3, Tech 2; checked in headless Chrome. Branch `phase9/categories` off main (9.4 merged in #42).
+- Open: older stories whose sources left the feeds have no category (All only). `sensitive_single` 3/6 and one `unattributed` miss. Live search waits for Tavily/Firecrawl keys. Langfuse untested live. Upstash Redis drops idle connections and ARQ then exits; run the worker under a restart loop or supervisor.
+- Next: 9.6 spoken and typed questions during a telecast.

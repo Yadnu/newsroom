@@ -15,42 +15,73 @@ class FeedConfig(BaseModel):
     url: str
     outlet: str = Field(max_length=200)
     trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    category: str = Field(default="Tech", min_length=1, max_length=30)  # Press filter (task 9.5)
 
 
-# v1 topic scope default: AI and tech news (STATE open question).
+# v1 topic scope default: AI and tech news (STATE open question). Categories: task 9.5.
 # Trust scores are a uniform 0.5 placeholder until the Editor calibrates them.
 DEFAULT_FEEDS = (
     FeedConfig(
-        url="https://feeds.arstechnica.com/arstechnica/technology-lab", outlet="Ars Technica"
+        url="https://feeds.arstechnica.com/arstechnica/technology-lab",
+        outlet="Ars Technica",
+        category="Tech",
     ),
     FeedConfig(
-        url="https://techcrunch.com/category/artificial-intelligence/feed/", outlet="TechCrunch"
+        url="https://techcrunch.com/category/artificial-intelligence/feed/",
+        outlet="TechCrunch",
+        category="AI",
     ),
     FeedConfig(
-        url="https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", outlet="The Verge"
+        url="https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        outlet="The Verge",
+        category="AI",
     ),
-    FeedConfig(url="https://www.technologyreview.com/feed/", outlet="MIT Technology Review"),
-    FeedConfig(url="https://www.wired.com/feed/tag/ai/latest/rss", outlet="Wired"),
-    FeedConfig(url="https://feeds.bbci.co.uk/news/technology/rss.xml", outlet="BBC News"),
+    FeedConfig(
+        url="https://www.technologyreview.com/feed/",
+        outlet="MIT Technology Review",
+        category="Science",
+    ),
+    FeedConfig(url="https://www.wired.com/feed/tag/ai/latest/rss", outlet="Wired", category="AI"),
+    FeedConfig(
+        url="https://feeds.bbci.co.uk/news/technology/rss.xml", outlet="BBC News", category="Tech"
+    ),
     # Added 2026-11-18 (all returned 200 with entries) so the same event shows up in 2+ outlets.
-    FeedConfig(url="https://arstechnica.com/ai/feed/", outlet="Ars Technica"),
+    FeedConfig(url="https://arstechnica.com/ai/feed/", outlet="Ars Technica", category="AI"),
     FeedConfig(
-        url="https://www.theregister.com/software/ai_ml/headlines.atom", outlet="The Register"
+        url="https://www.theregister.com/software/ai_ml/headlines.atom",
+        outlet="The Register",
+        category="AI",
     ),
-    FeedConfig(url="https://www.engadget.com/rss.xml", outlet="Engadget"),
-    FeedConfig(url="https://www.zdnet.com/topic/artificial-intelligence/rss.xml", outlet="ZDNET"),
+    FeedConfig(url="https://www.engadget.com/rss.xml", outlet="Engadget", category="Tech"),
+    FeedConfig(
+        url="https://www.zdnet.com/topic/artificial-intelligence/rss.xml",
+        outlet="ZDNET",
+        category="AI",
+    ),
     FeedConfig(
         url="https://www.theguardian.com/technology/artificialintelligenceai/rss",
         outlet="The Guardian",
+        category="AI",
     ),
     FeedConfig(
         url="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
         outlet="The New York Times",
+        category="Tech",
     ),
-    FeedConfig(url="https://siliconangle.com/category/ai/feed/", outlet="SiliconANGLE"),
-    FeedConfig(url="https://the-decoder.com/feed/", outlet="The Decoder"),
-    FeedConfig(url="https://www.cnbc.com/id/19854910/device/rss/rss.html", outlet="CNBC"),
-    FeedConfig(url="https://feeds.bloomberg.com/technology/news.rss", outlet="Bloomberg"),
+    FeedConfig(
+        url="https://siliconangle.com/category/ai/feed/", outlet="SiliconANGLE", category="AI"
+    ),
+    FeedConfig(url="https://the-decoder.com/feed/", outlet="The Decoder", category="AI"),
+    FeedConfig(
+        url="https://www.cnbc.com/id/19854910/device/rss/rss.html",
+        outlet="CNBC",
+        category="Business",
+    ),
+    FeedConfig(
+        url="https://feeds.bloomberg.com/technology/news.rss",
+        outlet="Bloomberg",
+        category="Business",
+    ),
 )
 
 

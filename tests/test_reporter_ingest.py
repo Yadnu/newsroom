@@ -120,7 +120,7 @@ class FakeStore:
 
 
 FEEDS = [
-    FeedConfig(url="https://a.test/rss", outlet="Outlet A", trust_score=0.8),
+    FeedConfig(url="https://a.test/rss", outlet="Outlet A", trust_score=0.8, category="AI"),
     FeedConfig(url="https://b.test/atom", outlet="Outlet B"),
 ]
 
@@ -158,6 +158,8 @@ async def test_ingest_stores_new_sources_and_reports(trace_sink: MemorySink) -> 
     assert (chip.outlet, chip.trust_score) == ("Outlet A", 0.8)
     assert chip.content_hash == content_hash(chip.title, chip.content)
     assert by_url["https://atom.example.org/a/1"].outlet == "Outlet B"
+    assert chip.category == "AI"  # from the feed (task 9.5)
+    assert by_url["https://atom.example.org/a/1"].category == "Tech"  # the default
 
     events = [(t.component, t.event) for t in trace_sink.traces]
     assert events.count(("reporter", "fetch_feed")) == 2

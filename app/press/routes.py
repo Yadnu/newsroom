@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.press import telecast as tc
-from app.press.feed import PressCursor, PressStory, press_stories
+from app.press.feed import CategoryCount, PressCursor, PressStory, press_categories, press_stories
 
 router = APIRouter(prefix="/press", tags=["press"])
 
@@ -23,6 +23,7 @@ async def list_stories(
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     after_latest_at: datetime | None = None,
     after_id: UUID | None = None,
+    category: Annotated[str | None, Query(max_length=30)] = None,
 ) -> PressPage:
     """Newest stories first. Summaries come from the crawler desk and are not fact-checked."""
     if (after_latest_at is None) != (after_id is None):
@@ -32,12 +33,18 @@ async def list_stories(
         if after_latest_at is not None and after_id is not None
         else None
     )
-    stories = await press_stories(limit, after)
+    stories = await press_stories(limit, after, category=category)
     last = stories[-1] if len(stories) == limit else None
     return PressPage(
         stories=stories,
         next=PressCursor(latest_at=last.latest_at, id=last.id) if last else None,
     )
+
+
+@router.get("/categories")
+async def list_categories() -> list[CategoryCount]:
+    """Categories with feed stories, most first (task 9.5). The web bar shows them when 2+ exist."""
+    return await press_categories()
 
 
 @router.post("/stories/{story_id}/telecast", status_code=202)

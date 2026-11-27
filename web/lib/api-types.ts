@@ -124,6 +124,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/press/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Categories
+         * @description Categories with feed stories, most first (task 9.5). The web bar shows them when 2+ exist.
+         */
+        get: operations["list_categories_press_categories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/press/stories": {
         parameters: {
             query?: never;
@@ -237,6 +257,13 @@ export interface components {
             };
             /** Wall Ms */
             wall_ms: number | null;
+        };
+        /** CategoryCount */
+        CategoryCount: {
+            /** Name */
+            name: string;
+            /** Stories */
+            stories: number;
         };
         /** ClaimTrace */
         ClaimTrace: {
@@ -451,6 +478,8 @@ export interface components {
         };
         /** PressStory */
         PressStory: {
+            /** Category */
+            category?: string | null;
             /**
              * Id
              * Format: uuid
@@ -876,12 +905,33 @@ export interface operations {
             };
         };
     };
+    list_categories_press_categories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryCount"][];
+                };
+            };
+        };
+    };
     list_stories_press_stories_get: {
         parameters: {
             query?: {
                 limit?: number;
                 after_latest_at?: string | null;
                 after_id?: string | null;
+                category?: string | null;
             };
             header?: never;
             path?: never;
