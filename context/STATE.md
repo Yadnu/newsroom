@@ -1,14 +1,14 @@
 # STATE
 
-Last updated: 2026-11-26 by: Claude Code
+Last updated: 2026-11-27 by: Claude Code
 
 ## Current phase
 
-Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
+Phases 0 to 9 are complete (9: Press follow-ups).
 
 ## Active task
 
-9.6 spoken and typed questions during a telecast
+None. Phase 9 is done; the next phase is not planned yet.
 
 ## Tasks
 
@@ -73,7 +73,7 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 - [x] 9.3 telecasts as ARQ worker jobs, in-process fallback
 - [x] 9.4 MP3 telecast audio
 - [x] 9.5 categories (feed tags, filter, category bar)
-- [ ] 9.6 spoken and typed questions during a telecast
+- [x] 9.6 spoken and typed questions during a telecast
 
 ## Open questions (defaults in use until answered)
 
@@ -101,6 +101,6 @@ Phases 0 to 8 are complete (8: web frontend, Press feed and telecasts).
 ## Handoff
 
 - Who worked last: Claude Code
-- Done: 9.5. Each feed has a category (AI, Tech, Business, Science) stored on `sources.category` (migration `c9e2a4b6d815`, applied to the dev DB, ingest backfilled it); a story's category is the majority of its live sources, read-time SQL (decision 0030); `?category=` filter + `GET /press/categories`; web category bar synced to `?category=`, tags on cards. Live on the dev DB: AI 7, Business 3, Tech 2; checked in headless Chrome. Branch `phase9/categories` off main (9.4 merged in #42).
-- Open: older stories whose sources left the feeds have no category (All only). `sensitive_single` 3/6 and one `unattributed` miss. Live search waits for Tavily/Firecrawl keys. Langfuse untested live. Upstash Redis drops idle connections and ARQ then exits; run the worker under a restart loop or supervisor.
-- Next: 9.6 spoken and typed questions during a telecast.
+- Done: 9.6. WS `/press/telecasts/{id}/questions` takes typed (`ask`) and push-to-talk questions (decision 0031): Caller classify + screen, Producer `answer_question` (judged, cleared), answer voiced to `media/answers/` and played by the new `AskBar`, which pauses and resumes the show. Live on telecast `51f0e01e`: a follow-up answered in 11.9 s, weather and injection declined; checked in headless Chrome (typed only; the mic path is unit tested). Branch `phase9/questions` off main (9.5 merged in #43).
+- Open: no per-reader rate limit on questions beyond one at a time per socket. `test_anchor_routes.py::test_push_to_talk_gives_interim_then_classified_question` hangs about 1 run in 5 at TestClient teardown (asyncio cancelling leftover tasks); also on main before 9.6. Older stories without a category show under All only. `sensitive_single` 3/6 and one `unattributed` miss. Live search waits for Tavily/Firecrawl keys. Langfuse untested live. Upstash Redis drops idle connections and ARQ then exits; run the worker under a restart loop or supervisor.
+- Next: plan the next phase (none is queued).

@@ -85,3 +85,17 @@ async def test_cleanup_job_reports(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(worker, "cleanup_media", fake)
     assert await worker.cleanup_job({}) == {"expired": 2, "orphans": 1, "bytes_freed": 3}
+
+
+async def test_cleanup_removes_old_answer_audio(store: dict[str, Any], tmp_path: Path) -> None:
+    """Answers to readers' questions (task 9.6) are never referenced: gone after the grace."""
+    answers = tmp_path / "answers"
+    answers.mkdir()
+    (answers / "old.wav").write_bytes(b"y" * 10)
+    (answers / "new.wav").write_bytes(b"y" * 10)
+    hours_ago = (NOW - timedelta(hours=2)).timestamp()
+    os.utime(answers / "old.wav", (hours_ago, hours_ago))
+    os.utime(answers / "new.wav", (NOW.timestamp(), NOW.timestamp()))
+    report = await media.cleanup_media(7, now=NOW)
+    assert report.orphans == 2  # telecasts/orphan.wav and answers/old.wav
+    assert [p.name for p in answers.iterdir()] == ["new.wav"]

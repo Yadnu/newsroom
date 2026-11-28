@@ -1,14 +1,20 @@
 """``/press`` API for the web Press feed (task 8.2)."""
 
+import asyncio
+import contextlib
+import json
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from app.caller.live import CallIn
+from app.press import questions
 from app.press import telecast as tc
 from app.press.feed import CategoryCount, PressCursor, PressStory, press_categories, press_stories
+from app.standards_desk import BriefingNotFoundError, NotClearedError
 
 router = APIRouter(prefix="/press", tags=["press"])
 
@@ -64,3 +70,60 @@ async def get_telecast(telecast_id: UUID) -> tc.TelecastView:
         return await tc.telecast_view(telecast_id)
     except tc.TelecastNotFoundError as e:
         raise HTTPException(404, "unknown telecast") from e
+
+
+@router.websocket("/telecasts/{telecast_id}/questions")
+async def telecast_questions(ws: WebSocket, telecast_id: UUID) -> None:
+    """Ask during a telecast (task 9.6, decision 0031). Client -> server: ``{"type": "ask",
+    "text": "..."}``, or push-to-talk ``mic_start{sample_rate}`` + binary PCM16 + ``mic_end``.
+    Server -> client: ``caller_interim``, ``caller_question``, ``caller_error``, ``answer_status``
+    (see ``app.press.questions``). One question at a time. Close codes: 4404 unknown telecast,
+    4409 not ready (nothing aired to ask about)."""
+    await ws.accept()
+    try:
+        script, story_id = await questions.telecast_script(telecast_id)
+    except tc.TelecastNotFoundError:
+        await ws.close(code=4404, reason="unknown telecast")
+        return
+    except (questions.TelecastNotReadyError, BriefingNotFoundError, NotClearedError):
+        await ws.close(code=4409, reason="telecast not ready")
+        return
+    lock = asyncio.Lock()
+
+    async def send(event: dict[str, Any]) -> None:
+        async with lock:
+            await ws.send_json(event)
+
+    callin = CallIn(
+        script,
+        send,
+        lambda: None,
+        default_story=story_id,
+        on_question=lambda q: questions.answer_on_telecast(q, script, send),
+    )
+    try:
+        while True:
+            msg = await ws.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            if msg.get("bytes") is not None:
+                callin.audio(msg["bytes"])
+                continue
+            try:
+                data = json.loads(msg.get("text") or "")
+                kind = data.get("type")
+            except (ValueError, AttributeError):
+                continue
+            if kind == "ask" and isinstance(data.get("text"), str):
+                await callin.ask(data["text"])
+            elif kind == "mic_start":
+                rate = data.get("sample_rate")
+                await callin.start(rate if isinstance(rate, int) else None)
+            elif kind == "mic_end":
+                await callin.end()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await callin.close()
+    with contextlib.suppress(Exception):
+        await ws.close()

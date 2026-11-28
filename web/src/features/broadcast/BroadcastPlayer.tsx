@@ -1,17 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type TelecastView, describeError } from "@/src/api/client";
 import { usePressFeed } from "@/src/api/press";
 import { useTelecast } from "@/src/api/telecast";
 import { useAmplitude } from "@/src/audio/useAmplitude";
 import { useShowClock } from "@/src/audio/useShowClock";
+import { useTelecastQuestions } from "@/src/audio/useTelecastQuestions";
 import { safeHref } from "@/lib/format";
+import { isBusy } from "@/src/broadcast/questions";
 import { buildBroadcastScript } from "@/src/broadcast/script";
 import { usePlayer } from "@/src/store/player";
 
+import { AskBar } from "./AskBar";
 import { Controls } from "./Controls";
 import type { NextStory } from "./Graphics";
 import { PortraitPanel } from "./PortraitPanel";
@@ -21,7 +24,7 @@ import { Stage } from "./Stage";
 const SEEK_STEP_MS = 5000;
 
 /** /watch/[storyId]: start (or reuse) the story's telecast, show progress, then play it. */
-export function BroadcastPlayer({ storyId }: { storyId: string }) {
+export function BroadcastPlayer({ storyId, wsUrl }: { storyId: string; wsUrl: string }) {
   const router = useRouter();
   const { telecast, error, retry } = useTelecast(storyId);
   const { stories } = usePressFeed();
@@ -60,6 +63,7 @@ export function BroadcastPlayer({ storyId }: { storyId: string }) {
       next={nextStory ? { title: nextStory.title } : null}
       tickerItems={tickerItems}
       preload={{ audio: nextAudio, image: nextStory?.image_url ?? null }}
+      wsUrl={wsUrl}
     />
   );
 }
@@ -72,6 +76,7 @@ function Show({
   next,
   tickerItems,
   preload,
+  wsUrl,
 }: {
   telecast: TelecastView;
   onExit: () => void;
@@ -80,6 +85,7 @@ function Show({
   next: NextStory | null;
   tickerItems: string[];
   preload: { audio: string | null; image: string | null };
+  wsUrl: string;
 }) {
   const script = useMemo(() => buildBroadcastScript(telecast), [telecast]);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
@@ -90,11 +96,31 @@ function Show({
 
   useEffect(() => setRate(rate), [rate, setRate]);
 
+  // Questions (task 9.6): the show holds while a question is heard, checked and answered, then
+  // carries on if it was playing when the viewer asked.
+  const questions = useTelecastQuestions(telecast.id, wsUrl, muted);
+  const asking = isBusy(questions.state);
+  const resumeAfter = useRef(false);
+  const playingRef = useRef(show.playing);
+  useEffect(() => {
+    playingRef.current = show.playing;
+  }, [show.playing]);
+  const { play, pause } = show;
+  useEffect(() => {
+    if (asking) {
+      resumeAfter.current = playingRef.current;
+      pause();
+    } else if (resumeAfter.current) {
+      resumeAfter.current = false;
+      play();
+    }
+  }, [asking, play, pause]);
+
   // Outro: auto-advance to the next story when the show ends, unless the viewer cancelled.
   const [cancelled, setCancelled] = useState(false);
   useEffect(() => {
-    if (show.ended && next && !cancelled && onNext) onNext();
-  }, [show.ended, next, cancelled, onNext]);
+    if (show.ended && next && !cancelled && !asking && onNext) onNext();
+  }, [show.ended, next, cancelled, asking, onNext]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -175,6 +201,14 @@ function Show({
           setCancelled(true);
           replay();
         }}
+      />
+      <AskBar
+        state={questions.state}
+        answerTime={questions.answerTime}
+        onAsk={questions.ask}
+        onTalkStart={() => void questions.startTalk()}
+        onTalkEnd={questions.stopTalk}
+        onSkip={() => questions.skipAnswer()}
       />
       <Controls
         time={show.time}

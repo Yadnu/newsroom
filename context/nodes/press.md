@@ -4,9 +4,9 @@ type: component
 status: in-progress
 phase: 8
 code: app/press/
-depends_on: [reporter, writer, editor, standards-desk, producer, anchor, data-model, archive]
+depends_on: [reporter, writer, editor, standards-desk, producer, anchor, caller, data-model, archive]
 feeds: [web]
-decisions: [0026, 0027, 0028, 0029, 0030]
+decisions: [0026, 0027, 0028, 0029, 0030, 0031]
 ---
 
 # press
@@ -59,12 +59,20 @@ readers to skim (not fact-checked), and telecasts: one story written, judged, cl
 - MP3 (task 9.4, `audio.py`): telecast audio is encoded to 64 kbps MP3 after voicing (WAV kept if encoding fails);
   `TelecastView.audio_lead_ms` = MP3 encoder+decoder delay (46 ms at 24 kHz, 0 for WAV). `newsroom
   transcode-media [--dry-run]` converts ready WAV telecasts.
+- Questions (task 9.6, decision 0031, `questions.py`): WS `/press/telecasts/{id}/questions` (4404 unknown, 4409 not
+  ready). Client: `ask{text}` or `mic_start{sample_rate}` + PCM16 + `mic_end` (`caller.live.CallIn`, one at a time);
+  server: `caller_interim`, `caller_question`, `caller_error`, `answer_status{question_id, state thinking|answering|
+  unsure|declined|failed, lines[line_id, text, start_ms, end_ms, words], audio_url, duration_ms, total_ms}`.
+  `telecast_script(id) -> (ClearedScript, story_id)`; `answer_on_telecast(question, script, send)`: declined unless
+  allowed `follow_up`/`background`, else `producer.answer.answer_question` then `voice_answer` to
+  `media_dir/answers/<question id>.wav` (captions only, `audio_url` null, if voicing fails). Never raises.
+  `telecast_view` lines and verdicts are `kind = 'script'` only; `cleanup_media` also clears `answers/` orphans (1 h).
 
 ## Invariants
 
 - Summaries paraphrase (no 12-word copied runs, quotes under 15 words) and are labelled "not yet fact-checked" in the
-  UI. Nothing from the Press feed is spoken: only telecasts, which go through the Editor and Standards Desk; a
-  telecast voices only cleared lines and fails ("nothing ... verified well enough to air") if none clear.
+  UI. Nothing from the Press feed is spoken: only telecasts and answers to readers' questions, both through the
+  Editor and Standards Desk; a telecast voices only cleared lines and fails ("nothing ... verified well enough to air") if none clear.
 - `run_telecast()` never raises: every failure ends `step=failed` with a reader-facing reason.
 - Source text reaches the summary model only as escaped data in the user turn.
 - Image URLs are stored, never fetched by the backend; the browser loads them, and only http(s) URLs are kept.
@@ -80,6 +88,9 @@ Telecast live 2026-11-23 (Cartesia voice, OpenRouter judge fallback): "Gemini 4 
 with Range through the web proxy. Job unit tests fake the pipeline; DB tests cover reuse, stale rows and the view.
 Categories live 2026-11-26 on the dev DB after the backfill: AI 7, Business 3, Tech 2 stories; the filter and its
 cursor return only that category. Older stories whose sources left the feeds have no category (All only).
+Questions live 2026-11-27 on telecast `51f0e01e` (Groq, Cartesia): "Which commission said that about Nvidia chips?"
+answered "A congressional commission." (fact-checked 5.5 s, voiced with word timings, 11.9 s end to end); weather and
+an "ignore your previous instructions" question were declined by the rules in under 0.5 s.
 
 ## Open questions
 
@@ -95,3 +106,4 @@ cursor return only that category. Older stories whose sources left the feeds hav
 - 2026-11-23: telecasts run on the ARQ worker when one is alive, else in-process; per-story start lock (task 9.3).
 - 2026-11-23: MP3 telecast audio, `audio_lead_ms`, `newsroom transcode-media` (task 9.4).
 - 2026-11-26: story categories by majority of live sources, `?category=` filter, `GET /press/categories` (task 9.5, decision 0030).
+- 2026-11-27: typed and spoken questions during a telecast, voiced answers under `media/answers/` (task 9.6, decision 0031).

@@ -174,7 +174,7 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
 ) -> None:
     monkeypatch.setattr(tc, "media_dir", lambda: tmp_path)
     sid = await _story(db, "aired story", [("A", 1), ("B", 2)])
-    bid, l1, l2, l3 = uuid4(), uuid4(), uuid4(), uuid4()
+    bid, l1, l2, l3, ans = uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
     async with db.begin() as conn:
         await conn.execute(
             text(
@@ -183,14 +183,21 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
             ),
             {"b": bid},
         )
-        for lid, order, start, end in ((l1, 0, 0, 4000), (l2, 1, 4300, 9000), (l3, 2, None, None)):
+        lines = [
+            (l1, 0, 0, 4000, "script"),
+            (l2, 1, 4300, 9000, "script"),
+            (l3, 2, None, None, "script"),
+            (ans, 3, 0, 800, "answer"),  # a reader's question, voiced into its own file (9.6)
+        ]
+        for lid, order, start, end, kind in lines:
             await conn.execute(
                 text(
                     'INSERT INTO script_lines (id, briefing_id, story_id, "order", text, kind,'
                     " audio_start_ms, audio_end_ms, audio_words)"
-                    " VALUES (:id, :b, :s, :o, :t, 'script', :st, :en, CAST(:w AS JSONB))"
+                    " VALUES (:id, :b, :s, :o, :t, :k, :st, :en, CAST(:w AS JSONB))"
                 ),
                 {
+                    "k": kind,
                     "id": lid,
                     "b": bid,
                     "s": sid,
@@ -201,7 +208,12 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
                     "w": '[["line", 0, 2000], ["0", 2000, 4000]]' if order == 0 else None,
                 },
             )
-        for lid, verdict in ((l1, "approved"), (l2, "approved"), (l3, "rejected")):
+        for lid, verdict in (
+            (l1, "approved"),
+            (l2, "approved"),
+            (l3, "rejected"),
+            (ans, "approved"),
+        ):
             await conn.execute(
                 text(
                     "INSERT INTO claims (id, script_line_id, text, verdict, rewrite_round)"
@@ -226,7 +238,7 @@ async def test_ready_telecast_view_has_audio_lines_and_verdicts(
         ("line 1", 4300, 9000),
     ]
     assert [w.text for w in view.lines[0].words] == ["line", "0"] and view.lines[1].words == []
-    assert view.verdicts == {"approved": 2, "rejected": 1}
+    assert view.verdicts == {"approved": 2, "rejected": 1}  # the answer's claim is not counted
     assert (
         view.story is not None and view.story.telecast is not None and view.story.telecast.id == tid
     )

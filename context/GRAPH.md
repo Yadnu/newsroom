@@ -22,9 +22,9 @@ Decisions are in `context/decisions/`, current progress in `context/STATE.md`.
 | [writer](nodes/writer.md) | component | in-progress | 2 | `app/writer/` | producer, editor, llm-gateway, data-model, archive | editor, press | 0002, 0011, 0013, 0014, 0020, 0023, 0026 |
 | [anchor](nodes/anchor.md) | component | in-progress | 4 | `app/anchor/` | standards-desk, producer, caller, archive | web | 0004, 0016, 0017, 0020, 0028 |
 | [standards-desk](nodes/standards-desk.md) | component | in-progress | 4 | `app/standards_desk/` | editor, caller, archive | anchor, producer, caller, reporter, press | 0016, 0019, 0022, 0023 |
-| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026, 0027, 0028, 0030 |
-| [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor | 0004, 0018, 0019 |
-| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, data-model, archive | web | 0026, 0027, 0028, 0029, 0030 |
+| [web](nodes/web.md) | app | in-progress | 4 | `web/` | anchor, archive, press | - | 0026, 0027, 0028, 0030, 0031 |
+| [caller](nodes/caller.md) | component | in-progress | 5 | `app/caller/` | archive, llm-gateway, standards-desk | standards-desk, producer, anchor, press | 0004, 0018, 0019, 0031 |
+| [press](nodes/press.md) | component | in-progress | 8 | `app/press/` | reporter, writer, editor, standards-desk, producer, anchor, caller, data-model, archive | web | 0026, 0027, 0028, 0029, 0030, 0031 |
 
 ## Edges
 
@@ -55,6 +55,7 @@ flowchart LR
   archive --> web
   archive --> writer
   caller --> anchor
+  caller --> press
   caller --> producer
   caller --> standards_desk
   data_model --> archive
