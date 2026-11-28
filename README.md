@@ -83,9 +83,12 @@ The web app (`web/`, Next.js) has three parts:
   together (one show clock); without audio it runs captions-only. Phones held upright get the picture with a
   readable panel under it. Telecast audio is MP3 (about 0.5 MB a minute), kept 7 days (`newsroom cleanup-media`;
   the worker cleans daily). With the ARQ worker running, telecasts run there; otherwise in the API process.
+  **Ask about the story** under the player: type a question, or hold the mic button and speak (Deepgram). The
+  telecast pauses, the question is screened, answered from the story's sources and fact-checked like any line,
+  then voiced; the show resumes after it. Off-topic questions and instructions are declined.
 - **Archive** (`/archive`): every briefing and telecast, each sentence traced to its claims, verdicts and sources.
 
-Design notes: [`FRONTEND_PLAN.md`](FRONTEND_PLAN.md) and decisions 0026 to 0028.
+Design notes: [`FRONTEND_PLAN.md`](FRONTEND_PLAN.md) and decisions 0026 to 0031.
 
 ## Eval numbers
 

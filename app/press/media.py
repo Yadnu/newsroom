@@ -3,7 +3,8 @@
 Audio under ``media_dir/telecasts/`` is kept ``press_telecast_retention_days`` (7; 0 = forever).
 ``cleanup_media()`` deletes older ones and marks their telecasts ``expired`` (the row and its
 briefing stay in the Archive; a reader asking again gets a fresh telecast), and removes orphan files
-no telecast row points at (older than ``ORPHAN_GRACE``, so a job still writing is never touched).
+no telecast row points at (older than ``ORPHAN_GRACE``, so a job still writing is never touched),
+including answers to readers' questions under ``media_dir/answers/`` (task 9.6).
 Run daily by the worker and by ``newsroom cleanup-media``.
 """
 
@@ -23,6 +24,7 @@ from app.log import get_logger
 
 ORPHAN_GRACE = timedelta(hours=1)
 SUBDIR = "telecasts"
+SUBDIRS = (SUBDIR, "answers")  # answer audio (task 9.6): never referenced, gone after the grace
 
 log = get_logger(__name__)
 _telecasts = Telecast.__table__  # type: ignore[attr-defined]
@@ -46,14 +48,15 @@ def orphan_files(
 
 
 def _media_files(root: Path) -> list[tuple[str, datetime]]:
-    folder = root / SUBDIR
-    if not folder.is_dir():
-        return []
     out = []
-    for f in folder.iterdir():
-        if f.is_file():
-            mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=utcnow().tzinfo)
-            out.append((f"{SUBDIR}/{f.name}", mtime))
+    for sub in SUBDIRS:
+        folder = root / sub
+        if not folder.is_dir():
+            continue
+        for f in folder.iterdir():
+            if f.is_file():
+                mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=utcnow().tzinfo)
+                out.append((f"{sub}/{f.name}", mtime))
     return out
 
 

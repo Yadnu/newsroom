@@ -299,7 +299,7 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
             counts = await conn.execute(
                 select(_claims.c.verdict, func.count())
                 .join(_lines, _lines.c.id == _claims.c.script_line_id)
-                .where(_lines.c.briefing_id == view.briefing_id)
+                .where(_lines.c.briefing_id == view.briefing_id, _lines.c.kind == "script")
                 .group_by(_claims.c.verdict)
             )
             view.verdicts = {str(v): int(n) for v, n in counts.all()}
@@ -317,6 +317,7 @@ async def telecast_view(telecast_id: UUID) -> TelecastView:
                 )
                 .where(
                     _lines.c.briefing_id == view.briefing_id,
+                    _lines.c.kind == "script",  # answers to readers' questions are not the show
                     _lines.c.audio_start_ms.is_not(None),
                     _lines.c.audio_end_ms.is_not(None),
                 )

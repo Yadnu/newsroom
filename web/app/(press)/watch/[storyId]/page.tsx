@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { publicWsUrl } from "@/lib/api";
 import { BroadcastPlayer } from "@/src/features/broadcast/BroadcastPlayer";
 
 export const metadata: Metadata = { title: "Broadcast" };
@@ -17,5 +18,5 @@ export default function WatchPage(props: PageProps<"/watch/[storyId]">) {
 
 async function Watch({ params }: PageProps<"/watch/[storyId]">) {
   const { storyId } = await params;
-  return <BroadcastPlayer storyId={storyId} />;
+  return <BroadcastPlayer storyId={storyId} wsUrl={publicWsUrl()} />;
 }

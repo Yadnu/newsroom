@@ -6,7 +6,7 @@ phase: 4
 code: web/
 depends_on: [anchor, archive, press]
 feeds: []
-decisions: [0026, 0027, 0028, 0030]
+decisions: [0026, 0027, 0028, 0030, 0031]
 ---
 
 # web
@@ -58,6 +58,12 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
   images fall back to the gradient on load errors; API failures read as sentences (`describeError`); audio that
   fails mid-show switches to captions-only on the wall clock; a refused autoplay shows a Play button.
   Failed telecast: reason, retry, link to the briefing in the Archive.
+  Questions (task 9.6, decision 0031): `AskBar` under the stage: type and Ask, or hold the mic button (pointer or
+  Space/Enter). `useTelecastQuestions` opens `/press/telecasts/{id}/questions` on the first question (base from
+  `publicWsUrl()`, passed by the watch page), streams the mic like the Player, and plays the answer's audio (or holds
+  unvoiced captions for reading time); `src/broadcast/questions.ts` `askReducer` is the state. The show pauses while
+  a question is busy and resumes if it was playing; no auto-advance meanwhile. Answer labelled fact-checked or
+  "Not confirmed", current line highlighted, "Skip answer and resume".
 - Archive dashboard (task 3.3): `/archive` briefing list (verdict counts, wall time, tokens, cost);
   `/briefings/[id]?line=<line_id>` script with per-line verdict dots, the selected line's claim trace (verdicts,
   cited source links, evidence passages, earlier verdicts), stage table, and the briefing's rejections;
@@ -68,7 +74,7 @@ Next.js app: the Press feed, the Player, and the Archive dashboard.
 
 - Talks only to the FastAPI backend: Archive pages read through server components (`lib/api.ts` is `server-only`);
   the browser calls the API only through the same-origin `/api/*` and `/media/*` rewrites (`next.config.ts`, to
-  `NEWSROOM_API_URL`) and opens the Anchor WebSocket.
+  `NEWSROOM_API_URL`) and opens the Anchor and telecast-question WebSockets.
 - API types generated from OpenAPI: `scripts/export_openapi.py` writes `web/openapi.json`, `npm run gen:api`
   writes `lib/api-types.ts`. CI fails if either is stale.
 - Links built from feed data go through `safeHref()` (http/https only).
@@ -95,9 +101,7 @@ automated (no browser in the agent environment).
 ## Changelog
 
 - 2026-11-16: node created from the design doc.
-- 2026-11-19: Archive dashboard (3.3); live Player with synced transcript (4.3); push-to-talk (5.1); answer card (5.3).
-- 2026-11-21: briefing page Corrections banner and `Correction` line badge; corrections badge on the list (task 6.2).
-- 2026-11-21: trace panel shows "Sources disagree" conflicts under a judgement (task 6.3).
+- 2026-11-19..21: Archive dashboard, live Player, push-to-talk, answer card, corrections, conflicts (tasks 3.3-6.3).
 - 2026-11-23: Press feed at `/` (Tailwind, Framer Motion, TanStack Query); Archive moved to `/archive`; Vitest (task 8.2).
 - 2026-11-23: telecast player skeleton at `/watch/[storyId]`: timeline, ShowClock, controls, captions (task 8.3).
 - 2026-11-23: studio scene, animated anchor, word-timed lip sync and captions (task 8.4).
@@ -106,3 +110,4 @@ automated (no browser in the agent environment).
 - 2026-11-23: telecast start is a deduplicated query, not a mutation (no double POST in dev; task 9.3).
 - 2026-11-23: MP3 telecasts: the clock skips the encoder delay (`audioLead`) (task 9.4).
 - 2026-11-26: category bar, `?category=` filter, category tag on cards (task 9.5).
+- 2026-11-27: ask bar on the telecast player: typed and push-to-talk questions, voiced answers (task 9.6).

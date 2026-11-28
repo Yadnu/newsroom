@@ -5,8 +5,8 @@ status: in-progress
 phase: 5
 code: app/caller/
 depends_on: [archive, llm-gateway, standards-desk]
-feeds: [standards-desk, producer, anchor]
-decisions: [0004, 0018, 0019]
+feeds: [standards-desk, producer, anchor, press]
+decisions: [0004, 0018, 0019, 0031]
 ---
 
 # caller
@@ -37,6 +37,12 @@ Voice input. Streams listener audio to text and classifies intent.
   `caller_error{message}`; `caller_question` also carries `allowed`, `screen_category`, `screen_reason`. One question
   at a time; the current story is the line being read at `mic_start`. `CallIn(on_question=...)` hands each
   question to the Producer (`handle_question`, task 5.3); a new mic_start waits until the answer is done.
+- Typed questions (task 9.6, `ask.py`): `async def question_from_text(text, context, *, classifier=None,
+  screener=None) -> CallerQuestion`: whitespace collapsed, cut at `MAX_TYPED_CHARS` (500), then the same classify ->
+  `screen_caller` as a transcript (span `caller/question`, `typed=True`). `CallIn.ask(text)` runs it under the same
+  one-at-a-time rule ("one question at a time" `caller_error` while busy); `CallIn(default_story=)` is the current
+  story when no line is playing (telecasts); `question_event(q, titles)` builds `caller_question`. A push-to-talk
+  that yields no question ends with `caller_error{"did not catch a question"}`.
 - CLI `newsroom ask --briefing <id> --wav q.wav [--realtime]`.
 
 ## Invariants
@@ -70,3 +76,4 @@ than real time ("What did..." became "What"), so the settle now waits until the 
 - 2026-11-19: Deepgram + fake STT, intent classification, push-to-talk on the Anchor WebSocket (task 5.1, decision 0018).
 - 2026-11-19: questions screened by the Standards Desk; settle waits for finals to cover the audio (task 5.2).
 - 2026-11-19: `CallIn` hands questions to the Producer for an on-air answer (task 5.3).
+- 2026-11-27: typed questions (`question_from_text`, `CallIn.ask`); "did not catch a question" error (task 9.6).
